@@ -534,3 +534,31 @@ a.chip.active { color: var(--purple); }
 .om-letter { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border); display: grid; place-items: center; font-weight: 800; font-size: 12.5px; flex-shrink: 0; }
 .opt-mini.ok .om-letter { background: var(--green); border-color: var(--green); color: #fff; }
 .om-check { margin-left: auto; color: var(--green); display: grid; }
+
+/* ---------- Сынама папкалары, сәйкестендіру, суреттер ---------- */
+.folder { margin-bottom: 20px; }
+.folder-head { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; color: var(--purple); }
+.folder-head h2 { margin: 0; font-size: 20px; color: var(--text); }
+.test-card { display: flex; flex-direction: column; gap: 10px; }
+.tc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 18px; }
+.hist-title { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+details.context-box { padding: 0; }
+details.context-box summary { cursor: pointer; padding: 12px 16px; font-weight: 700; list-style: none; }
+details.context-box summary::-webkit-details-marker { display: none; }
+details.context-box summary::after { content: "▾"; float: right; color: var(--muted); }
+details.context-box:not([open]) summary::after { content: "▸"; }
+.ctx-body { padding: 0 16px 14px; line-height: 1.6; }
+.q-img { display: block; max-width: 100%; max-height: 420px; margin: 10px auto 14px; border-radius: 12px; border: 1px solid var(--border); background: #fff; }
+.match-opts { display: grid; gap: 8px; margin-bottom: 14px; }
+.mo { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 15px; }
+.mo .letter { width: 26px; height: 26px; border-radius: 8px; border: 1.5px solid var(--border); display: grid; place-items: center; font-weight: 800; font-size: 12.5px; flex-shrink: 0; background: var(--surface); }
+.match-items { display: grid; gap: 10px; }
+.mi { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 14px; flex-wrap: wrap; }
+.mi.ok { border-color: var(--green); }
+.mi.bad { border-color: var(--red); }
+.mi-text { flex: 1; min-width: 160px; }
+.mi-letters { display: flex; gap: 6px; }
+.ml { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); font-weight: 800; display: grid; place-items: center; color: var(--text); }
+.ml.sel { background: var(--purple); border-color: var(--purple); color: #fff; }
+.ml.ok { background: var(--green); border-color: var(--green); color: #fff; }
+.ml.bad { background: var(--red); border-color: var(--red); color: #fff; }

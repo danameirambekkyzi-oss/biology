@@ -55,7 +55,12 @@ const fail = text => Object.assign(new Error(text), { userMessage: text });
 const userRef = uid => F.doc(fs, "users", uid);
 const strip = u => { const o = Object.assign({}, u); delete o.pass; return o; };
 // Оқушы өзі өзгерте алмайтын өрістер (оларды тек мұғалім өзгертеді) — сақтағанда жіберілмейді
-const progressOnly = u => { const o = strip(u); ["id", "role", "blocked", "deviceId", "device", "deviceAt"].forEach(k => delete o[k]); return o; };
+const progressOnly = u => {
+  const o = strip(u); ["id", "role", "blocked", "deviceId", "device", "deviceAt"].forEach(k => delete o[k]);
+  // Firestore бос кілтті қабылдамайды — сақтамас бұрын тазалау
+  ["solved", "mistakes", "modulesTried", "activity"].forEach(k => { if (o[k]) { o[k] = Object.assign({}, o[k]); delete o[k][""]; } });
+  return o;
+};
 
 // Кіргеннен кейін: бұғатталғанын және құрылғыны тексеру
 async function openSession(fbUser) {

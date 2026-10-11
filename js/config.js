@@ -47,7 +47,8 @@ window.CONFIG = {
   calculator: {
     single:  { count: 25, points: 1, label: "Бір дұрыс жауабы бар тапсырмалар" },
     context: { count: 5,  points: 1, label: "Контекстік тапсырмалар" },
-    multi:   { count: 10, points: 2, label: "Бірнеше дұрыс жауабы бар тапсырмалар" }
+    match:   { count: 5,  points: 2, label: "Сәйкестендіру тапсырмалары" },
+    multi:   { count: 5,  points: 2, label: "Бірнеше дұрыс жауабы бар тапсырмалар" }
   },
 
   // Рейтинг: оқушылар осы айда тесттерден жинаған балл бойынша орналасады

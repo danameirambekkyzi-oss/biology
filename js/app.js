@@ -2,7 +2,10 @@
 (function () {
   "use strict";
 
-  const Q = window.QUESTIONS;
+  // Сұрақтар: жалпы қор + сынама папкаларындағы тесттер (js/tests/*.js)
+  const FOLDERS = window.TEST_FOLDERS || [];
+  const TESTS = [].concat(...FOLDERS.map(f => f.tests.map(t => Object.assign({ folder: f }, t))));
+  const Q = window.QUESTIONS.concat(...TESTS.map(t => t.questions));
   const MODULES = window.MODULES;
   const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
   const CFG = window.CONFIG, SITE = CFG.siteName, AUTHOR = CFG.author || {};
@@ -71,7 +74,8 @@
   const fmtNum = n => n.toLocaleString("en-US");
   const firstName = u => esc((u.name || "Түлек").trim().split(/\s+/)[0]);
   const initials = name => (name || "Т").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
-  const isMulti = q => q.type === "multi" || q.correct.length > 1;
+  const isMulti = q => q.type === "multi" || (q.type !== "match" && q.correct.length > 1);
+  const hasAnswer = (q, a) => q.type === "match" ? (a || []).some(x => x != null && x >= 0) : (a || []).length > 0;
   const modTitle = id => (MODULES.find(m => m.id === id) || {}).title || id;
 
   /* ================= Icons (SVG) ================= */
@@ -191,6 +195,7 @@
    *   Белгіленгендердің ішінде бір қате нұсқа болса — 0 балл.
    */
   function scorePoints(q, sel) {
+    if (q.type === "match") return q.items.reduce((a, it, k) => a + (sel[k] === it.answer ? 1 : 0), 0);
     const k = q.correct.length, s = sel.length;
     if (!s) return 0;
     if (sel.some(i => !q.correct.includes(i))) return 0;
@@ -199,7 +204,7 @@
     if (s === k - 1) return 1;
     return 0;
   }
-  const maxPoints = q => q.correct.length > 1 ? 2 : 1;
+  const maxPoints = q => q.type === "match" ? q.items.length : (q.type === "multi" || q.correct.length > 1) ? 2 : 1;
   const ptsCls = (q, p) => p === maxPoints(q) ? 2 : p > 0 ? 1 : 0; // 2 — толық, 1 — жартылай, 0 — қате
 
   function grade(test) {
@@ -278,7 +283,7 @@
     const today = dayKey();
     u.activity[today] = (u.activity[today] || 0) + 1;
     test.questions.forEach((q, i) => {
-      u.modulesTried[q.module] = true;
+      if (q.module) u.modulesTried[q.module] = true;
       if (res.per[i] === maxPoints(q)) {
         u.solved[q.id] = true;
         if (u.mistakes[q.id]) { delete u.mistakes[q.id]; u.fixed++; }
@@ -288,7 +293,7 @@
     });
     if (test.mode === "mock") u.mocks++;
     const wrong = test.questions.filter((q, i) => res.per[i] < maxPoints(q)).map(q => q.id);
-    u.history.push({ date: Date.now(), mode: test.mode, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong });
+    u.history.push({ date: Date.now(), mode: test.mode, testId: test.testId || null, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong });
     u.history = u.history.slice(-200);
     checkBadges(u, res, test);
     const rankAfter = myRank(u);
@@ -397,7 +402,7 @@
 
   /* ---- ҰБТ балл калькуляторы ---- */
   const CALC = CFG.calculator;
-  const CALC_MAX = CALC.single.count * CALC.single.points + CALC.context.count * CALC.context.points + CALC.multi.count * CALC.multi.points;
+  const CALC_MAX = CALC.single.count * CALC.single.points + CALC.context.count * CALC.context.points + CALC.match.count * CALC.match.points + CALC.multi.count * CALC.multi.points;
   function calcRow(id, label, hint, max) {
     return `<div class="calc-row"><div><b>${label}</b><small class="muted">${hint}</small></div>
       <div class="stepper"><button type="button" data-act="calc-step" data-for="${id}" data-d="-1" aria-label="Азайту">−</button>
@@ -411,6 +416,7 @@
         <div class="calc-inputs">
           ${calcRow("c-single", CALC.single.label, `${CALC.single.count} тапсырма · әрқайсысы ${CALC.single.points} балл`, CALC.single.count)}
           ${calcRow("c-context", CALC.context.label, `${CALC.context.count} тапсырма · әрқайсысы ${CALC.context.points} балл`, CALC.context.count)}
+          ${calcRow("c-match", CALC.match.label, `${CALC.match.count} тапсырма · әр дұрыс сәйкестік — 1 балл (барлығы ${CALC.match.count * CALC.match.points} сәйкестік)`, CALC.match.count * CALC.match.points)}
           ${calcRow("c-full", CALC.multi.label + " — толық дұрыс", `${CALC.multi.count} тапсырма · толық дұрыс — 2 балл`, CALC.multi.count)}
           ${calcRow("c-part", CALC.multi.label + " — жартылай дұрыс", "Бір қатесі бар (бір дұрыс жауап белгіленбеген) — 1 балл", CALC.multi.count)}
         </div>
@@ -424,9 +430,9 @@
   }
   function updateCalc() {
     const get = (id, max) => { const el = document.getElementById(id); if (!el) return 0; let v = Math.max(0, Math.min(max, Math.floor(+el.value || 0))); el.value = v; return v; };
-    const single = get("c-single", CALC.single.count), context = get("c-context", CALC.context.count);
+    const single = get("c-single", CALC.single.count), context = get("c-context", CALC.context.count), match = get("c-match", CALC.match.count * CALC.match.points);
     const full = get("c-full", CALC.multi.count), part = get("c-part", CALC.multi.count - full);
-    const total = single * CALC.single.points + context * CALC.context.points + full * CALC.multi.points + part;
+    const total = single * CALC.single.points + context * CALC.context.points + match + full * CALC.multi.points + part;
     const out = document.getElementById("c-total"); if (!out) return;
     out.textContent = total;
     document.getElementById("c-bar").style.width = (total / CALC_MAX * 100) + "%";
@@ -867,28 +873,36 @@
       <table><thead><tr><th>Дұрыс жауап саны</th><th>Толық балл</th><th>1 балл</th><th>0 балл</th></tr></thead><tbody>
       <tr><td>3 дұрыс жауап</td><td>3-еуі де дұрыс — 2 балл</td><td>2 дұрыс</td><td>1, 4, 5 белгіленсе</td></tr>
       <tr><td>2 дұрыс жауап</td><td>2-еуі де дұрыс — 2 балл</td><td>1 дұрыс</td><td>3, 4, 5 белгіленсе</td></tr>
-      <tr><td>1 дұрыс жауап</td><td>Дұрыс жауап — 1 балл</td><td>—</td><td>Қате немесе 2, 3, 4, 5 белгіленсе</td></tr></tbody></table></div>`;
+      <tr><td>1 дұрыс жауап</td><td>Дұрыс жауап — 1 балл</td><td>—</td><td>Қате немесе 2, 3, 4, 5 белгіленсе</td></tr>
+      <tr><td>Сәйкестендіру</td><td>2 сәйкестік те дұрыс — 2 балл</td><td>1 сәйкестік дұрыс</td><td>Екеуі де қате</td></tr></tbody></table></div>`;
   }
 
   function pageMock(u) {
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
-    return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ жағдайын модельдеу: таймер, жаңа формат, нәтиже мен толық талдау.</p>
-      <div class="grid g-2">
-        <div class="card">
-          <h3>${MOCK_SIZE} сұрақ</h3>
-          <div class="field"><label>Уақытты таңда</label><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div>
-          <ul class="muted" style="padding-left:18px"><li>Бір және бірнеше дұрыс жауабы бар сұрақтар</li><li>Контекстік тапсырмалар</li><li>Уақыт біткенде тест автоматты түрде аяқталады</li><li>Нәтиже 50 балдық шкалаға келтіріледі</li></ul>
-          <button class="btn btn-cta btn-lg btn-block" data-act="start-mock">Сынаманы бастау</button>
+    const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
+    return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
+      <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
+        <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
+      ${FOLDERS.length ? FOLDERS.map(f => `
+        <div class="folder">
+          <div class="folder-head">${ic("layers", 22)}<h2>${esc(f.title)}</h2><span class="muted">${f.tests.length} тест</span></div>
+          <div class="grid g-3">${f.tests.map(t => { const b = best(t.id); return `
+            <div class="card test-card">
+              <div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : ""}</div>
+              <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут</small>
+              <button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">Бастау</button>
+            </div>`; }).join("")}</div>
+        </div>`).join("") : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}
+      <div class="grid g-2" style="margin-top:16px">
+        <div class="card"><h3>Соңғы сынамалар</h3>
+          ${mocks.length ? mocks.map(h => {
+            const wrong = (h.wrong || []).filter(id => QBY[id]);
+            return `<div class="lb-row hist-row"><span class="lb-name hist-date">${fmtDate(h.date)}</span><span class="muted hist-title">${esc(h.title || "")}</span>
+              <span class="lb-xp">${h.scaled}/50</span>
+              ${wrong.length ? `<button class="btn btn-ghost btn-sm" data-act="start-hist" data-d="${h.date}">Қатемен жұмыс (${wrong.length})</button>` : `<span class="tag">Қате жоқ</span>`}</div>`; }).join("") :
+            `<p class="muted">Әзірге сынама тапсырылмаған. Алғашқысын баста!</p>`}
         </div>
         <div class="card">${rulesHtml()}</div>
-      </div>
-      <div class="card" style="margin-top:16px"><h3>Соңғы сынамалар</h3>
-        ${mocks.length ? mocks.map(h => {
-          const wrong = (h.wrong || []).filter(id => QBY[id]);
-          return `<div class="lb-row hist-row"><span class="lb-name hist-date">${fmtDate(h.date)}</span>
-            <span class="lb-xp">${h.scaled}/50</span><span class="lb-score">${h.score}/${h.max} · ${h.pct}%</span>
-            ${wrong.length ? `<button class="btn btn-ghost btn-sm" data-act="start-hist" data-d="${h.date}">Қатемен жұмыс (${wrong.length})</button>` : `<span class="tag">Қате жоқ</span>`}</div>`; }).join("") :
-          `<p class="muted">Әзірге сынама тапсырылмаған. Алғашқысын баста!</p>`}
       </div>`;
   }
 
@@ -1070,6 +1084,11 @@
   function startMode(mode, id) {
     const u = currentUser();
     if (!u) return go("#/login");
+    if (mode === "test") {
+      const t = TESTS.find(x => x.id === id); if (!t) return;
+      if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді.`);
+      return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
+    }
     if (mode === "mock") {
       if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді. Шексіз сынама үшін Премиумға өт!`);
       return startTest(buildMock(u));
@@ -1098,10 +1117,30 @@
   function timeLeft(t) { return t.timeLimit ? Math.max(0, t.timeLimit - Math.floor((Date.now() - t.startedAt) / 1000)) : null; }
   const fmtTime = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 
+  const imgsHtml = list => (list || []).map(src => `<img class="q-img" src="${esc(src)}" alt="Сурет" loading="lazy">`).join("");
+  function contextHtml(q) {
+    if (!q.context && !q.contextImg) return "";
+    return `<details class="context-box" ${q._ctxOpen === false ? "" : "open"}><summary>${q.contextTitle ? q.contextTitle : "Контекст"}</summary>
+      <div class="ctx-body">${q.context || ""}${imgsHtml(q.contextImg)}</div></details>`;
+  }
+  // Сәйкестендіру: нұсқалар тізімі + әр элементке әріп таңдау
+  function matchHtml(q, sel, checked, interactive) {
+    sel = sel || [];
+    return `<div class="match-opts">${q.options.map((o, i) => `<div class="mo"><span class="letter">${LETTERS[i]}</span><span>${o}</span></div>`).join("")}</div>
+      <div class="match-items">${q.items.map((it, k) => {
+        const chosen = sel[k];
+        return `<div class="mi ${checked ? (chosen === it.answer ? "ok" : "bad") : ""}"><div class="mi-text"><b>${k + 1}.</b> ${it.text}</div>
+          <div class="mi-letters">${q.options.map((o, i) => {
+            const cls = checked ? (i === it.answer ? "ok" : i === chosen ? "bad" : "") : (i === chosen ? "sel" : "");
+            return interactive ? `<button class="ml ${cls}" data-act="pick-match" data-k="${k}" data-i="${i}" ${checked ? "disabled" : ""}>${LETTERS[i]}</button>` : `<span class="ml ${cls}">${LETTERS[i]}</span>`;
+          }).join("")}</div></div>`; }).join("")}</div>`;
+  }
+  const correctText = q => q.type === "match" ? q.items.map((it, k) => `${k + 1}–${LETTERS[it.answer]}`).join(", ") : q.correct.map(i => LETTERS[i]).join(", ");
+
   function renderTest() {
     const t = state.test, q = t.questions[t.cur], sel = t.answers[t.cur], multi = isMulti(q), checked = t.checked[t.cur];
-    const answered = t.answers.filter(a => a.length).length;
-    const typeTag = q.type === "context" ? `<span class="tag t-context">Контекстік тапсырма</span>` :
+    const answered = t.answers.filter((a, i) => hasAnswer(t.questions[i], a)).length;
+    const typeTag = q.type === "match" ? `<span class="tag t-context">Сәйкестендіру</span>` : q.type === "context" ? `<span class="tag t-context">Контекстік тапсырма</span>` :
       multi ? `<span class="tag t-multi">Бір немесе бірнеше дұрыс жауап</span>` : `<span class="tag t-single">Бір дұрыс жауап</span>`;
     const optClass = i => {
       if (!checked) return sel.includes(i) ? "sel" : "";
@@ -1121,23 +1160,24 @@
       </div>
       <div class="progress-line"><i style="width:${(t.instant ? t.checked.filter(Boolean).length : answered) / t.questions.length * 100}%"></i></div>
       <div class="q-card">
-        <div class="q-meta"><span class="tag">${t.cur + 1} / ${t.questions.length}</span>${typeTag}<span class="tag">${modTitle(q.module)}</span>
+        <div class="q-meta"><span class="tag">${t.cur + 1} / ${t.questions.length}</span>${typeTag}${q.module ? `<span class="tag">${modTitle(q.module)}</span>` : ""}
           ${checked ? `<span class="pts p${ptsCls(q, pts)}">${pts} балл</span>` : ""}</div>
-        ${q.context ? `<div class="context-box">${q.context}</div>` : ""}
+        ${contextHtml(q)}
         <div class="q-text">${q.q}</div>
-        <div class="opts">${q.options.map((o, i) => `
+        ${imgsHtml(q.img)}
+        ${q.type === "match" ? matchHtml(q, sel, checked, true) : `<div class="opts">${q.options.map((o, i) => `
           <button class="opt ${multi ? "multi" : "single"} ${optClass(i)}" data-act="pick" data-i="${i}" ${checked ? "disabled" : ""} aria-pressed="${sel.includes(i)}">
             <span class="letter">${LETTERS[i]}</span><span>${o}</span></button>`).join("")}
-        </div>
-        ${checked ? `<div class="explain">${q.explain ? `<b>Түсініктеме:</b> ${q.explain}<br>` : ""}<small class="muted">Дұрыс жауап: ${q.correct.map(i => LETTERS[i]).join(", ")}</small></div>` : ""}
+        </div>`}
+        ${checked ? `<div class="explain">${q.explain ? `<b>Түсініктеме:</b> ${q.explain}<br>` : ""}<small class="muted">Дұрыс жауап: ${correctText(q)}</small></div>` : ""}
         <div class="q-nav">
           <button class="btn btn-ghost" data-act="prev" ${t.cur === 0 ? "disabled" : ""}>← Алдыңғы</button>
-          ${t.instant && !checked ? `<button class="btn btn-primary" data-act="check" ${sel.length ? "" : "disabled"}>Тексеру</button>` :
+          ${t.instant && !checked ? `<button class="btn btn-primary" data-act="check" ${hasAnswer(q, sel) ? "" : "disabled"}>Тексеру</button>` :
             isLast ? `<button class="btn btn-cta" data-act="finish">Тестті аяқтау</button>` : `<button class="btn btn-primary" data-act="next">Келесі →</button>`}
         </div>
       </div>
       <div class="q-grid">${t.questions.map((qq, i) => {
-        let c = t.answers[i].length ? "done" : "";
+        let c = hasAnswer(qq, t.answers[i]) ? "done" : "";
         if (t.checked[i]) { const p = scorePoints(qq, t.answers[i]); c = ["r-bad", "r-part", "r-ok"][ptsCls(qq, p)]; }
         return `<button class="${c} ${i === t.cur ? "cur" : ""}" data-act="goto" data-i="${i}">${i + 1}</button>`; }).join("")}
       </div>
@@ -1199,10 +1239,11 @@
         const sel = t.answers[i], p = res.per[i];
         const cls = j => { const ok = q.correct.includes(j), s = sel.includes(j); return ok && s ? "ok" : s ? "bad" : ok ? "miss" : ""; };
         return `<div class="q-card review-item">
-          <div class="q-meta"><span class="tag">${i + 1}</span><span class="tag">${modTitle(q.module)}</span><span class="pts p${ptsCls(q, p)}">${p} балл</span>${sel.length ? "" : `<span class="tag">Жауап берілмеген</span>`}</div>
-          ${q.context ? `<div class="context-box">${q.context}</div>` : ""}
+          <div class="q-meta"><span class="tag">${i + 1}</span>${q.module ? `<span class="tag">${modTitle(q.module)}</span>` : ""}<span class="pts p${ptsCls(q, p)}">${p} балл</span>${hasAnswer(q, sel) ? "" : `<span class="tag">Жауап берілмеген</span>`}</div>
+          ${q.context && (i === 0 || t.questions[i - 1].context !== q.context) ? contextHtml(Object.assign({}, q, { _ctxOpen: false })) : ""}
           <div class="q-text">${q.q}</div>
-          <div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>
+          ${imgsHtml(q.img)}
+          ${q.type === "match" ? matchHtml(q, sel, true, false) : `<div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>`}
           ${q.explain ? `<div class="explain"><b>Түсініктеме:</b> ${q.explain}</div>` : ""}</div>`; }).join("")}
       <div class="card" style="margin-top:8px">${rulesHtml()}</div>
     </div>`;
@@ -1264,7 +1305,8 @@
       const run = () => window.Cloud.setBlocked(el.dataset.id, b).then(() => { toast(b ? "Оқушы бұғатталды" : "Бұғат алынды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)));
       b ? confirmModal("Бұғаттау", "Оқушы сайтқа кіре алмайды. Жалғастырасыз ба?", "Бұғаттау", run) : run();
     },
-    "start-mock": () => startMode("mock"),
+    "start-mock": () => go("#/app/mock"),
+    "start-test": el => startMode("test", el.dataset.id),
     "goto-mock": () => go("#/app/mock"),
     "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
     "scroll-to": el => { const t = document.getElementById(el.dataset.id); if (t) t.scrollIntoView({ behavior: "smooth" }); },
@@ -1282,6 +1324,14 @@
       t.answers[t.cur] = sel;
       renderTestKeepScroll();
     },
+    "pick-match": el => {
+      const t = state.test, q = t.questions[t.cur], k = +el.dataset.k, i = +el.dataset.i;
+      if (t.checked[t.cur]) return;
+      const sel = (t.answers[t.cur] || []).slice(); while (sel.length < q.items.length) sel.push(null);
+      sel[k] = sel[k] === i ? null : i;
+      t.answers[t.cur] = sel;
+      renderTestKeepScroll();
+    },
     check: () => {
       const t = state.test; t.checked[t.cur] = true;
       const p = scorePoints(t.questions[t.cur], t.answers[t.cur]);
@@ -1293,7 +1343,7 @@
     goto: el => { state.test.cur = +el.dataset.i; renderTest(); window.scrollTo(0, 0); },
     finish: () => {
       const t = state.test; if (!t) return;
-      const left = t.instant ? t.checked.filter(c => !c).length : t.answers.filter(a => !a.length).length;
+      const left = t.instant ? t.checked.filter(c => !c).length : t.answers.filter((a, i) => !hasAnswer(t.questions[i], a)).length;
       if (left) confirmModal("Тестті аяқтау", `${left} сұрақ${t.instant ? " тексерілмеген" : "қа жауап берілмеген"}. Аяқтасаң, олар 0 балл болып есептеледі.`, "Аяқтау", finishTest);
       else finishTest();
     }
@@ -1313,10 +1363,11 @@
     const idx = "abcdefgh".indexOf(e.key.toLowerCase());
     const n = "123456".indexOf(e.key);
     const i = idx >= 0 ? idx : n;
+    if (q.type === "match") { if (e.key === "ArrowRight") actions.next(); else if (e.key === "ArrowLeft") actions.prev(); return; }
     if (i >= 0 && i < q.options.length) actions.pick({ dataset: { i } });
     else if (e.key === "ArrowRight") actions.next();
     else if (e.key === "ArrowLeft") actions.prev();
-    else if (e.key === "Enter" && t.instant && !t.checked[t.cur] && t.answers[t.cur].length) actions.check();
+    else if (e.key === "Enter" && t.instant && !t.checked[t.cur] && hasAnswer(q, t.answers[t.cur])) actions.check();
   });
 
   // Бір күн ішінде бірінші кіргенде — streak хабарламасы
