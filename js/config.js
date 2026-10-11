@@ -67,7 +67,13 @@ window.CONFIG = {
   // «бір аккаунт — бір құрылғы» бақылауы. null болса — деректер тек әр оқушының браузерінде сақталады.
   // Firebase Console → Project settings → Your apps → Web app → firebaseConfig мәндерін осында көшіріңіз:
   // firebase: { apiKey: "...", authDomain: "...firebaseapp.com", projectId: "...", appId: "..." },
-  firebase: null,
+  firebase: {
+    enabled: false, // true — серверлік режим қосулы (firestore.rules жарияланғаннан кейін қосыңыз)
+    apiKey: "AIzaSyB0_q0rx5cMQtYi-U8x3-aBizpYLl26N4E",
+    authDomain: "bio9-d2fd9.firebaseapp.com",
+    projectId: "bio9-d2fd9",
+    appId: "1:658906788213:web:1c9eef583f158cfd62633c"
+  },
 
   // Ақылы тариф. enabled: false — барлық мүмкіндіктер тегін, тариф туралы ештеңе көрсетілмейді.
   // Ескерту: онлайн төлем қабылдау үшін сервер мен төлем жүйесі (Kaspi, т.б.) қосу қажет.

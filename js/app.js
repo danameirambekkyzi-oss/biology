@@ -9,7 +9,7 @@
   const MOCK_SIZE = CFG.test.mockSize, MOCK_OPTS = CFG.test.mockMinuteOptions, EXPRESS_SIZE = CFG.test.expressSize;
   const PREMIUM = !!CFG.premium.enabled, FREE_MOCKS = CFG.premium.freeMocks;
   const hasPremium = u => !PREMIUM || u.premium;
-  const CLOUD = !!(CFG.firebase && CFG.firebase.apiKey); // Firebase қосылған ба
+  const CLOUD = !!(CFG.firebase && CFG.firebase.apiKey && CFG.firebase.enabled !== false); // Firebase қосылған ба
   const GRADS = ["linear-gradient(135deg,#7C3AED,#EC4899)", "linear-gradient(135deg,#3B82F6,#22D3EE)", "linear-gradient(135deg,#EC4899,#F59E0B)", "linear-gradient(135deg,#10B981,#3B82F6)"];
   const DB_KEY = "bioubt_db_v1", SESSION_KEY = "bioubt_session", THEME_KEY = "bioubt_theme", DEMO_KEY = "bioubt_demo";
   const LETTERS = "ABCDEFGH";
