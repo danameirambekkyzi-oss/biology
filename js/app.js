@@ -9,6 +9,7 @@
   const MOCK_SIZE = CFG.test.mockSize, MOCK_OPTS = CFG.test.mockMinuteOptions, EXPRESS_SIZE = CFG.test.expressSize;
   const PREMIUM = !!CFG.premium.enabled, FREE_MOCKS = CFG.premium.freeMocks;
   const hasPremium = u => !PREMIUM || u.premium;
+  const CLOUD = !!(CFG.firebase && CFG.firebase.apiKey); // Firebase қосылған ба
   const GRADS = ["linear-gradient(135deg,#7C3AED,#EC4899)", "linear-gradient(135deg,#3B82F6,#22D3EE)", "linear-gradient(135deg,#EC4899,#F59E0B)", "linear-gradient(135deg,#10B981,#3B82F6)"];
   const DB_KEY = "bioubt_db_v1", SESSION_KEY = "bioubt_session", THEME_KEY = "bioubt_theme", DEMO_KEY = "bioubt_demo";
   const LETTERS = "ABCDEFGH";
@@ -42,8 +43,13 @@
       (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, id);
     } catch (e) { /* ignore */ }
   }
-  function currentUser() { const id = getSessionId() || memSession; return id && db.users[id] ? db.users[id] : null; }
-  function saveUser(u) { db.users[u.id] = u; saveDb(); }
+  let cloudUser = null;
+  function currentUser() {
+    if (CLOUD) return cloudUser;
+    const id = getSessionId() || memSession; return id && db.users[id] ? db.users[id] : null;
+  }
+  function saveUser(u) { if (CLOUD) return window.Cloud.save(u); db.users[u.id] = u; saveDb(); }
+  function fillUser(u) { return Object.assign(newUser(u.id, {}), u); }
 
   function newUser(id, data) {
     return Object.assign({
@@ -230,13 +236,16 @@
   function bestMock(u) { const m = u.history.filter(h => h.mode === "mock" && thisMonth(h)); return m.length ? Math.max(...m.map(h => h.scaled)) : null; }
   function leaderboard(u) {
     // Тек нақты тіркелген қолданушылар (осы құрылғыда)
-    const rows = Object.values(db.users).map(x => ({ name: shortName(x.name), pts: monthPoints(x), best: bestMock(x), me: x.id === u.id }));
+    const rows = CLOUD
+      ? ((state.lb && state.lb.rows) || []).filter(r => r.id !== u.id).map(r => ({ name: shortName(r.name), pts: r.pts || 0, best: r.best, me: false }))
+          .concat(u.role === "teacher" ? [] : [{ name: shortName(u.name), pts: monthPoints(u), best: bestMock(u), me: true }])
+      : Object.values(db.users).map(x => ({ name: shortName(x.name), pts: monthPoints(x), best: bestMock(x), me: x.id === u.id }));
     rows.sort((a, b) => b.pts - a.pts || (a.me ? 1 : -1));
     rows.forEach((r, i) => r.rank = i + 1);
     return rows;
   }
   function shortName(n) { const w = (n || "Түлек").trim().split(/\s+/); return w[0] + (w[1] ? " " + w[1][0] + "." : ""); }
-  const myRank = u => leaderboard(u).find(r => r.me).rank;
+  const myRank = u => { const r = leaderboard(u).find(x => x.me); return r ? r.rank : "—"; };
   const mistakesCount = u => Object.keys(u.mistakes).length;
 
   function notify(u, icon, text) {
@@ -283,7 +292,7 @@
     u.history = u.history.slice(-200);
     checkBadges(u, res, test);
     const rankAfter = myRank(u);
-    if (rankAfter < rankBefore) notify(u, "trophy", `Сіздің рейтингіңіз көтерілді! Енді ${rankAfter}-орындасыз.`);
+    if (typeof rankAfter === "number" && rankAfter < rankBefore) notify(u, "trophy", `Сіздің рейтингіңіз көтерілді! Енді ${rankAfter}-орындасыз.`);
     saveUser(u);
     return xp;
   }
@@ -486,6 +495,14 @@
     $("#login-form").addEventListener("submit", e => {
       e.preventDefault();
       const v = id.value.trim(), p = $("#l-pass").value, err = $("#l-err");
+      if (CLOUD) {
+        if (!looksLikeEmail(v) && !validPhone(v)) { showErr(err, "Телефон нөмірін +7 (7XX) XXX-XX-XX форматында немесе email енгізіңіз."); return; }
+        const btn = e.target.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = "Тексерілуде…";
+        window.Cloud.login(v, p, $("#l-rem").checked, looksLikeEmail(v) ? null : phoneDigits(v))
+          .then(u => { cloudUser = fillUser(u); toast(`Қош келдің, ${(u.name || "").split(" ")[0]}!`); afterLogin(cloudUser); })
+          .catch(ex => { showErr(err, ex.message); btn.disabled = false; btn.textContent = "Жүйеге кіру"; });
+        return;
+      }
       let user = null;
       if (looksLikeEmail(v)) user = Object.values(db.users).find(x => x.email && x.email.toLowerCase() === v.toLowerCase());
       else if (validPhone(v)) user = db.users[phoneDigits(v)];
@@ -515,6 +532,22 @@
 
   // Аккаунт осы құрылғыда сақталғандықтан, құпия сөзді нөмір мен аты-жөні арқылы осында жаңартуға болады
   function forgotModal() {
+    if (CLOUD) return openModal(`<h3>Құпия сөзді қалпына келтіру</h3>
+      <p class="muted">Тіркелген телефон нөміріңді немесе email-іңді енгіз — email-ге құпия сөзді жаңарту сілтемесі жіберіледі.</p>
+      <div class="field"><input class="input" id="f-id" inputmode="tel" placeholder="+7 (7XX) XXX-XX-XX немесе email"></div>
+      <div class="err hidden" id="f-err"></div>
+      ${AUTHOR.whatsapp ? `<p class="hint">Қиындық болса: <a target="_blank" rel="noopener" href="https://wa.me/${esc(AUTHOR.whatsapp.replace(/\D/g, ""))}">мұғалімге WhatsApp арқылы жаз</a></p>` : ""}
+      <div class="btn-row"><button class="btn btn-ghost" data-close>Жабу</button><button class="btn btn-primary" id="f-send">Жіберу</button></div>`,
+      (m, close) => {
+        const inp = $("#f-id", m); bindPhoneMask(inp, true);
+        $("#f-send", m).onclick = () => {
+          const v = inp.value.trim(), err = $("#f-err", m);
+          if (!looksLikeEmail(v) && !validPhone(v)) return showErr(err, "Нөмірді немесе email-ді дұрыс енгіз.");
+          window.Cloud.resetPassword(v, looksLikeEmail(v) ? null : phoneDigits(v))
+            .then(masked => { close(); toast(`Сілтеме жіберілді: ${masked}`); })
+            .catch(ex => showErr(err, ex.message));
+        };
+      });
     openModal(`<h3>Құпия сөзді қалпына келтіру</h3>
       <p class="muted">Тіркелген нөміріңді және аты-жөніңді (тіркелгендегідей) енгіз.</p>
       <div class="field"><input class="input" id="f-phone" inputmode="tel" placeholder="+7 (7XX) XXX-XX-XX"></div>
@@ -552,6 +585,9 @@
           <input class="input" id="r-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (7XX) XXX-XX-XX" value="${esc(r.phone)}">
           <div class="hint">Нөмір кіру үшін логин ретінде қолданылады</div>
         </div>
+        ${CLOUD ? `<div class="field"><label for="r-email">Email</label>
+          <input class="input" id="r-email" type="email" inputmode="email" autocomplete="email" placeholder="example@gmail.com" value="${esc(r.email || "")}">
+          <div class="hint">Құпия сөзді ұмытсаң, қалпына келтіру сілтемесі осы email-ге келеді</div></div>` : ""}
         <div class="field"><label for="r-pass">Құпия сөз құрастыру</label>
           <div class="input-wrap"><input class="input" id="r-pass" type="password" autocomplete="new-password" placeholder="Кемінде 6 таңба" value="${esc(r.pass)}">
           <button type="button" class="eye" data-act="eye" aria-label="Құпия сөзді көрсету">${ic("eye", 20)}</button></div>
@@ -563,6 +599,7 @@
       bindPhoneMask(ph);
       ph.addEventListener("input", () => r.phone = ph.value);
       $("#r-name").addEventListener("input", e => r.name = e.target.value);
+      if (CLOUD) $("#r-email").addEventListener("input", e => r.email = e.target.value.trim());
       const pass = $("#r-pass");
       const upd = () => { r.pass = pass.value; const s = passStrength(pass.value); $("#r-str").style.width = s.pct + "%"; $("#r-str").style.background = s.color; if (s.label) $("#r-str-l").textContent = "Сенімділігі: " + s.label; };
       pass.addEventListener("input", upd); upd();
@@ -570,7 +607,8 @@
         const err = $("#r-err");
         if (r.name.trim().length < 2) return showErr(err, "Аты-жөніңді енгіз.");
         if (!validPhone(r.phone)) return showErr(err, "Телефон нөмірін толық енгіз.");
-        if (db.users[phoneDigits(r.phone)]) return showErr(err, "Бұл нөмір бұрын тіркелген. «Кіру» бөліміне өт.");
+        if (CLOUD && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email || "")) return showErr(err, "Email-ді дұрыс енгіз.");
+        if (!CLOUD && db.users[phoneDigits(r.phone)]) return showErr(err, "Бұл нөмір бұрын тіркелген. «Кіру» бөліміне өт.");
         if (r.pass.length < 6) return showErr(err, "Құпия сөз кемінде 6 таңба болуы керек.");
         r.step = 2; renderRegister();
       };
@@ -612,6 +650,15 @@
       $("#r-back").onclick = () => { r.step = 2; renderRegister(); };
       $("#r-done").onclick = () => {
         if (!r.agree) return showErr($("#r-err"), "Жалғастыру үшін қолданушы келісімімен келісу қажет.");
+        if (CLOUD) {
+          const btn = $("#r-done"); btn.disabled = true; btn.textContent = "Тіркелуде…";
+          const data = newUser("", { name: r.name.trim(), phone: formatPhone(r.phone), email: r.email, target: r.target, city: r.city.trim(), school: r.school.trim(), month: r.month });
+          notify(data, "star", `${SITE}-ға қош келдің! Алғашқы тестіңді тапсырып, балл жина.`);
+          window.Cloud.register(data, r.pass, phoneDigits(r.phone))
+            .then(u => { cloudUser = fillUser(u); state.reg = null; toast("Тіркелу сәтті аяқталды!", "xp"); afterLogin(cloudUser); })
+            .catch(ex => { showErr($("#r-err"), ex.message); btn.disabled = false; btn.textContent = "Тіркелуді аяқтау"; });
+          return;
+        }
         const id = phoneDigits(r.phone);
         const user = newUser(id, { name: r.name.trim(), phone: formatPhone(r.phone), pass: hash(r.pass), target: r.target, city: r.city.trim(), school: r.school.trim(), month: r.month });
         notify(user, "star", `${SITE}-ға қош келдің! Алғашқы тестіңді тапсырып, балл жина.`);
@@ -644,7 +691,7 @@
       <div class="shell">
         <aside class="sidebar" id="sidebar">
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
-          ${NAV.map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
+          ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
             <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Шексіз ҰБТ сынамалары.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Тарифті жаңарту</button></div>`}
@@ -671,10 +718,26 @@
       </div>`;
   }
 
+  function verifySession() {
+    if (Date.now() - (state.verifiedAt || 0) < 60000) return;
+    state.verifiedAt = Date.now();
+    window.Cloud.verify().catch(e => { cloudUser = null; state.lb = null; stopTimer(); state.test = null; toast(e.message); go("#/login"); });
+  }
+  setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
+
   function renderApp(u, page, arg) {
     const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, leaderboard: pageLeaderboard, settings: pageSettings };
-    const fn = pages[page] || pageDashboard;
+    if (CLOUD && u.role === "teacher") pages.teacher = pageTeacher;
+    const fn = pages[page] || (CLOUD && u.role === "teacher" ? pageTeacher : pageDashboard);
     app.innerHTML = shell(u, page, fn(u, arg));
+    if (page === "teacher" || (!pages[page] && u.role === "teacher")) bindTeacher();
+    if (CLOUD) verifySession();
+    if (CLOUD && (page === "dashboard" || page === "leaderboard") && (!state.lb || Date.now() - state.lb.at > 60000) && !state.lbLoading) {
+      state.lbLoading = true;
+      window.Cloud.leaderboard().then(rows => { state.lb = { rows, at: Date.now() }; })
+        .catch(e => { console.warn(e); state.lb = { rows: [], at: Date.now() }; })
+        .finally(() => { state.lbLoading = false; if (location.hash.startsWith("#/app") && /dashboard|leaderboard|^#\/app$/.test(location.hash)) render(); });
+    }
     if (page === "settings") bindSettings(u);
   }
 
@@ -699,7 +762,8 @@
   }
 
   function lbWidget(u, full) {
-    const rows = leaderboard(u), me = rows.find(r => r.me);
+    const rows = leaderboard(u), me = rows.find(r => r.me) || { rank: 0 };
+    if (!rows.length) return `<p class="muted">Әзірге рейтингте ешкім жоқ.</p>`;
     const row = r => `<div class="lb-row ${r.me ? "me" : ""}"><span class="lb-rank ${r.rank <= 3 ? "top" + r.rank : ""}">${r.rank}</span>
       <span class="lb-name">${esc(r.me ? `Сен (${(u.name || "Түлек").split(" ")[0]})` : r.name)}</span>
       <span class="lb-xp">${fmtNum(r.pts)} балл</span><span class="lb-score">${r.best != null ? `ҰБТ: ${r.best}/50` : ""}</span></div>`;
@@ -869,6 +933,54 @@
       <p class="hint">Әр тестте алған баллың (әр сұраққа 0, 1 немесе 2 балл) айлық есепке қосылады. «ҰБТ» — осы айдағы толық сынамадағы ең жоғары нәтиже.</p>`;
   }
 
+  /* ---- Мұғалім кабинеті ---- */
+  function pageTeacher(u) {
+    const list = state.students;
+    if (!list) return `<h1 class="page-title">Мұғалім кабинеті</h1><div class="card empty"><p>Оқушылар тізімі жүктелуде…</p></div>`;
+    const q = (state.tq || "").toLowerCase();
+    const weekAgo = Date.now() - 7 * 864e5;
+    const rows = list.map(x => Object.assign(x, { _m: monthPoints(fillUser(x)), _best: bestMock(fillUser(x)) }))
+      .filter(x => !q || [x.name, x.phone, x.email, x.city, x.school].join(" ").toLowerCase().includes(q))
+      .sort((a, b) => b._m - a._m);
+    const active = list.filter(x => (x.lastSeen || 0) > weekAgo).length;
+    const leader = rows.find(x => x._m > 0);
+    return `<h1 class="page-title">Мұғалім кабинеті</h1><p class="page-sub">Барлық оқушылар, олардың баллдары мен құрылғылары.</p>
+      <div class="grid g-3" style="margin-bottom:16px">
+        <div class="card stat-card"><span class="muted">Барлық оқушы</span><b>${list.length}</b></div>
+        <div class="card stat-card"><span class="muted">Соңғы 7 күнде белсенді</span><b>${active}</b></div>
+        <div class="card stat-card"><span class="muted">Айдың көшбасшысы</span><b>${leader ? esc(leader.name) : "—"}</b>${leader ? `<small class="muted">${leader._m} балл</small>` : ""}</div>
+      </div>
+      <div class="card">
+        <div class="row-between" style="margin:0 0 12px"><input class="input" id="t-search" placeholder="Аты, нөмірі, мектебі бойынша іздеу" value="${esc(state.tq || "")}" style="max-width:360px">
+          <button class="btn btn-ghost btn-sm" data-act="t-reload">${ic("refresh", 16)} Жаңарту</button></div>
+        <div class="t-table-wrap"><table class="t-table"><thead><tr>
+          <th>#</th><th>Оқушы</th><th>Байланыс</th><th>Осы ай</th><th>ҰБТ (ай)</th><th>Тест</th><th>Соңғы кіру</th><th>Құрылғы</th><th></th></tr></thead><tbody>
+          ${rows.map((x, i) => `<tr class="${x.blocked ? "blocked" : ""}">
+            <td>${i + 1}</td>
+            <td><b>${esc(x.name)}</b><br><small class="muted">${esc([x.city, x.school].filter(Boolean).join(" · ") || "—")}</small></td>
+            <td>${esc(x.phone || "")}<br><small class="muted">${esc(x.email || "")}</small></td>
+            <td><b>${x._m}</b> балл</td>
+            <td>${x._best != null ? x._best + "/50" : "—"}</td>
+            <td>${(x.history || []).length}</td>
+            <td>${x.lastSeen ? fmtDate(x.lastSeen) : "—"}</td>
+            <td>${x.deviceId ? `${esc(x.device || "Бекітілген")}<br><small class="muted">${x.deviceAt ? fmtDate(x.deviceAt) : ""}</small>` : `<span class="muted">Бос</span>`}</td>
+            <td class="t-actions">
+              ${x.deviceId ? `<button class="btn btn-ghost btn-sm" data-act="t-device" data-id="${x.id}">Құрылғыны босату</button>` : ""}
+              <button class="btn btn-sm ${x.blocked ? "btn-green" : "btn-outline"}" data-act="t-block" data-id="${x.id}" data-b="${x.blocked ? 0 : 1}">${x.blocked ? "Ашу" : "Бұғаттау"}</button>
+            </td></tr>`).join("") || `<tr><td colspan="9" class="muted" style="text-align:center;padding:20px">Оқушы табылмады</td></tr>`}
+        </tbody></table></div>
+      </div>
+      <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Бұғаттау» — оқушы сайтқа кіре алмайды.</p>`;
+  }
+  function loadStudents() {
+    return window.Cloud.students().then(l => { state.students = l; }).catch(e => { toast(window.Cloud.errorText(e)); state.students = []; });
+  }
+  function bindTeacher() {
+    if (!state.students && !state.stLoading) { state.stLoading = true; loadStudents().finally(() => { state.stLoading = false; render(); }); }
+    const inp = $("#t-search");
+    if (inp) inp.addEventListener("input", () => { state.tq = inp.value; const pos = inp.selectionStart; render(); const n = $("#t-search"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } });
+  }
+
   /* ---- Settings ---- */
   function pageSettings(u) {
     const theme = store.get(THEME_KEY, "auto");
@@ -887,7 +999,7 @@
         <div class="grid" style="align-content:start">
           <form class="card" id="pass-form">
             <h3>Құпия сөзді ауыстыру</h3>
-            ${u.pass ? `<div class="field"><input class="input" type="password" name="old" placeholder="Қазіргі құпия сөз" autocomplete="current-password"></div>` : ""}
+            ${u.pass || CLOUD ? `<div class="field"><input class="input" type="password" name="old" placeholder="Қазіргі құпия сөз" autocomplete="current-password"></div>` : ""}
             <div class="field"><input class="input" type="password" name="new" placeholder="Жаңа құпия сөз" autocomplete="new-password"></div>
             <button class="btn btn-ghost btn-block">Жаңарту</button>
           </form>
@@ -915,6 +1027,10 @@
     ps.addEventListener("submit", e => {
       e.preventDefault();
       const f = ps.elements;
+      if (CLOUD) {
+        if (f.new.value.length < 6) return toast("Жаңа құпия сөз кемінде 6 таңба");
+        return window.Cloud.changePassword(f.old.value, f.new.value).then(() => { ps.reset(); toast("Құпия сөз жаңартылды"); }).catch(ex => toast(ex.message));
+      }
       if (u.pass && hash(f.old.value) !== u.pass) return toast("Қазіргі құпия сөз қате");
       if (f.new.value.length < 6) return toast("Жаңа құпия сөз кемінде 6 таңба");
       u.pass = hash(f.new.value); saveUser(u); ps.reset(); toast("Құпия сөз жаңартылды");
@@ -1131,12 +1247,23 @@
     upgrade: () => upgradeModal(),
     print: () => window.print(),
     theme: el => { store.set(THEME_KEY, el.dataset.v); applyTheme(); render(); },
-    logout: () => confirmModal("Шығу", "Аккаунттан шыққыңыз келе ме?", "Шығу", () => { store.del(SESSION_KEY); memSession = null; go("#/"); }),
+    logout: () => confirmModal("Шығу", "Аккаунттан шыққыңыз келе ме?", "Шығу", () => {
+      if (CLOUD) return window.Cloud.logout().finally(() => { cloudUser = null; state.lb = null; go("#/"); });
+      store.del(SESSION_KEY); memSession = null; go("#/");
+    }),
     reset: () => confirmModal("Прогресті тазалау", "Балл, статистика, қате сұрақтар тізімі және жетістіктер өшіріледі. Жалғастырасыз ба?", "Тазалау", () => {
       const u = currentUser();
       Object.assign(u, { xp: 0, mocks: 0, history: [], solved: {}, mistakes: {}, fixed: 0, activity: {}, modulesTried: {}, badges: [] });
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
+    "t-reload": () => { state.students = null; render(); },
+    "t-device": el => confirmModal("Құрылғыны босату", "Оқушы келесі жолы кірген құрылғыға аккаунт қайта бекітіледі. Жалғастырасыз ба?", "Босату", () =>
+      window.Cloud.resetDevice(el.dataset.id).then(() => { toast("Құрылғы босатылды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)))),
+    "t-block": el => {
+      const b = el.dataset.b === "1";
+      const run = () => window.Cloud.setBlocked(el.dataset.id, b).then(() => { toast(b ? "Оқушы бұғатталды" : "Бұғат алынды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)));
+      b ? confirmModal("Бұғаттау", "Оқушы сайтқа кіре алмайды. Жалғастырасыз ба?", "Бұғаттау", run) : run();
+    },
     "start-mock": () => startMode("mock"),
     "goto-mock": () => go("#/app/mock"),
     "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
@@ -1193,15 +1320,26 @@
   });
 
   // Бір күн ішінде бірінші кіргенде — streak хабарламасы
-  (function dailyGreeting() {
+  function dailyGreeting() {
     const u = currentUser(); if (!u) return;
     const k = "bioubt_greet_" + u.id + "_" + dayKey();
     if (store.get(k, false)) return;
     store.set(k, true);
     const s = streak(u);
     if (s >= 2) { notify(u, "flame", `${s} күн қатарынан! Тізбекті үзбе — бүгін де бір тест тапсыр.`); saveUser(u); }
-  })();
+  }
 
   applyTheme();
-  render();
+  if (!CLOUD) { dailyGreeting(); render(); }
+  else {
+    app.innerHTML = `<div class="boot"><span class="logo-mark">${ic("dna", 22)}</span><p>Жүктелуде…</p></div>`;
+    import("./cloud.js")
+      .then(() => window.Cloud.restore())
+      .then(({ user, error }) => {
+        cloudUser = user ? fillUser(user) : null;
+        if (error) toast(error);
+        dailyGreeting(); render();
+      })
+      .catch(e => { console.error(e); app.innerHTML = `<div class="boot"><p>Серверге қосылу мүмкін болмады. Интернетті тексеріп, бетті жаңартыңыз.</p></div>`; });
+  }
 })();
