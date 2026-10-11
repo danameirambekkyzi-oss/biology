@@ -199,7 +199,7 @@
     const k = q.correct.length, s = sel.length;
     if (!s) return 0;
     if (sel.some(i => !q.correct.includes(i))) return 0;
-    if (k === 1) return 1;              // бір дұрыс жауап — 1 балл (ресми ҰБТ)
+    if (k === 1) return q.type === "multi" ? 2 : 1; // бір дұрыс жауап — 1 балл; «бірнеше жауапты» түрде — 2 балл
     if (s === k) return 2;
     if (s === k - 1) return 1;
     return 0;
