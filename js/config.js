@@ -68,7 +68,7 @@ window.CONFIG = {
   // Firebase Console → Project settings → Your apps → Web app → firebaseConfig мәндерін осында көшіріңіз:
   // firebase: { apiKey: "...", authDomain: "...firebaseapp.com", projectId: "...", appId: "..." },
   firebase: {
-    enabled: false, // true — серверлік режим қосулы (firestore.rules жарияланғаннан кейін қосыңыз)
+    enabled: true, // false — серверлік режимді уақытша өшіру
     apiKey: "AIzaSyB0_q0rx5cMQtYi-U8x3-aBizpYLl26N4E",
     authDomain: "bio9-d2fd9.firebaseapp.com",
     projectId: "bio9-d2fd9",
