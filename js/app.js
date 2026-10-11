@@ -1398,7 +1398,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><span class="logo-mark">${ic("dna", 22)}</span><p>Жүктелуде…</p></div>`;
-    import("./cloud.js")
+    import("./cloud.js?v=202610112310")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
