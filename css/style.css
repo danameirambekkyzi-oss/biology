@@ -531,3 +531,6 @@ a.chip.active { color: var(--purple); }
 .t-table tr.blocked td { opacity: .55; }
 .t-actions { white-space: nowrap; }
 .t-actions .btn + .btn { margin-left: 6px; }
+.om-letter { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border); display: grid; place-items: center; font-weight: 800; font-size: 12.5px; flex-shrink: 0; }
+.opt-mini.ok .om-letter { background: var(--green); border-color: var(--green); color: #fff; }
+.om-check { margin-left: auto; color: var(--green); display: grid; }

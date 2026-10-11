@@ -355,14 +355,14 @@
         </div>
         <div class="hero-visual">
           <div class="hero-card">
-            <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Жасушалық биология</span></div>
-            <div class="q-mini">Прокариот жасушаларға тән белгілер:</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Қалыптасқан ядросы жоқ</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Сақина тәрізді ДНҚ</div>
-            <div class="opt-mini"><span class="om-box"></span>Митохондриялары бар</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>70S рибосомалар</div>
+            <div class="q-meta"><span class="tag t-single">Бір дұрыс жауап</span><span class="tag">Ботаника</span></div>
+            <div class="q-mini">Саңырауқұлақтың қоректік қор заты:</div>
+            <div class="opt-mini ok"><span class="om-letter">A</span>Гликоген<span class="om-check">${ic("check", 16)}</span></div>
+            <div class="opt-mini"><span class="om-letter">B</span>Хитин</div>
+            <div class="opt-mini"><span class="om-letter">C</span>Муреин</div>
+            <div class="opt-mini"><span class="om-letter">D</span>Целлюлоза</div>
           </div>
-          <div class="float-badge fb2"><span class="fb-dot"></span>2 балл</div>
+          <div class="float-badge fb2"><span class="fb-dot"></span>1 балл</div>
         </div>
       </div></section>
 
