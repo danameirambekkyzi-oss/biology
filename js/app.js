@@ -5,11 +5,16 @@
   const Q = window.QUESTIONS;
   const MODULES = window.MODULES;
   const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
-  const MOCK_SIZE = 45, MOCK_MIN = 50, EXPRESS_SIZE = 10, DEMO_SIZE = 10, FREE_MOCKS = 2;
+  const CFG = window.CONFIG, SITE = CFG.siteName, AUTHOR = CFG.author || {};
+  const MOCK_SIZE = CFG.test.mockSize, MOCK_MIN = CFG.test.mockMinutes, EXPRESS_SIZE = CFG.test.expressSize;
+  const DEMO_SIZE = CFG.test.demoSize, DEMO_MIN = CFG.test.demoMinutes;
+  const PREMIUM = !!CFG.premium.enabled, FREE_MOCKS = CFG.premium.freeMocks;
+  const hasPremium = u => !PREMIUM || u.premium;
+  const GRADS = ["linear-gradient(135deg,#7C3AED,#EC4899)", "linear-gradient(135deg,#3B82F6,#22D3EE)", "linear-gradient(135deg,#EC4899,#F59E0B)", "linear-gradient(135deg,#10B981,#3B82F6)"];
   const DB_KEY = "bioubt_db_v1", SESSION_KEY = "bioubt_session", THEME_KEY = "bioubt_theme", DEMO_KEY = "bioubt_demo";
   const LETTERS = "ABCDEFGH";
   const DAYS = ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сн"];
-  const MONTHS = ["Қаңтар", "Наурыз", "Мамыр–Маусым", "Тамыз"];
+  const MONTHS = CFG.months;
   const CHEERS = ["Бүгін де бір қадам алға! 🚀", "50/50 — жақын арада! 💪", "Әр қате — жаңа білім 🌱", "Сен міндетті түрде жетесің! ✨", "Бүгінгі мақсат: 1 тест 🎯"];
 
   const app = document.getElementById("app");
@@ -179,12 +184,13 @@
     return { total: qs.length, solved: qs.filter(q => u.solved[q.id]).length, mistakes: qs.filter(q => u.mistakes[q.id]).length };
   }
   function leaderboard(u) {
-    const rows = window.PEERS.map(p => Object.assign({}, p));
-    rows.push({ name: u.name || "Сен", xp: u.xp, score: avgScore(u), me: true });
+    // Тек нақты тіркелген қолданушылар (осы құрылғыда)
+    const rows = Object.values(db.users).map(x => ({ name: shortName(x.name), xp: x.xp, score: avgScore(x), me: x.id === u.id }));
     rows.sort((a, b) => b.xp - a.xp || (a.me ? 1 : -1));
     rows.forEach((r, i) => r.rank = i + 1);
     return rows;
   }
+  function shortName(n) { const w = (n || "Түлек").trim().split(/\s+/); return w[0] + (w[1] ? " " + w[1][0] + "." : ""); }
   const myRank = u => leaderboard(u).find(r => r.me).rank;
   const mistakesCount = u => Object.keys(u.mistakes).length;
 
@@ -272,7 +278,7 @@
     ];
     app.innerHTML = `
       <header class="topbar"><div class="container">
-        <a class="logo" href="#/"><span class="logo-mark">🧬</span>BioҰБТ</a>
+        <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
         <div class="topbar-actions">
           ${u ? `<a class="btn btn-primary" href="#/app">Кабинетке өту</a>` :
             `<a class="btn btn-outline" href="#/login">Кіру</a><a class="btn btn-primary" href="#/register">Тіркелу</a>`}
@@ -281,21 +287,21 @@
 
       <section class="hero"><div class="container hero-grid">
         <div>
-          <span class="pill">🔥 2027 ҰБТ форматы бойынша жаңартылды</span>
-          <h1>Биологиядан ҰБТ-да <span class="grad-text">50/50</span> жинағың келе ме?</h1>
-          <p class="lead">Тақырыптық және ҰБТ форматындағы 1000+ өзекті сұрақтар жинағы. Қатеңді бірге талдаймыз!</p>
+          ${CFG.hero.pill ? `<span class="pill">${esc(CFG.hero.pill)}</span>` : ""}
+          <h1>${CFG.hero.title}</h1>
+          <p class="lead">${esc(CFG.hero.lead.replace("{count}", Q.length))}</p>
           <div class="hero-cta">
             <a class="btn btn-cta btn-lg" href="#/demo">Тегін Демо-тестті бастау →</a>
             <a class="btn btn-ghost btn-lg" href="#/register">Тіркелу — 30 секунд</a>
           </div>
           <div class="hero-stats">
-            <div><b>1000+</b><span>сұрақ</span></div>
-            <div><b>12 400</b><span>түлек дайындалуда</span></div>
-            <div><b>+11</b><span>балл орташа өсім</span></div>
+            <div><b>${Q.length}</b><span>сұрақ</span></div>
+            <div><b>${MODULES.length}</b><span>тарау</span></div>
+            <div><b>${MOCK_SIZE}</b><span>сұрақтық ҰБТ сынамасы</span></div>
           </div>
         </div>
         <div class="hero-visual">
-          <div class="float-badge fb1">💎 +20 XP</div>
+          <div class="float-badge fb1">💎 +10 XP</div>
           <div class="hero-card">
             <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Цитология</span></div>
             <div class="q-mini">Прокариот жасушаларға тән белгілер:</div>
@@ -304,40 +310,51 @@
             <div class="opt-mini">◻️ Митохондриялары бар</div>
             <div class="opt-mini ok">✅ 70S рибосомалар</div>
           </div>
-          <div class="float-badge fb2">🔥 7 күн қатарынан</div>
+          <div class="float-badge fb2">✅ 2 балл</div>
         </div>
       </div></section>
 
       <section class="section"><div class="container">
-        <div class="section-head"><h2>Неге дәл <span class="grad-text">BioҰБТ</span>?</h2><p class="muted">Тек жаттау емес — түсініп, нәтижеге жету.</p></div>
+        <div class="section-head"><h2>Неге дәл <span class="grad-text">${esc(SITE)}</span>?</h2><p class="muted">Тек жаттау емес — түсініп, нәтижеге жету.</p></div>
         <div class="features">${feats.map(f => `
           <div class="feature"><div class="ico" style="background:${f.bg}">${f.ico}</div><h3>${f.t}</h3><p>${f.d}</p></div>`).join("")}
         </div>
       </div></section>
 
+      ${CFG.testimonials.length ? `
       <section class="section" style="padding-top:0"><div class="container">
         <div class="section-head"><h2>Түлектер не дейді? 💬</h2><p class="muted">Жоғары балл жинаған оқушылардың өз сөздері</p></div>
-        <div class="reviews">${window.TESTIMONIALS.map(t => `
+        <div class="reviews">${CFG.testimonials.map((t, k) => `
           <div class="review">
             <div class="review-head">
-              <div class="avatar" style="background:${t.grad}">${initials(t.name)}</div>
-              <div><b>${esc(t.name)}</b><br><small class="muted">${esc(t.city)}</small></div>
-              <span class="score">${t.score}</span>
+              <div class="avatar" style="background:${GRADS[k % GRADS.length]}">${initials(t.name)}</div>
+              <div><b>${esc(t.name)}</b><br><small class="muted">${esc(t.city || "")}</small></div>
+              ${t.score ? `<span class="score">${esc(t.score)}</span>` : ""}
             </div>
             <div class="stars">★★★★★</div>
             <p>${esc(t.text)}</p>
           </div>`).join("")}
         </div>
-      </div></section>
+      </div></section>` : ""}
 
       <section class="section" style="padding-top:0">
         <div class="cta-band container">
-          <h2>10 сұрақ. 10 минут. Деңгейіңді біл! ⚡</h2>
+          <h2>${DEMO_SIZE} сұрақ. ${DEMO_MIN} минут. Деңгейіңді біл! ⚡</h2>
           <p style="opacity:.9;margin:0 0 20px">Тіркелусіз тегін демо-тест тапсырып көр.</p>
           <a class="btn btn-cta btn-lg" href="#/demo">Тегін сынап көр</a>
         </div>
       </section>
-      <footer class="footer">© ${new Date().getFullYear()} BioҰБТ · Биологиядан ҰБТ-ға дайындық платформасы</footer>`;
+      ${contactsHtml() ? `<section class="section" style="padding-top:0"><div class="container"><div class="card" style="text-align:center">
+        <h3>👩‍🏫 ${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
+      <footer class="footer">© ${new Date().getFullYear()} ${esc(SITE)} · Биологиядан ҰБТ-ға дайындық${AUTHOR.name ? " · " + esc(AUTHOR.name) : ""}</footer>`;
+  }
+
+  function contactsHtml() {
+    const links = [];
+    if (AUTHOR.whatsapp) links.push(`<a class="btn btn-green" target="_blank" rel="noopener" href="https://wa.me/${esc(AUTHOR.whatsapp.replace(/\D/g, ""))}">💬 WhatsApp</a>`);
+    if (AUTHOR.telegram) links.push(`<a class="btn btn-tg" style="width:auto" target="_blank" rel="noopener" href="https://t.me/${esc(AUTHOR.telegram.replace(/^@/, ""))}">✈️ Telegram</a>`);
+    if (AUTHOR.instagram) links.push(`<a class="btn btn-cta" target="_blank" rel="noopener" href="https://instagram.com/${esc(AUTHOR.instagram.replace(/^@/, ""))}">📸 Instagram</a>`);
+    return links.length ? `<div class="hero-cta" style="justify-content:center">${links.join("")}</div>` : "";
   }
 
   /* ================= Auth ================= */
@@ -345,18 +362,12 @@
     const isLogin = state.authTab === "login";
     app.innerHTML = `
       <div class="auth-wrap"><div class="auth-card">
-        <a class="logo" href="#/"><span class="logo-mark">🧬</span>BioҰБТ</a>
+        <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
         <div class="tabs" role="tablist">
           <button class="tab ${isLogin ? "active" : ""}" data-act="tab-login">Кіру</button>
           <button class="tab ${!isLogin ? "active" : ""}" data-act="tab-register">Тіркелу</button>
         </div>
-        <div class="social-row">
-          <button class="btn btn-social" data-act="social" data-p="google">
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
-            Google арқылы кіру</button>
-          <button class="btn btn-tg" data-act="social" data-p="telegram">✈️ Telegram арқылы кіру</button>
-        </div>
-        <div class="divider">немесе</div>
+
         <div id="auth-body"></div>
       </div></div>`;
     if (isLogin) renderLoginForm(); else renderRegister();
@@ -390,8 +401,7 @@
       else if (validPhone(v)) user = db.users[phoneDigits(v)];
       else { showErr(err, "Телефон нөмірін +7 (7XX) XXX-XX-XX форматында енгізіңіз."); id.classList.add("invalid"); return; }
       if (!user) { showErr(err, "Мұндай аккаунт табылмады. Алдымен тіркеліңіз."); return; }
-      if (!user.pass) { showErr(err, "Бұл аккаунт Google/Telegram арқылы ашылған — жоғарыдағы батырманы басыңыз."); return; }
-      if (user.pass !== hash(p)) { showErr(err, "Құпия сөз қате."); $("#l-pass").classList.add("invalid"); return; }
+            if (user.pass !== hash(p)) { showErr(err, "Құпия сөз қате."); $("#l-pass").classList.add("invalid"); return; }
       setSession(user.id, $("#l-rem").checked);
       toast(`Қош келдің, ${user.name.split(" ")[0]}! 👋`);
       afterLogin(user);
@@ -413,69 +423,34 @@
     go("#/app");
   }
 
-  function socialLogin(provider) {
-    const id = provider + ":demo";
-    toast(provider === "google" ? "Google аккаунты тексерілуде…" : "Telegram бот арқылы растау…");
-    setTimeout(() => {
-      let user = db.users[id];
-      const isNew = !user;
-      if (!user) {
-        user = newUser(id, { name: provider === "google" ? "Google қолданушы" : "Telegram қолданушы", email: provider === "google" ? "student@gmail.com" : "" });
-        notify(user, "🎉", "BioҰБТ-ға қош келдің! Алғашқы тестіңді тапсырып, XP жина.");
-        saveUser(user);
-      }
-      setSession(id, true);
-      if (isNew) {
-        openModal(`<h3>Танысайық! 👋</h3><p class="muted">Сені қалай атайық?</p>
-          <div class="field"><input class="input" id="s-name" placeholder="Мысалы: Аружан Нұрланова"></div>
-          <div class="btn-row"><button class="btn btn-ghost" id="s-skip">Өткізу</button><button class="btn btn-primary" id="s-ok">Сақтау</button></div>`,
-          (m, close) => {
-            const done = () => { close(); afterLogin(user); };
-            $("#s-skip", m).onclick = done;
-            $("#s-ok", m).onclick = () => { const n = $("#s-name", m).value.trim(); if (n) { user.name = n; saveUser(user); } done(); };
-          });
-      } else afterLogin(user);
-    }, 700);
-  }
-
+  // Аккаунт осы құрылғыда сақталғандықтан, құпия сөзді нөмір мен аты-жөні арқылы осында жаңартуға болады
   function forgotModal() {
     openModal(`<h3>Құпия сөзді қалпына келтіру</h3>
-      <p class="muted">Нөміріңді енгіз — қалпына келтіру кодын жібереміз.</p>
+      <p class="muted">Тіркелген нөміріңді және аты-жөніңді (тіркелгендегідей) енгіз.</p>
       <div class="field"><input class="input" id="f-phone" inputmode="tel" placeholder="+7 (7XX) XXX-XX-XX"></div>
-      <div class="chips" style="margin-bottom:14px"><button class="chip active" data-ch="WhatsApp">💬 WhatsApp</button><button class="chip" data-ch="SMS">✉️ SMS</button></div>
-      <div id="f-step2" class="hidden">
-        <div class="field"><label>Код</label><input class="input" id="f-code" inputmode="numeric" maxlength="4" placeholder="4 таңбалы код"></div>
-        <div class="field"><label>Жаңа құпия сөз</label><input class="input" id="f-new" type="password" placeholder="Кемінде 6 таңба"></div>
-      </div>
+      <div class="field"><input class="input" id="f-name" placeholder="Аты-жөні"></div>
+      <div class="field"><input class="input" id="f-new" type="password" placeholder="Жаңа құпия сөз (кемінде 6 таңба)"></div>
       <div class="err hidden" id="f-err"></div>
-      <div class="btn-row"><button class="btn btn-ghost" data-close>Жабу</button><button class="btn btn-primary" id="f-send">Жіберу</button></div>`,
+      ${AUTHOR.whatsapp ? `<p class="hint">Қиындық болса: <a target="_blank" rel="noopener" href="https://wa.me/${esc(AUTHOR.whatsapp.replace(/\D/g, ""))}">мұғалімге WhatsApp арқылы жаз</a></p>` : ""}
+      <div class="btn-row"><button class="btn btn-ghost" data-close>Жабу</button><button class="btn btn-primary" id="f-send">Сақтау</button></div>`,
       (m, close) => {
-        let channel = "WhatsApp", code = null;
         bindPhoneMask($("#f-phone", m));
-        $$(".chip", m).forEach(c => c.onclick = () => { $$(".chip", m).forEach(x => x.classList.remove("active")); c.classList.add("active"); channel = c.dataset.ch; });
         $("#f-send", m).onclick = () => {
           const ph = $("#f-phone", m).value, err = $("#f-err", m);
-          if (!code) {
-            if (!validPhone(ph)) return showErr(err, "Нөмірді дұрыс енгізіңіз.");
-            if (!db.users[phoneDigits(ph)]) return showErr(err, "Бұл нөмір тіркелмеген.");
-            code = String(Math.floor(1000 + Math.random() * 9000));
-            err.classList.add("hidden");
-            $("#f-step2", m).classList.remove("hidden");
-            $("#f-send", m).textContent = "Сақтау";
-            toast(`${channel}: қалпына келтіру коды — ${code} (демо)`);
-          } else {
-            if ($("#f-code", m).value !== code) return showErr(err, "Код қате.");
-            if ($("#f-new", m).value.length < 6) return showErr(err, "Құпия сөз кемінде 6 таңба болуы керек.");
-            const u = db.users[phoneDigits(ph)]; u.pass = hash($("#f-new", m).value); saveUser(u);
-            close(); toast("✅ Құпия сөз жаңартылды. Енді кіре аласың!");
-          }
+          const norm = v => v.trim().toLowerCase().replace(/\s+/g, " ");
+          const u = validPhone(ph) && db.users[phoneDigits(ph)];
+          if (!u) return showErr(err, "Бұл нөмір осы құрылғыда тіркелмеген.");
+          if (norm(u.name) !== norm($("#f-name", m).value)) return showErr(err, "Аты-жөні сәйкес келмейді.");
+          if ($("#f-new", m).value.length < 6) return showErr(err, "Құпия сөз кемінде 6 таңба болуы керек.");
+          u.pass = hash($("#f-new", m).value); saveUser(u);
+          close(); toast("✅ Құпия сөз жаңартылды. Енді кіре аласың!");
         };
       });
   }
 
   /* ---- Registration (3 steps) ---- */
   function renderRegister() {
-    if (!state.reg) state.reg = { step: 1, name: "", phone: "", code: null, verified: false, pass: "", target: 45, city: "", school: "", month: MONTHS[2], agree: false };
+    if (!state.reg) state.reg = { step: 1, name: "", phone: "", pass: "", target: 45, city: "", school: "", month: MONTHS[2], agree: false };
     const r = state.reg, body = $("#auth-body");
     const steps = `<div class="steps">${[1, 2, 3].map(i => `<i class="${i <= r.step ? "on" : ""}"></i>`).join("")}</div>`;
 
@@ -484,13 +459,8 @@
         <div class="step-title">1-қадам: Негізгі мәліметтер</div>
         <div class="field"><label for="r-name">Аты-жөні</label><input class="input" id="r-name" autocomplete="name" placeholder="Мысалы: Аружан Нұрланова" value="${esc(r.name)}"></div>
         <div class="field"><label for="r-phone">Телефон нөмірі</label>
-          <div class="input-wrap"><input class="input" id="r-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (7XX) XXX-XX-XX" value="${esc(r.phone)}" ${r.verified ? "disabled" : ""}>
-          <button class="btn btn-primary ${validPhone(r.phone) && !r.verified ? "" : "hidden"}" id="r-send" type="button">Код жіберу</button></div>
-          <div id="otp-box" class="${r.code && !r.verified ? "" : "hidden"}">
-            <p class="hint">Нөміріңе келген 4 таңбалы SMS-кодты енгіз</p>
-            <div class="otp">${[0, 1, 2, 3].map(i => `<input inputmode="numeric" maxlength="1" data-otp="${i}" aria-label="Код ${i + 1}">`).join("")}</div>
-          </div>
-          ${r.verified ? `<div class="verified">✅ Нөмір расталды</div>` : ""}
+          <input class="input" id="r-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (7XX) XXX-XX-XX" value="${esc(r.phone)}">
+          <div class="hint">Нөмір кіру үшін логин ретінде қолданылады</div>
         </div>
         <div class="field"><label for="r-pass">Құпия сөз құрастыру</label>
           <div class="input-wrap"><input class="input" id="r-pass" type="password" autocomplete="new-password" placeholder="Кемінде 6 таңба" value="${esc(r.pass)}">
@@ -499,31 +469,10 @@
         </div>
         <div class="err hidden" id="r-err"></div>
         <button class="btn btn-primary btn-lg btn-block" id="r-next">Әрі қарай →</button>`;
-      const ph = $("#r-phone"), send = $("#r-send");
+      const ph = $("#r-phone");
       bindPhoneMask(ph);
-      ph.addEventListener("input", () => { r.phone = ph.value; r.code = null; send.classList.toggle("hidden", !validPhone(ph.value)); $("#otp-box").classList.add("hidden"); });
+      ph.addEventListener("input", () => r.phone = ph.value);
       $("#r-name").addEventListener("input", e => r.name = e.target.value);
-      send.onclick = () => {
-        if (db.users[phoneDigits(r.phone)]) return showErr($("#r-err"), "Бұл нөмір бұрын тіркелген. «Кіру» бөліміне өт.");
-        r.code = String(Math.floor(1000 + Math.random() * 9000));
-        toast(`📩 SMS-код: ${r.code} (демо режим)`);
-        $("#otp-box").classList.remove("hidden");
-        send.textContent = "Қайта жіберу";
-        $("[data-otp='0']").focus();
-      };
-      const otps = $$("[data-otp]");
-      otps.forEach((inp, i) => {
-        inp.addEventListener("input", () => {
-          inp.value = inp.value.replace(/\D/g, "").slice(0, 1);
-          if (inp.value && otps[i + 1]) otps[i + 1].focus();
-          const val = otps.map(o => o.value).join("");
-          if (val.length === 4) {
-            if (val === r.code) { r.verified = true; toast("✅ Нөмір расталды!"); renderRegister(); }
-            else { otps.forEach(o => { o.value = ""; o.classList.add("invalid"); }); otps[0].focus(); toast("Код қате, қайтадан енгіз"); }
-          }
-        });
-        inp.addEventListener("keydown", e => { if (e.key === "Backspace" && !inp.value && otps[i - 1]) otps[i - 1].focus(); });
-      });
       const pass = $("#r-pass");
       const upd = () => { r.pass = pass.value; const s = passStrength(pass.value); $("#r-str").style.width = s.pct + "%"; $("#r-str").style.background = s.color; if (s.label) $("#r-str-l").textContent = "Сенімділігі: " + s.label; };
       pass.addEventListener("input", upd); upd();
@@ -531,7 +480,7 @@
         const err = $("#r-err");
         if (r.name.trim().length < 2) return showErr(err, "Аты-жөніңді енгіз.");
         if (!validPhone(r.phone)) return showErr(err, "Телефон нөмірін толық енгіз.");
-        if (!r.verified) return showErr(err, "Нөмірді SMS-код арқылы раста.");
+        if (db.users[phoneDigits(r.phone)]) return showErr(err, "Бұл нөмір бұрын тіркелген. «Кіру» бөліміне өт.");
         if (r.pass.length < 6) return showErr(err, "Құпия сөз кемінде 6 таңба болуы керек.");
         r.step = 2; renderRegister();
       };
@@ -545,7 +494,7 @@
           <input type="range" id="r-target" min="10" max="50" step="1" value="${r.target}">
         </div>
         <div class="field"><label for="r-city">Қала</label><input class="input" id="r-city" list="cities" placeholder="Тізімнен таңда немесе жаз" value="${esc(r.city)}">
-          <datalist id="cities">${window.CITIES.map(c => `<option value="${c}">`).join("")}</datalist></div>
+          <datalist id="cities">${CFG.cities.map(c => `<option value="${c}">`).join("")}</datalist></div>
         <div class="field"><label for="r-school">Мектеп</label><input class="input" id="r-school" placeholder="Мысалы: №25 мектеп-гимназия" value="${esc(r.school)}"></div>
         <div class="field"><label>ҰБТ тапсыратын айың</label>
           <div class="chips">${MONTHS.map(m => `<button type="button" class="chip ${m === r.month ? "active" : ""}" data-month="${m}">${m}</button>`).join("")}</div></div>
@@ -575,8 +524,7 @@
         if (!r.agree) return showErr($("#r-err"), "Жалғастыру үшін қолданушы келісімімен келісу қажет.");
         const id = phoneDigits(r.phone);
         const user = newUser(id, { name: r.name.trim(), phone: formatPhone(r.phone), pass: hash(r.pass), target: r.target, city: r.city.trim(), school: r.school.trim(), month: r.month });
-        notify(user, "🎉", "BioҰБТ-ға қош келдің! Алғашқы тестіңді тапсырып, XP жина.");
-        notify(user, "🌿", "Жаңа ботаника тесті қосылды — «Тақырыптық тесттер» бөлімін қара!");
+        notify(user, "🎉", `${SITE}-ға қош келдің! Алғашқы тестіңді тапсырып, XP жина.`);
         saveUser(user);
         setSession(id, true);
         state.reg = null;
@@ -604,10 +552,10 @@
     return `
       <div class="shell">
         <aside class="sidebar" id="sidebar">
-          <a class="logo" href="#/"><span class="logo-mark">🧬</span>BioҰБТ</a>
+          <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
           ${NAV.map(n => `<a class="nav-item ${active === n.id || (active === "topic" && n.id === "topics") ? "active" : ""}" href="#/app/${n.id}">
             <span class="ni">${n.ico}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
-          ${u.premium ? "" : `<div class="sidebar-promo"><b>⭐ Премиум</b>Шексіз ҰБТ сынамалары мен барлық конспектілер.<br>
+          ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>⭐ Премиум</b>Шексіз ҰБТ сынамалары мен барлық конспектілер.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Тарифті жаңарту</button></div>`}
         </aside>
         <div class="backdrop" id="backdrop" data-act="close-menu"></div>
@@ -621,7 +569,7 @@
             <div class="header-right">
               <span class="stat-pill" title="Күн қатарынан">🔥 ${streak(u)}<span class="lbl">&nbsp;күн</span></span>
               <span class="stat-pill xp-pill" title="Тәжірибе ұпайлары">💎 ${fmtNum(u.xp)}<span class="lbl">&nbsp;XP</span></span>
-              ${u.premium ? `<span class="tariff pro">⭐ Премиум рұқсат (ҰБТ-ға дейін активті)</span>` :
+              ${!PREMIUM ? "" : u.premium ? `<span class="tariff pro">⭐ Премиум рұқсат (ҰБТ-ға дейін активті)</span>` :
                 `<span class="tariff free">Тегін режим</span><button class="btn btn-cta btn-upgrade" data-act="upgrade">⭐<span class="up-txt">&nbsp;Тарифті жаңарту</span></button>`}
               <button class="bell" data-act="bell" aria-label="Хабарламалар">🔔${unread ? `<span class="dot"></span>` : ""}</button>
             </div>
@@ -716,7 +664,7 @@
       <div class="grid g-4">${MODULES.map(m => moduleCard(u, m)).join("")}</div>
 
       <div class="grid g-2" style="margin-top:26px">
-        <div class="card"><h3>🏆 Апталық үздік 5 түлек</h3>${lbWidget(u)}
+        <div class="card"><h3>🏆 Үздік 5 түлек</h3>${lbWidget(u)}
           <a class="btn btn-ghost btn-block" style="margin-top:12px" href="#/app/leaderboard">Толық рейтингті көру</a></div>
         <div class="card"><h3>🏅 Жетістік белгілері <span class="muted" style="font-weight:600">${u.badges.length}/${window.BADGES.length}</span></h3>${badgesHtml(u)}</div>
       </div>`;
@@ -770,13 +718,13 @@
 
   function pageMock(u) {
     const mocks = u.history.filter(h => h.mode === "mock").slice(-8).reverse();
-    const left = u.premium ? "∞" : Math.max(0, FREE_MOCKS - u.mocks);
+    const left = hasPremium(u) ? "" : Math.max(0, FREE_MOCKS - u.mocks);
     return `<h1 class="page-title">📝 Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ жағдайын модельдеу: таймер, жаңа формат, нәтиже мен толық талдау.</p>
       <div class="grid g-2">
         <div class="card">
           <h3>🎯 ${Math.min(MOCK_SIZE, Q.length)} сұрақ · ${MOCK_MIN} минут</h3>
           <ul class="muted" style="padding-left:18px"><li>Бір және бірнеше дұрыс жауабы бар сұрақтар</li><li>Контекстік тапсырмалар</li><li>Уақыт біткенде тест автоматты түрде аяқталады</li><li>Нәтиже 50 балдық шкалаға келтіріледі</li></ul>
-          <p>Қалған тегін әрекет: <b>${left}</b></p>
+          ${left === "" ? "" : `<p>Қалған тегін әрекет: <b>${left}</b></p>`}
           <button class="btn btn-cta btn-lg btn-block" data-act="start-mock">Сынаманы бастау</button>
         </div>
         <div class="card">${rulesHtml()}</div>
@@ -807,7 +755,7 @@
   /* ---- Notes ---- */
   function pageNotes(u) {
     return `<div class="row-between" style="margin:0"><div><h1 class="page-title">📖 Конспектілер мен шпаргалкалар</h1><p class="page-sub">Әр тараудың ең маңызды фактілері — бір жерде.</p></div>
-      <button class="btn btn-primary no-print" data-act="${u.premium ? "print" : "upgrade"}">📄 PDF ретінде сақтау ${u.premium ? "" : "⭐"}</button></div>
+      <button class="btn btn-primary no-print" data-act="${hasPremium(u) ? "print" : "upgrade"}">📄 PDF ретінде сақтау ${hasPremium(u) ? "" : "⭐"}</button></div>
       <div class="grid g-2">${MODULES.map(m => `
         <div class="card cheat"><h3>${m.icon} ${m.title}</h3><ul>${m.cheat.map(c => `<li>${c}</li>`).join("")}</ul>
           ${m.examples.map(e => `<div class="example"><b>Есеп:</b> ${e.q}<br><b style="color:var(--green)">Шешуі:</b> ${e.a}</div>`).join("")}</div>`).join("")}
@@ -816,7 +764,7 @@
 
   /* ---- Leaderboard ---- */
   function pageLeaderboard(u) {
-    return `<h1 class="page-title">🏆 Рейтинг</h1><p class="page-sub">Апталық үздік түлектер. Сенің орның: <b>${myRank(u)}</b>. Тест тапсырып, XP жина!</p>
+    return `<h1 class="page-title">🏆 Рейтинг</h1><p class="page-sub">Сенің орның: <b>${myRank(u)}</b>. Тест тапсырып, XP жина! <br><small>Рейтингте осы құрылғыда тіркелген оқушылар көрсетіледі.</small></p>
       <div class="card">${lbWidget(u, true)}</div>`;
   }
 
@@ -830,7 +778,7 @@
           <div class="field"><label>Аты-жөні</label><input class="input" name="name" value="${esc(u.name)}"></div>
           <div class="field"><label>Телефон</label><input class="input" value="${esc(u.phone || u.email || "—")}" disabled></div>
           <div class="field"><label>Нысаналы балл: <b id="s-tv">${u.target}</b>/50</label><input type="range" name="target" min="10" max="50" value="${u.target}"></div>
-          <div class="field"><label>Қала</label><input class="input" name="city" list="cities2" value="${esc(u.city)}"><datalist id="cities2">${window.CITIES.map(c => `<option value="${c}">`).join("")}</datalist></div>
+          <div class="field"><label>Қала</label><input class="input" name="city" list="cities2" value="${esc(u.city)}"><datalist id="cities2">${CFG.cities.map(c => `<option value="${c}">`).join("")}</datalist></div>
           <div class="field"><label>Мектеп</label><input class="input" name="school" value="${esc(u.school)}"></div>
           <div class="field"><label>ҰБТ айы</label><select class="input" name="month">${MONTHS.map(m => `<option ${m === u.month ? "selected" : ""}>${m}</option>`).join("")}</select></div>
           <button class="btn btn-primary btn-block">Сақтау</button>
@@ -880,7 +828,7 @@
 
   /* ================= Tests ================= */
   function pick(list, n) { return shuffle(list).slice(0, Math.min(n, list.length)); }
-  function buildDemo() { return { mode: "demo", title: "Тегін демо-тест", questions: pick(Q, DEMO_SIZE), timeLimit: 10 * 60, instant: false }; }
+  function buildDemo() { return { mode: "demo", title: "Тегін демо-тест", questions: pick(Q, DEMO_SIZE), timeLimit: DEMO_MIN * 60, instant: false }; }
 
   function buildMock(u) {
     // ҰБТ құрылымына жақын: алдымен бір жауаптылар, содан кейін контекстік, соңында бірнеше жауаптылар
@@ -902,7 +850,7 @@
     const u = currentUser();
     if (!u) return go("#/login");
     if (mode === "mock") {
-      if (!u.premium && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді. Шексіз сынама үшін Премиумға өт!`);
+      if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді. Шексіз сынама үшін Премиумға өт!`);
       return startTest(buildMock(u));
     }
     if (mode === "express") return startTest({ mode: "express", title: "⚡ Экспресс-тест (10 сұрақ)", questions: pick(Q, EXPRESS_SIZE), instant: true });
@@ -967,7 +915,7 @@
     </div>`;
 
     if (u && t.mode !== "demo") app.innerHTML = shell(u, "test", inner);
-    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>BioҰБТ</a>
+    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
       <a class="btn btn-ghost" href="#/register">Тіркелу</a></div></header><div class="content" style="margin:0 auto">${inner}</div>`;
 
     stopTimer();
@@ -1030,7 +978,7 @@
       <div class="card" style="margin-top:8px">${rulesHtml()}</div>
     </div>`;
     if (u) app.innerHTML = shell(u, "result", inner);
-    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>BioҰБТ</a>
+    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
       <a class="btn btn-primary" href="#/register">Тіркелу</a></div></header><div class="content" style="margin:0 auto">${inner}</div>`;
   }
 
@@ -1038,17 +986,11 @@
   function upgradeModal(reason) {
     openModal(`<h3>⭐ Премиум рұқсат</h3>
       ${reason ? `<p class="muted">${reason}</p>` : ""}
-      <ul style="padding-left:18px"><li>Шексіз толық ҰБТ сынамалары</li><li>Барлық конспектілерді PDF-ке сақтау</li><li>1000+ сұрақ толық талдауымен</li><li>ҰБТ-ға дейін белсенді</li></ul>
-      <div class="card" style="text-align:center;background:var(--surface-2);border:0;margin-bottom:14px"><b style="font-size:28px">4 990 ₸</b><span class="muted"> / ҰБТ-ға дейін</span></div>
-      <button class="btn btn-cta btn-lg btn-block" id="up-ok">Премиумды қосу</button>
-      <p class="hint" style="text-align:center">Демо режим: төлем алынбайды.</p>`,
-      (m, close) => {
-        $("#up-ok", m).onclick = () => {
-          const u = currentUser(); if (!u) return close();
-          u.premium = true; notify(u, "⭐", "Премиум рұқсат белсендірілді! ҰБТ-ға дейін белсенді."); saveUser(u);
-          close(); toast("⭐ Премиум белсендірілді!", "xp"); render();
-        };
-      });
+      <ul style="padding-left:18px"><li>Шексіз толық ҰБТ сынамалары</li><li>Конспектілерді PDF-ке сақтау</li></ul>
+      ${CFG.premium.price ? `<div class="card" style="text-align:center;background:var(--surface-2);border:0;margin-bottom:14px"><b style="font-size:28px">${esc(CFG.premium.price)}</b></div>` : ""}
+      <p class="muted">${esc(CFG.premium.contactText)}</p>
+      ${contactsHtml()}
+      <button class="btn btn-ghost btn-block" style="margin-top:12px" data-close>Жабу</button>`);
   }
 
   function toggleNotifs() {
@@ -1067,9 +1009,8 @@
   const actions = {
     "tab-login": () => go("#/login"),
     "tab-register": () => go("#/register"),
-    social: el => socialLogin(el.dataset.p),
     forgot: forgotModal,
-    terms: () => openModal(`<h3>Қолданушы келісімі</h3><p class="muted">Платформаны пайдалана отырып, сіз дербес деректеріңіздің (аты-жөні, телефон нөмірі, мектеп) тек оқу статистикасын жүргізу мақсатында өңделуіне келісесіз. Деректер үшінші тұлғаларға берілмейді. Тест материалдарын рұқсатсыз көшіріп таратуға тыйым салынады.</p><button class="btn btn-primary btn-block" data-close>Түсінікті</button>`),
+    terms: () => openModal(`<h3>Қолданушы келісімі</h3><p class="muted">${esc(CFG.terms)}</p><button class="btn btn-primary btn-block" data-close>Түсінікті</button>`),
     eye: el => { const inp = el.parentElement.querySelector("input"); inp.type = inp.type === "password" ? "text" : "password"; el.textContent = inp.type === "password" ? "👁️" : "🙈"; },
     menu: () => { $("#sidebar").classList.add("open"); $("#backdrop").classList.add("show"); },
     "close-menu": () => { $("#sidebar").classList.remove("open"); $("#backdrop").classList.remove("show"); },

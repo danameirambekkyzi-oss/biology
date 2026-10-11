@@ -135,7 +135,7 @@ h1, h2, h3, h4 { line-height: 1.2; margin: 0 0 .5em; }
 .review p { margin: 0; color: var(--muted); font-size: 14.5px; }
 .stars { color: var(--amber); letter-spacing: 2px; }
 
-.cta-band { background: var(--grad); color: #fff; border-radius: 28px; padding: 40px 24px; text-align: center; margin: 0 16px; }
+.cta-band { background: var(--grad); color: #fff; border-radius: 28px; padding: 40px 24px; text-align: center; margin: 0 auto; width: calc(100% - 32px); max-width: 1128px; }
 .cta-band h2 { font-size: clamp(24px, 3.4vw, 36px); }
 .footer { padding: 32px 0; text-align: center; color: var(--muted); font-size: 14px; }
 
