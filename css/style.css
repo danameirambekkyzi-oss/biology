@@ -498,3 +498,23 @@ a.chip.active { color: var(--purple); }
   .cert-name { padding-right: 74px; }
   .cert-table { font-size: 12.5px; }
 }
+
+/* ---------- Балл калькуляторы ---------- */
+.calc { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; padding: 26px; }
+.calc-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.calc-row:last-child { border-bottom: 0; }
+.calc-row b { display: block; font-size: 15px; }
+.calc-row small { font-size: 12.5px; }
+.stepper { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+.stepper button { width: 42px; height: 44px; border: 0; background: var(--surface-2); color: var(--text); font-size: 20px; font-weight: 700; }
+.stepper button:active { background: var(--purple-50); }
+.stepper input { width: 52px; height: 44px; border: 0; text-align: center; font-weight: 800; font-size: 17px; background: var(--surface); outline: none; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.calc-out { background: var(--grad); color: #fff; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; justify-content: center; gap: 14px; text-align: center; }
+.calc-score b { font-size: 72px; font-weight: 800; line-height: 1; }
+.calc-score span { font-size: 24px; opacity: .8; margin-left: 4px; }
+.calc-out .bar { background: rgba(255,255,255,.25); }
+.calc-out .bar i { background: #fff; }
+.calc-msg { margin: 0; font-weight: 600; min-height: 2.6em; }
+@media (max-width: 900px) { .calc { grid-template-columns: 1fr; padding: 18px; } }
+#calc, #results { scroll-margin-top: 76px; }

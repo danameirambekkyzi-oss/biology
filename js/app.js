@@ -319,8 +319,6 @@
       { ico: "chart", cls: "f3", t: "Статистика мен қатемен жұмыс", d: "Әлсіз тарауларыңды көрсетеміз, қате жауаптарыңнан жеке тест құрып, қайта тапсыруға мүмкіндік береміз." }
     ];
     const results = CFG.results || [];
-    const bioOf = r => { const h = (r.subjects || []).find(x => x[0] === r.highlight); return h ? h[1] : 0; };
-    const top = results.slice().sort((a, b) => bioOf(b) - bioOf(a) || b.total - a.total)[0];
     app.innerHTML = `
       <header class="topbar"><div class="container">
         <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
@@ -337,13 +335,23 @@
           <p class="lead">${esc(CFG.hero.lead)}</p>
           <div class="hero-cta">
             <a class="btn btn-cta btn-lg" href="${u ? "#/app" : "#/register"}">${u ? "Кабинетке өту" : "Тіркеліп, дайындықты бастау"} ${ic("arrow", 18)}</a>
-            ${results.length ? `<button class="btn btn-ghost btn-lg" data-act="scroll-results">Оқушылар нәтижесі</button>` : ""}
+            <button class="btn btn-ghost btn-lg" data-act="scroll-to" data-id="calc">Балл калькуляторы</button>
           </div>
           <div class="hero-stats">
             ${(CFG.hero.stats || []).map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("")}
           </div>
         </div>
-        ${top ? `<div class="hero-visual">${certHtml(top, true)}</div>` : ""}
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Жасушалық биология</span></div>
+            <div class="q-mini">Прокариот жасушаларға тән белгілер:</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Қалыптасқан ядросы жоқ</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Сақина тәрізді ДНҚ</div>
+            <div class="opt-mini"><span class="om-box"></span>Митохондриялары бар</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>70S рибосомалар</div>
+          </div>
+          <div class="float-badge fb2"><span class="fb-dot"></span>2 балл</div>
+        </div>
       </div></section>
 
       <section class="section"><div class="container">
@@ -352,6 +360,8 @@
           <div class="feature"><div class="ico ${f.cls}">${ic(f.ico, 24)}</div><h3>${f.t}</h3><p>${f.d}</p></div>`).join("")}
         </div>
       </div></section>
+
+      ${calcHtml()}
 
       ${results.length ? `
       <section class="section" id="results" style="padding-top:0"><div class="container">
@@ -369,6 +379,47 @@
       ${contactsHtml() ? `<section class="section" style="padding-top:0"><div class="container"><div class="card" style="text-align:center">
         <h3>${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
       <footer class="footer">© ${new Date().getFullYear()} ${esc(SITE)} · Биологиядан ҰБТ-ға дайындық${AUTHOR.name ? " · " + esc(AUTHOR.name) : ""}</footer>`;
+    $$(".calc input").forEach(i => i.addEventListener("input", updateCalc));
+    updateCalc();
+  }
+
+  /* ---- ҰБТ балл калькуляторы ---- */
+  const CALC = CFG.calculator;
+  const CALC_MAX = CALC.single.count * CALC.single.points + CALC.context.count * CALC.context.points + CALC.multi.count * CALC.multi.points;
+  function calcRow(id, label, hint, max) {
+    return `<div class="calc-row"><div><b>${label}</b><small class="muted">${hint}</small></div>
+      <div class="stepper"><button type="button" data-act="calc-step" data-for="${id}" data-d="-1" aria-label="Азайту">−</button>
+        <input id="${id}" type="number" inputmode="numeric" min="0" max="${max}" value="0" aria-label="${esc(label)}">
+        <button type="button" data-act="calc-step" data-for="${id}" data-d="1" aria-label="Көбейту">+</button></div></div>`;
+  }
+  function calcHtml() {
+    return `<section class="section" id="calc" style="padding-top:0"><div class="container">
+      <div class="section-head"><h2>ҰБТ балл калькуляторы</h2><p class="muted">Неше сұраққа дұрыс жауап берсең, қанша балл аласың? Есептеп көр.</p></div>
+      <div class="card calc">
+        <div class="calc-inputs">
+          ${calcRow("c-single", CALC.single.label, `${CALC.single.count} тапсырма · әрқайсысы ${CALC.single.points} балл`, CALC.single.count)}
+          ${calcRow("c-context", CALC.context.label, `${CALC.context.count} тапсырма · әрқайсысы ${CALC.context.points} балл`, CALC.context.count)}
+          ${calcRow("c-full", CALC.multi.label + " — толық дұрыс", `${CALC.multi.count} тапсырма · толық дұрыс — 2 балл`, CALC.multi.count)}
+          ${calcRow("c-part", CALC.multi.label + " — жартылай дұрыс", "Бір қатесі бар (бір дұрыс жауап белгіленбеген) — 1 балл", CALC.multi.count)}
+        </div>
+        <div class="calc-out">
+          <div class="calc-score"><b id="c-total">0</b><span>/ ${CALC_MAX}</span></div>
+          <div class="bar"><i id="c-bar" style="width:0%"></i></div>
+          <p id="c-msg" class="calc-msg">Сандарды енгіз</p>
+          <a class="btn btn-cta btn-block" href="#/register">Нәтижеңді арттыр — тіркел</a>
+        </div>
+      </div></div></section>`;
+  }
+  function updateCalc() {
+    const get = (id, max) => { const el = document.getElementById(id); if (!el) return 0; let v = Math.max(0, Math.min(max, Math.floor(+el.value || 0))); el.value = v; return v; };
+    const single = get("c-single", CALC.single.count), context = get("c-context", CALC.context.count);
+    const full = get("c-full", CALC.multi.count), part = get("c-part", CALC.multi.count - full);
+    const total = single * CALC.single.points + context * CALC.context.points + full * CALC.multi.points + part;
+    const out = document.getElementById("c-total"); if (!out) return;
+    out.textContent = total;
+    document.getElementById("c-bar").style.width = (total / CALC_MAX * 100) + "%";
+    document.getElementById("c-msg").textContent = !total ? "Сандарды енгіз" : total >= 45 ? "Керемет нәтиже! Грантқа жақынсың." :
+      total >= 35 ? "Жақсы! Тағы аздап жұмыс — және жоғары балл сенікі." : total >= 20 ? "Орташа деңгей. Әлсіз тарауларыңмен жұмыс жаса." : "Бастама жасалды. Тараулық тесттерден баста.";
   }
 
   // ҰБТ сертификаты түріндегі нәтиже карточкасы
@@ -1082,7 +1133,8 @@
     "start-mock": () => startMode("mock"),
     "goto-mock": () => go("#/app/mock"),
     "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
-    "scroll-results": () => { const el = document.getElementById("results"); if (el) el.scrollIntoView({ behavior: "smooth" }); },
+    "scroll-to": el => { const t = document.getElementById(el.dataset.id); if (t) t.scrollIntoView({ behavior: "smooth" }); },
+    "calc-step": el => { const inp = document.getElementById(el.dataset.for); inp.value = +inp.value + +el.dataset.d; updateCalc(); },
     "start-express": () => startMode("express"),
     "start-topic": el => startMode("topic", el.dataset.id),
     "start-mistakes": el => startMode("mistakes", el.dataset.id),
