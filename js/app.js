@@ -14,8 +14,10 @@
   const DB_KEY = "bioubt_db_v1", SESSION_KEY = "bioubt_session", THEME_KEY = "bioubt_theme", DEMO_KEY = "bioubt_demo";
   const LETTERS = "ABCDEFGH";
   const DAYS = ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сн"];
+  const MONTH_NAMES = ["Қаңтар", "Ақпан", "Наурыз", "Сәуір", "Мамыр", "Маусым", "Шілде", "Тамыз", "Қыркүйек", "Қазан", "Қараша", "Желтоқсан"];
+  const fmtDate = t => { const d = new Date(t); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear(); };
   const MONTHS = CFG.months;
-  const CHEERS = ["Бүгін де бір қадам алға! 🚀", "50/50 — жақын арада! 💪", "Әр қате — жаңа білім 🌱", "Сен міндетті түрде жетесің! ✨", "Бүгінгі мақсат: 1 тест 🎯"];
+  const CHEERS = ["Бүгін де бір қадам алға!", "50/50 — жақын арада!", "Әр қате — жаңа білім", "Сен міндетті түрде жетесің!", "Бүгінгі мақсат: 1 тест"];
 
   const app = document.getElementById("app");
   const modalRoot = document.getElementById("modal-root");
@@ -66,6 +68,44 @@
   const initials = name => (name || "Т").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
   const isMulti = q => q.type === "multi" || q.correct.length > 1;
   const modTitle = id => (MODULES.find(m => m.id === id) || {}).title || id;
+
+  /* ================= Icons (SVG) ================= */
+  const ICONS = {
+    home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+    layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+    clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/>',
+    book: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+    trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3.2.3 1.6 1.4 2.7 2.5 2.7z"/>',
+    star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-7"/>',
+    bulb: '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>',
+    seed: '<path d="M7 20h10M12 20v-8"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 12c0-3 2.5-5 6-5 0 3-2.5 5-6 5z"/>',
+    gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21 8 9l4-6 4 6z"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
+    compass: '<circle cx="12" cy="12" r="10"/><path d="m16.2 7.8-2.1 6.3-6.3 2.1 2.1-6.3z"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+    eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    eyeoff: '<path d="M17.9 17.9A10 10 0 0 1 12 19c-6.4 0-10-7-10-7a18 18 0 0 1 5-5.9M9.9 4.2A9 9 0 0 1 12 4c6.4 0 10 7 10 7a18 18 0 0 1-2.2 3.2M2 2l20 20"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/>',
+    chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+    camera: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    dna: '<path d="M4 2c0 6 16 6 16 12M20 2c0 6-16 6-16 12M4 22c0-3 4-5 8-6.5M20 22c0-3-4-5-8-6.5"/><path d="M7 5h10M7 11h10M8 19h8"/>'
+  };
+  function ic(name, size = 20) {
+    return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+  }
+  const LOGO = `<span class="logo-mark">${ic("dna", 20)}</span>`;
 
   function toast(msg, cls = "") {
     const t = document.createElement("div");
@@ -183,10 +223,13 @@
     const qs = Q.filter(q => q.module === id);
     return { total: qs.length, solved: qs.filter(q => u.solved[q.id]).length, mistakes: qs.filter(q => u.mistakes[q.id]).length };
   }
+  const thisMonth = h => { const d = new Date(h.date), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); };
+  const monthPoints = u => u.history.filter(thisMonth).reduce((a, h) => a + h.score, 0);
+  function bestMock(u) { const m = u.history.filter(h => h.mode === "mock" && thisMonth(h)); return m.length ? Math.max(...m.map(h => h.scaled)) : null; }
   function leaderboard(u) {
     // Тек нақты тіркелген қолданушылар (осы құрылғыда)
-    const rows = Object.values(db.users).map(x => ({ name: shortName(x.name), xp: x.xp, score: avgScore(x), me: x.id === u.id }));
-    rows.sort((a, b) => b.xp - a.xp || (a.me ? 1 : -1));
+    const rows = Object.values(db.users).map(x => ({ name: shortName(x.name), pts: monthPoints(x), best: bestMock(x), me: x.id === u.id }));
+    rows.sort((a, b) => b.pts - a.pts || (a.me ? 1 : -1));
     rows.forEach((r, i) => r.rank = i + 1);
     return rows;
   }
@@ -207,19 +250,19 @@
     if (streak(u) >= 7) give("streak7");
     if (res && res.score === res.max && res.max > 0) give("perfect");
     if (test && test.mode === "mock") give("mock");
-    if (u.xp >= 1000) give("xp1000");
+    if (u.xp >= 500) give("pts500");
     if (u.fixed >= 5) give("fixer");
     if (MODULES.every(m => u.modulesTried[m.id])) give("explorer");
     earned.forEach(id => {
       const b = window.BADGES.find(x => x.id === id);
-      notify(u, b.icon, `Жаңа жетістік белгісі: «${b.title}»!`);
-      setTimeout(() => toast(`${b.icon} Жаңа белгі: ${b.title}`, "xp"), 600);
+      notify(u, "star", `Жаңа жетістік белгісі: «${b.title}»!`);
+      setTimeout(() => toast(`Жаңа белгі: ${b.title}`, "xp"), 600);
     });
   }
 
   function applyResult(u, test, res) {
     const rankBefore = myRank(u);
-    const xp = res.full * 10 + res.part * 4 + (test.mode === "mock" ? 50 : 0) + (res.score === res.max ? 20 : 0);
+    const xp = res.score; // жинаған балл
     u.xp += xp;
     const today = dayKey();
     u.activity[today] = (u.activity[today] || 0) + 1;
@@ -233,11 +276,12 @@
       }
     });
     if (test.mode === "mock") u.mocks++;
-    u.history.push({ date: Date.now(), mode: test.mode, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct });
+    const wrong = test.questions.filter((q, i) => res.per[i] < 2).map(q => q.id);
+    u.history.push({ date: Date.now(), mode: test.mode, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong });
     u.history = u.history.slice(-200);
     checkBadges(u, res, test);
     const rankAfter = myRank(u);
-    if (rankAfter < rankBefore) notify(u, "📈", `Сіздің рейтингіңіз көтерілді! Енді ${rankAfter}-орындасыз.`);
+    if (rankAfter < rankBefore) notify(u, "trophy", `Сіздің рейтингіңіз көтерілді! Енді ${rankAfter}-орындасыз.`);
     saveUser(u);
     return xp;
   }
@@ -272,13 +316,14 @@
   /* ================= Landing ================= */
   function renderLanding(u) {
     const feats = [
-      { ico: "🎯", bg: "var(--purple-50)", t: "ҰБТ жаңа форматына 100% сәйкес", d: "Контекстік сұрақтар, бір және бірнеше дұрыс жауабы бар тапсырмалар — нақты ҰБТ сияқты, сол балл жүйесімен." },
-      { ico: "💡", bg: "color-mix(in srgb, var(--blue) 14%, transparent)", t: "Әр сұраққа толық талдау", d: "Қате жібердің бе? Неліктен дұрыс емес екенін және дұрыс жауаптың логикасын бірден түсіндіреміз." },
-      { ico: "📊", bg: "color-mix(in srgb, var(--pink) 14%, transparent)", t: "Статистика мен қателермен жұмыс", d: "Әлсіз тарауларыңды көрсетеміз, қателеріңді жеке банкке жинап, қайта тапсыруға мүмкіндік береміз." }
+      { ico: "target", cls: "f1", t: "ҰБТ жаңа форматына 100% сәйкес", d: "Контекстік сұрақтар, бір және бірнеше дұрыс жауабы бар тапсырмалар — нақты ҰБТ сияқты, сол балл жүйесімен." },
+      { ico: "bulb", cls: "f2", t: "Әр сұраққа толық талдау", d: "Тест соңында әр сұрақтың дұрыс жауабы мен түсініктемесін көресің." },
+      { ico: "chart", cls: "f3", t: "Статистика мен қатемен жұмыс", d: "Әлсіз тарауларыңды көрсетеміз, қате жауаптарыңнан жеке тест құрып, қайта тапсыруға мүмкіндік береміз." }
     ];
+    const results = CFG.results || [];
     app.innerHTML = `
       <header class="topbar"><div class="container">
-        <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
+        <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
         <div class="topbar-actions">
           ${u ? `<a class="btn btn-primary" href="#/app">Кабинетке өту</a>` :
             `<a class="btn btn-outline" href="#/login">Кіру</a><a class="btn btn-primary" href="#/register">Тіркелу</a>`}
@@ -291,8 +336,8 @@
           <h1>${CFG.hero.title}</h1>
           <p class="lead">${esc(CFG.hero.lead.replace("{count}", Q.length))}</p>
           <div class="hero-cta">
-            <a class="btn btn-cta btn-lg" href="#/demo">Тегін Демо-тестті бастау →</a>
-            <a class="btn btn-ghost btn-lg" href="#/register">Тіркелу — 30 секунд</a>
+            <a class="btn btn-cta btn-lg" href="#/demo">Тегін демо-тестті бастау ${ic("arrow", 18)}</a>
+            <a class="btn btn-ghost btn-lg" href="#/register">Тіркелу</a>
           </div>
           <div class="hero-stats">
             <div><b>${Q.length}</b><span>сұрақ</span></div>
@@ -301,59 +346,55 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="float-badge fb1">💎 +10 XP</div>
           <div class="hero-card">
-            <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Цитология</span></div>
+            <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Жасушалық биология</span></div>
             <div class="q-mini">Прокариот жасушаларға тән белгілер:</div>
-            <div class="opt-mini ok">✅ Қалыптасқан ядросы жоқ</div>
-            <div class="opt-mini ok">✅ Сақина тәрізді ДНҚ</div>
-            <div class="opt-mini">◻️ Митохондриялары бар</div>
-            <div class="opt-mini ok">✅ 70S рибосомалар</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Қалыптасқан ядросы жоқ</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Сақина тәрізді ДНҚ</div>
+            <div class="opt-mini"><span class="om-box"></span>Митохондриялары бар</div>
+            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>70S рибосомалар</div>
           </div>
-          <div class="float-badge fb2">✅ 2 балл</div>
+          <div class="float-badge fb2"><span class="fb-dot"></span>2 балл</div>
         </div>
       </div></section>
 
       <section class="section"><div class="container">
         <div class="section-head"><h2>Неге дәл <span class="grad-text">${esc(SITE)}</span>?</h2><p class="muted">Тек жаттау емес — түсініп, нәтижеге жету.</p></div>
         <div class="features">${feats.map(f => `
-          <div class="feature"><div class="ico" style="background:${f.bg}">${f.ico}</div><h3>${f.t}</h3><p>${f.d}</p></div>`).join("")}
+          <div class="feature"><div class="ico ${f.cls}">${ic(f.ico, 24)}</div><h3>${f.t}</h3><p>${f.d}</p></div>`).join("")}
         </div>
       </div></section>
 
-      ${CFG.testimonials.length ? `
+      ${results.length ? `
       <section class="section" style="padding-top:0"><div class="container">
-        <div class="section-head"><h2>Түлектер не дейді? 💬</h2><p class="muted">Жоғары балл жинаған оқушылардың өз сөздері</p></div>
-        <div class="reviews">${CFG.testimonials.map((t, k) => `
-          <div class="review">
-            <div class="review-head">
-              <div class="avatar" style="background:${GRADS[k % GRADS.length]}">${initials(t.name)}</div>
-              <div><b>${esc(t.name)}</b><br><small class="muted">${esc(t.city || "")}</small></div>
-              ${t.score ? `<span class="score">${esc(t.score)}</span>` : ""}
-            </div>
-            <div class="stars">★★★★★</div>
-            <p>${esc(t.text)}</p>
+        <div class="section-head"><h2>Оқушыларымның ҰБТ нәтижелері</h2><p class="muted">Нақты ҰБТ-да биологиядан жинаған баллдары</p></div>
+        <div class="results">${results.map((r, k) => `
+          <div class="result-card">
+            ${r.photo ? `<img class="rc-photo" src="${esc(r.photo)}" alt="${esc(r.name)}" loading="lazy">` : `<div class="avatar rc-photo" style="background:${GRADS[k % GRADS.length]}">${esc(initials(r.name))}</div>`}
+            <div class="rc-score">${esc(r.score)}</div><div class="rc-sub">биология</div>
+            <div class="rc-name">${esc(r.name)}</div>
+            <small class="muted">${[r.total ? "Жалпы балл: " + r.total : "", r.school, r.year].filter(Boolean).map(esc).join(" · ")}</small>
           </div>`).join("")}
         </div>
       </div></section>` : ""}
 
       <section class="section" style="padding-top:0">
         <div class="cta-band container">
-          <h2>${DEMO_SIZE} сұрақ. ${DEMO_MIN} минут. Деңгейіңді біл! ⚡</h2>
+          <h2>${DEMO_SIZE} сұрақ. ${DEMO_MIN} минут. Деңгейіңді біл!</h2>
           <p style="opacity:.9;margin:0 0 20px">Тіркелусіз тегін демо-тест тапсырып көр.</p>
           <a class="btn btn-cta btn-lg" href="#/demo">Тегін сынап көр</a>
         </div>
       </section>
       ${contactsHtml() ? `<section class="section" style="padding-top:0"><div class="container"><div class="card" style="text-align:center">
-        <h3>👩‍🏫 ${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
+        <h3>${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
       <footer class="footer">© ${new Date().getFullYear()} ${esc(SITE)} · Биологиядан ҰБТ-ға дайындық${AUTHOR.name ? " · " + esc(AUTHOR.name) : ""}</footer>`;
   }
 
   function contactsHtml() {
     const links = [];
-    if (AUTHOR.whatsapp) links.push(`<a class="btn btn-green" target="_blank" rel="noopener" href="https://wa.me/${esc(AUTHOR.whatsapp.replace(/\D/g, ""))}">💬 WhatsApp</a>`);
-    if (AUTHOR.telegram) links.push(`<a class="btn btn-tg" style="width:auto" target="_blank" rel="noopener" href="https://t.me/${esc(AUTHOR.telegram.replace(/^@/, ""))}">✈️ Telegram</a>`);
-    if (AUTHOR.instagram) links.push(`<a class="btn btn-cta" target="_blank" rel="noopener" href="https://instagram.com/${esc(AUTHOR.instagram.replace(/^@/, ""))}">📸 Instagram</a>`);
+    if (AUTHOR.whatsapp) links.push(`<a class="btn btn-green" target="_blank" rel="noopener" href="https://wa.me/${esc(AUTHOR.whatsapp.replace(/\D/g, ""))}">${ic("chat", 18)} WhatsApp</a>`);
+    if (AUTHOR.telegram) links.push(`<a class="btn btn-tg" style="width:auto" target="_blank" rel="noopener" href="https://t.me/${esc(AUTHOR.telegram.replace(/^@/, ""))}">${ic("send", 18)} Telegram</a>`);
+    if (AUTHOR.instagram) links.push(`<a class="btn btn-cta" target="_blank" rel="noopener" href="https://instagram.com/${esc(AUTHOR.instagram.replace(/^@/, ""))}">${ic("camera", 18)} Instagram</a>`);
     return links.length ? `<div class="hero-cta" style="justify-content:center">${links.join("")}</div>` : "";
   }
 
@@ -362,7 +403,7 @@
     const isLogin = state.authTab === "login";
     app.innerHTML = `
       <div class="auth-wrap"><div class="auth-card">
-        <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
+        <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
         <div class="tabs" role="tablist">
           <button class="tab ${isLogin ? "active" : ""}" data-act="tab-login">Кіру</button>
           <button class="tab ${!isLogin ? "active" : ""}" data-act="tab-register">Тіркелу</button>
@@ -381,7 +422,7 @@
           <input class="input" id="l-id" inputmode="tel" autocomplete="username" placeholder="+7 (7XX) XXX-XX-XX"></div>
         <div class="field"><label for="l-pass">Құпия сөз</label>
           <div class="input-wrap"><input class="input" id="l-pass" type="password" autocomplete="current-password" placeholder="••••••••">
-          <button type="button" class="eye" data-act="eye" aria-label="Құпия сөзді көрсету">👁️</button></div></div>
+          <button type="button" class="eye" data-act="eye" aria-label="Құпия сөзді көрсету">${ic("eye", 20)}</button></div></div>
         <div class="row-between">
           <label class="check"><input type="checkbox" id="l-rem" checked> Мені есте сақта</label>
           <button type="button" class="link-btn" data-act="forgot">Құпия сөзді ұмыттыңыз ба?</button>
@@ -403,7 +444,7 @@
       if (!user) { showErr(err, "Мұндай аккаунт табылмады. Алдымен тіркеліңіз."); return; }
             if (user.pass !== hash(p)) { showErr(err, "Құпия сөз қате."); $("#l-pass").classList.add("invalid"); return; }
       setSession(user.id, $("#l-rem").checked);
-      toast(`Қош келдің, ${user.name.split(" ")[0]}! 👋`);
+      toast(`Қош келдің, ${user.name.split(" ")[0]}!`);
       afterLogin(user);
     });
   }
@@ -416,7 +457,7 @@
       const test = { mode: "demo", title: "Демо-тест", questions: demo.map(d => QBY[d.id]).filter(Boolean), answers: demo.map(d => d.sel) };
       if (test.questions.length) {
         const xp = applyResult(user, test, grade(test));
-        notify(user, "🎁", `Демо-тест нәтижесі сақталды: +${xp} XP`);
+        notify(user, "check", `Демо-тест нәтижесі сақталды: +${xp} балл`);
         saveUser(user);
       }
     }
@@ -443,7 +484,7 @@
           if (norm(u.name) !== norm($("#f-name", m).value)) return showErr(err, "Аты-жөні сәйкес келмейді.");
           if ($("#f-new", m).value.length < 6) return showErr(err, "Құпия сөз кемінде 6 таңба болуы керек.");
           u.pass = hash($("#f-new", m).value); saveUser(u);
-          close(); toast("✅ Құпия сөз жаңартылды. Енді кіре аласың!");
+          close(); toast("Құпия сөз жаңартылды. Енді кіре аласың!");
         };
       });
   }
@@ -464,7 +505,7 @@
         </div>
         <div class="field"><label for="r-pass">Құпия сөз құрастыру</label>
           <div class="input-wrap"><input class="input" id="r-pass" type="password" autocomplete="new-password" placeholder="Кемінде 6 таңба" value="${esc(r.pass)}">
-          <button type="button" class="eye" data-act="eye" aria-label="Құпия сөзді көрсету">👁️</button></div>
+          <button type="button" class="eye" data-act="eye" aria-label="Құпия сөзді көрсету">${ic("eye", 20)}</button></div>
           <div class="strength"><i id="r-str"></i></div><div class="hint" id="r-str-l">Әріп, сан және белгі қоссаң — құпия сөз күшті болады</div>
         </div>
         <div class="err hidden" id="r-err"></div>
@@ -488,7 +529,7 @@
 
     if (r.step === 2) {
       body.innerHTML = steps + `
-        <div class="step-title">2-қадам: Профиліңді баптайық 🎯</div>
+        <div class="step-title">2-қадам: Профиліңді баптайық</div>
         <div class="field"><label for="r-target">Нысаналы балл (биология)</label>
           <div class="range-val"><span class="grad-text" id="r-tv">${r.target}</span><span class="muted" style="font-size:20px">/50</span></div>
           <input type="range" id="r-target" min="10" max="50" step="1" value="${r.target}">
@@ -509,7 +550,7 @@
 
     if (r.step === 3) {
       body.innerHTML = steps + `
-        <div class="step-title">3-қадам: Соңғы қадам ✨</div>
+        <div class="step-title">3-қадам: Соңғы қадам</div>
         <div class="card" style="background:var(--surface-2);border:0;margin-bottom:16px">
           <b>${esc(r.name)}</b><br><span class="muted">${esc(r.phone)}</span><br>
           <span class="muted">Мақсат: <b>${r.target}/50</b> · ${esc(r.city || "Қала көрсетілмеген")} · ${esc(r.month)}</span>
@@ -524,11 +565,11 @@
         if (!r.agree) return showErr($("#r-err"), "Жалғастыру үшін қолданушы келісімімен келісу қажет.");
         const id = phoneDigits(r.phone);
         const user = newUser(id, { name: r.name.trim(), phone: formatPhone(r.phone), pass: hash(r.pass), target: r.target, city: r.city.trim(), school: r.school.trim(), month: r.month });
-        notify(user, "🎉", `${SITE}-ға қош келдің! Алғашқы тестіңді тапсырып, XP жина.`);
+        notify(user, "star", `${SITE}-ға қош келдің! Алғашқы тестіңді тапсырып, балл жина.`);
         saveUser(user);
         setSession(id, true);
         state.reg = null;
-        toast("🎉 Тіркелу сәтті аяқталды!", "xp");
+        toast("Тіркелу сәтті аяқталды!", "xp");
         afterLogin(user);
       };
     }
@@ -536,42 +577,43 @@
 
   /* ================= App shell ================= */
   const NAV = [
-    { id: "dashboard",   ico: "🏠", t: "Басты бет" },
-    { id: "topics",      ico: "📚", t: "Тақырыптық тесттер" },
-    { id: "mock",        ico: "📝", t: "Толық ҰБТ сынамасы" },
-    { id: "mistakes",    ico: "❌", t: "Қателер банкі" },
-    { id: "notes",       ico: "📖", t: "Конспектілер" },
-    { id: "leaderboard", ico: "🏆", t: "Рейтинг" },
-    { id: "settings",    ico: "⚙️", t: "Баптаулар / Профиль" }
+    { id: "dashboard",   ico: "home",      t: "Басты бет" },
+    { id: "chapters",    ico: "layers",    t: "Тараулық тест" },
+    { id: "mock",        ico: "clipboard", t: "Толық ҰБТ сынамасы" },
+    { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
+    { id: "real",        ico: "book",      t: "Нағыз ҰБТ сұрақтары" },
+    { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
+    { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
   ];
 
   function shell(u, active, inner) {
     const unread = u.notifications.filter(n => !n.read).length;
     const mc = mistakesCount(u);
     const cheer = CHEERS[new Date().getDate() % CHEERS.length];
+    const isActive = id => active === id || (active === "chapter" && id === "chapters");
     return `
       <div class="shell">
         <aside class="sidebar" id="sidebar">
-          <a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
-          ${NAV.map(n => `<a class="nav-item ${active === n.id || (active === "topic" && n.id === "topics") ? "active" : ""}" href="#/app/${n.id}">
-            <span class="ni">${n.ico}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
-          ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>⭐ Премиум</b>Шексіз ҰБТ сынамалары мен барлық конспектілер.<br>
+          <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
+          ${NAV.map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
+            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
+          ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Шексіз ҰБТ сынамалары.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Тарифті жаңарту</button></div>`}
         </aside>
         <div class="backdrop" id="backdrop" data-act="close-menu"></div>
         <div class="main-col">
           <header class="header">
-            <button class="burger" data-act="menu" aria-label="Мәзір">☰</button>
+            <button class="burger" data-act="menu" aria-label="Мәзір">${ic("menu")}</button>
             <div class="greet">
               <div class="avatar">${esc(initials(u.name))}</div>
-              <div style="min-width:0"><h3>Сәлем, ${firstName(u)}! 👋</h3><small>${cheer}</small></div>
+              <div style="min-width:0"><h3>Сәлем, ${firstName(u)}!</h3><small>${cheer}</small></div>
             </div>
             <div class="header-right">
-              <span class="stat-pill" title="Күн қатарынан">🔥 ${streak(u)}<span class="lbl">&nbsp;күн</span></span>
-              <span class="stat-pill xp-pill" title="Тәжірибе ұпайлары">💎 ${fmtNum(u.xp)}<span class="lbl">&nbsp;XP</span></span>
-              ${!PREMIUM ? "" : u.premium ? `<span class="tariff pro">⭐ Премиум рұқсат (ҰБТ-ға дейін активті)</span>` :
-                `<span class="tariff free">Тегін режим</span><button class="btn btn-cta btn-upgrade" data-act="upgrade">⭐<span class="up-txt">&nbsp;Тарифті жаңарту</span></button>`}
-              <button class="bell" data-act="bell" aria-label="Хабарламалар">🔔${unread ? `<span class="dot"></span>` : ""}</button>
+              <span class="stat-pill" title="Күн қатарынан дайындық">${ic("flame", 18)} ${streak(u)}<span class="lbl">&nbsp;күн</span></span>
+              <span class="stat-pill pts-pill" title="Барлық жинаған балл">${ic("star", 18)} ${fmtNum(u.xp)}<span class="lbl">&nbsp;балл</span></span>
+              ${!PREMIUM ? "" : u.premium ? `<span class="tariff pro">Премиум рұқсат (ҰБТ-ға дейін активті)</span>` :
+                `<span class="tariff free">Тегін режим</span><button class="btn btn-cta btn-upgrade" data-act="upgrade">${ic("star", 16)}<span class="up-txt">&nbsp;Тарифті жаңарту</span></button>`}
+              <button class="bell" data-act="bell" aria-label="Хабарламалар">${ic("bell")}${unread ? `<span class="dot"></span>` : ""}</button>
             </div>
             <div id="notif-pop" class="notif-pop hidden"></div>
           </header>
@@ -581,7 +623,7 @@
   }
 
   function renderApp(u, page, arg) {
-    const pages = { dashboard: pageDashboard, topics: pageTopics, topic: pageTopic, mock: pageMock, mistakes: pageMistakes, notes: pageNotes, leaderboard: pageLeaderboard, settings: pageSettings };
+    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, leaderboard: pageLeaderboard, settings: pageSettings };
     const fn = pages[page] || pageDashboard;
     app.innerHTML = shell(u, page, fn(u, arg));
     if (page === "settings") bindSettings(u);
@@ -601,7 +643,7 @@
     for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push({ k: dayKey(d), l: DAYS[d.getDay()], today: i === 0 }); }
     const max = Math.max(3, ...days.map(d => u.activity[d.k] || 0));
     const total = days.reduce((a, d) => a + (u.activity[d.k] || 0), 0);
-    return `<div class="card"><h3>📅 Апталық белсенділік</h3><p class="muted" style="margin:0;font-size:14px">Осы аптада: <b>${total}</b> тест</p>
+    return `<div class="card"><h3>Апталық белсенділік</h3><p class="muted" style="margin:0;font-size:14px">Осы аптада: <b>${total}</b> тест</p>
       <div class="chart">${days.map(d => { const v = u.activity[d.k] || 0; return `
         <div class="col ${d.today ? "today" : ""}"><em>${v || ""}</em><i style="height:${Math.max(4, v / max * 100)}%"></i><span>${d.l}</span></div>`; }).join("")}
       </div></div>`;
@@ -609,18 +651,20 @@
 
   function lbWidget(u, full) {
     const rows = leaderboard(u), me = rows.find(r => r.me);
-    const medal = r => r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : r.rank;
-    const row = r => `<div class="lb-row ${r.me ? "me" : ""}"><span class="lb-rank">${medal(r)}</span>
+    const row = r => `<div class="lb-row ${r.me ? "me" : ""}"><span class="lb-rank ${r.rank <= 3 ? "top" + r.rank : ""}">${r.rank}</span>
       <span class="lb-name">${esc(r.me ? `Сен (${(u.name || "Түлек").split(" ")[0]})` : r.name)}</span>
-      <span class="lb-xp">${fmtNum(r.xp)} XP</span><span class="lb-score">(${r.score} балл)</span></div>`;
+      <span class="lb-xp">${fmtNum(r.pts)} балл</span><span class="lb-score">${r.best != null ? `ҰБТ: ${r.best}/50` : ""}</span></div>`;
     if (full) return rows.map(row).join("");
-    const top = rows.slice(0, 5);
-    return top.map(row).join("") + (me.rank > 5 ? `<div class="lb-gap">⋯</div>${row(me)}` : "");
+    return rows.slice(0, 5).map(row).join("") + (me.rank > 5 ? `<div class="lb-gap">⋯</div>${row(me)}` : "");
+  }
+
+  function prizeHtml() {
+    return CFG.leaderboard && CFG.leaderboard.prize ? `<div class="prize">${ic("gift", 22)}<span>${esc(CFG.leaderboard.prize)}</span></div>` : "";
   }
 
   function badgesHtml(u) {
     return `<div class="badges">${window.BADGES.map(b => `
-      <div class="badge ${u.badges.includes(b.id) ? "" : "locked"}" title="${esc(b.desc)}"><span class="b-ico">${b.icon}</span><b>${b.title}</b><small>${b.desc}</small></div>`).join("")}</div>`;
+      <div class="badge ${u.badges.includes(b.id) ? "" : "locked"}" title="${esc(b.desc)}"><span class="b-ico">${ic(b.icon, 22)}</span><b>${b.title}</b><small>${b.desc}</small></div>`).join("")}</div>`;
   }
 
   function weakestModule(u) {
@@ -639,77 +683,74 @@
             <h3>Биология курсы ${pct}% аяқталды</h3>
             <p class="muted" style="margin:0 0 6px;font-size:14px">${Object.keys(u.solved).length} / ${Q.length} сұраққа толық дұрыс жауап бердің</p>
             <div class="target-bar">
-              <div class="row-between" style="margin:0 0 6px"><span>🎯 Мақсат: <b>${u.target} балл</b></span><span>Қазіргі орташа: <b>${avg} балл</b></span></div>
+              <div class="row-between" style="margin:0 0 6px"><span>Мақсат: <b>${u.target} балл</b></span><span>Қазіргі орташа: <b>${avg} балл</b></span></div>
               <div class="bar"><i style="width:${avg / 50 * 100}%"></i><span class="mark" style="left:calc(${u.target / 50 * 100}% - 1px)"></span></div>
-              <p class="hint">${avg >= u.target && u.history.length ? "🎉 Мақсатқа жеттің! Енді нәтижені тұрақтандыр." : `Мақсатқа дейін: <b>${Math.max(0, u.target - avg)}</b> балл`}</p>
+              <p class="hint">${avg >= u.target && u.history.length ? "Мақсатқа жеттің! Енді нәтижені тұрақтандыр." : `Мақсатқа дейін: <b>${Math.max(0, u.target - avg)}</b> балл`}</p>
             </div>
           </div>
         </div>
         ${weekChart(u)}
       </div>
 
-      <h2 style="margin:26px 0 12px;font-size:20px">⚡ Жылдам бастау</h2>
+      <h2 class="sec-title">Жылдам бастау</h2>
       <div class="grid g-3">
-        <button class="qa-card qa-1" data-act="start-mock"><span class="qa-ico">🎯</span><h3>Толық ҰБТ сынамасын бастау</h3>
-          <p>${MOCK_SIZE} сұрақ / ${MOCK_MIN} минут · кері санақ таймері · жаңа формат</p><span class="go">Бастау →</span></button>
-        <button class="qa-card qa-2" data-act="start-mistakes"><span class="qa-ico">🔄</span><h3>Қателермен жұмыс</h3>
-          <p>Сенің әлсіз тұстарың</p>
-          ${weak ? `<span class="warn">⚠️ Сізде ${weak.m.abl} ${weak.n} қате бар, қайталау керек!</span>` : `<span class="warn">Әзірге қате жоқ — керемет! 🌟</span>`}
-          <span class="go">Қайталау →</span></button>
-        <button class="qa-card qa-3" data-act="start-express"><span class="qa-ico">⚡</span><h3>Күнделікті 10 сұрақтық экспресс-тест</h3>
-          <p>Жылдам жаттығу · әр жауаптан кейін талдау</p><span class="go">Бастау →</span></button>
+        <button class="qa-card qa-1" data-act="start-mock"><span class="qa-ico">${ic("target", 26)}</span><h3>Толық ҰБТ сынамасын бастау</h3>
+          <p>${MOCK_SIZE} сұрақ / ${MOCK_MIN} минут · кері санақ таймері</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
+        <button class="qa-card qa-2" data-act="start-mistakes"><span class="qa-ico">${ic("refresh", 26)}</span><h3>Қатемен жұмыс</h3>
+          <p>Қате жауап берген сұрақтарыңнан тест</p>
+          ${weak ? `<span class="warn">Сізде ${weak.m.abl} ${weak.n} қате бар, қайталау керек!</span>` : `<span class="warn">Әзірге қате жоқ</span>`}
+          <span class="go">Қайталау ${ic("arrow", 18)}</span></button>
+        <button class="qa-card qa-3" data-act="start-express"><span class="qa-ico">${ic("bolt", 26)}</span><h3>Күнделікті ${EXPRESS_SIZE} сұрақтық экспресс-тест</h3>
+          <p>Барлық тараулардан жылдам жаттығу</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
       </div>
 
-      <h2 style="margin:26px 0 12px;font-size:20px">📚 Тақырыптық модульдер</h2>
-      <div class="grid g-4">${MODULES.map(m => moduleCard(u, m)).join("")}</div>
+      <h2 class="sec-title">Тараулық тест</h2>
+      <div class="grid g-3">${MODULES.map((m, i) => chapterCard(u, m, i)).join("")}</div>
 
       <div class="grid g-2" style="margin-top:26px">
-        <div class="card"><h3>🏆 Үздік 5 түлек</h3>${lbWidget(u)}
+        <div class="card"><h3>Айдың үздік 5 оқушысы</h3>${prizeHtml()}${lbWidget(u)}
           <a class="btn btn-ghost btn-block" style="margin-top:12px" href="#/app/leaderboard">Толық рейтингті көру</a></div>
-        <div class="card"><h3>🏅 Жетістік белгілері <span class="muted" style="font-weight:600">${u.badges.length}/${window.BADGES.length}</span></h3>${badgesHtml(u)}</div>
+        <div class="card"><h3>Жетістік белгілері <span class="muted" style="font-weight:600">${u.badges.filter(b => window.BADGES.some(x => x.id === b)).length}/${window.BADGES.length}</span></h3>${badgesHtml(u)}</div>
       </div>`;
   }
 
-  function moduleCard(u, m) {
-    const p = moduleProgress(u, m.id), pct = Math.round(p.solved / p.total * 100);
-    return `<a class="card module-card" href="#/app/topic/${m.id}" style="color:inherit">
-      <div class="m-head"><span class="m-ico">${m.icon}</span><div><h4>${m.title}</h4><small>${m.desc}</small></div></div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="m-foot"><span>${pct}% · ${p.solved}/${p.total}</span><span>${p.mistakes ? `❌ ${p.mistakes} қате` : "✨"}</span></div></a>`;
+  const chNum = i => String(i + 1).padStart(2, "0");
+  function chapterCard(u, m, i) {
+    const p = moduleProgress(u, m.id), pct = p.total ? Math.round(p.solved / p.total * 100) : 0;
+    return `<a class="card module-card" href="#/app/chapter/${m.id}" style="color:inherit">
+      <div class="m-head"><span class="m-num">${chNum(i)}</span><div><h4>${m.title}</h4><small>${m.desc}</small></div></div>
+      ${p.total ? `<div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="m-foot"><span>${pct}% · ${p.solved}/${p.total} сұрақ</span><span>${p.mistakes ? `<span class="err-txt">${p.mistakes} қате</span>` : ""}</span></div>` :
+      `<div class="m-foot"><span>Сұрақтар жақында қосылады</span></div>`}</a>`;
   }
 
-  /* ---- Topics ---- */
-  function pageTopics(u) {
-    return `<h1 class="page-title">📚 Тақырыптық тесттер</h1><p class="page-sub">Биология бөлімдері бойынша жаттығу. Әр жауаптан кейін толық түсініктеме көрсетіледі.</p>
-      <div class="grid g-3">${MODULES.map(m => moduleCard(u, m)).join("")}</div>`;
+  /* ---- Chapters ---- */
+  function pageChapters(u) {
+    return `<h1 class="page-title">Тараулық тест</h1><p class="page-sub">Тарауды таңда — сол тарау бойынша тест тапсыр.</p>
+      <div class="grid g-3">${MODULES.map((m, i) => chapterCard(u, m, i)).join("")}</div>`;
   }
 
-  function pageTopic(u, id) {
-    const m = MODULES.find(x => x.id === id);
-    if (!m) return pageTopics(u);
-    const p = moduleProgress(u, id), pct = Math.round(p.solved / p.total * 100);
-    return `<a href="#/app/topics" class="muted">← Барлық тараулар</a>
-      <div class="card" style="margin:12px 0 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-        <span class="m-ico" style="width:64px;height:64px;border-radius:18px;background:var(--purple-50);display:grid;place-items:center;font-size:34px">${m.icon}</span>
-        <div style="flex:1;min-width:200px"><h1 class="page-title">${m.title}</h1><p class="muted" style="margin:0 0 8px">${m.desc}</p>
-          <div class="bar"><i style="width:${pct}%"></i></div><small class="muted">${pct}% аяқталды · ${p.total} сұрақ · ${p.mistakes} қате</small></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-cta" data-act="start-topic" data-id="${m.id}">▶ Тақырыптық тест</button>
-          ${p.mistakes ? `<button class="btn btn-ghost" data-act="start-mistakes" data-id="${m.id}">🔄 Қателерді қайталау</button>` : ""}
-        </div>
+  function pageChapter(u, id) {
+    const i = MODULES.findIndex(x => x.id === id);
+    if (i < 0) return pageChapters(u);
+    const m = MODULES[i], p = moduleProgress(u, id), pct = p.total ? Math.round(p.solved / p.total * 100) : 0;
+    return `<a href="#/app/chapters" class="back-link">← Барлық тараулар</a>
+      <div class="card chapter-head">
+        <span class="m-num m-num-lg">${chNum(i)}</span>
+        <div style="flex:1;min-width:200px"><h1 class="page-title">${m.title}</h1><p class="muted" style="margin:0 0 10px">${m.desc}</p>
+          ${p.total ? `<div class="bar"><i style="width:${pct}%"></i></div><small class="muted">${pct}% аяқталды · ${p.total} сұрақ · ${p.mistakes} қате</small>` :
+            `<small class="muted">Бұл тарауға сұрақтар жақында қосылады.</small>`}</div>
+        ${p.total ? `<div class="chapter-actions">
+          <button class="btn btn-cta btn-lg" data-act="start-topic" data-id="${m.id}">Тестті бастау</button>
+          ${p.mistakes ? `<button class="btn btn-ghost btn-lg" data-act="start-mistakes" data-id="${m.id}">Қатемен жұмыс</button>` : ""}
+        </div>` : ""}
       </div>
-      <div class="grid g-2">
-        <div class="card cheat"><h3>📖 Қысқаша шпаргалка</h3><ul>${m.cheat.map(c => `<li>${c}</li>`).join("")}</ul></div>
-        <div class="card"><h3>🧮 Есептердің шешілу жолдары</h3>
-          ${m.examples.length ? m.examples.map(e => `<div class="example"><b>Есеп:</b> ${e.q}<br><b style="color:var(--green)">Шешуі:</b> ${e.a}</div>`).join("") :
-            `<p class="muted">Бұл тарауда есептер жоқ — теорияға және тест сұрақтарына назар аудар.</p>`}
-        </div>
-      </div>`;
+      <div class="card">${rulesHtml()}</div>`;
   }
 
   /* ---- Mock ---- */
   function rulesHtml() {
-    return `<div class="rules"><h3>📏 Балл жүйесі</h3><p class="muted" style="margin:0">Әр сұрақ — ең көбі 2 балл. Қате нұсқа белгіленсе — 0 балл.</p>
+    return `<div class="rules"><h3>Балл жүйесі</h3><p class="muted" style="margin:0">Әр сұрақ — ең көбі 2 балл. Қате нұсқа белгіленсе — 0 балл.</p>
       <table><thead><tr><th>Дұрыс жауап саны</th><th>2 балл</th><th>1 балл</th><th>0 балл</th></tr></thead><tbody>
       <tr><td>3 дұрыс жауап</td><td>3-еуі де дұрыс</td><td>2 дұрыс</td><td>1, 4, 5 белгіленсе</td></tr>
       <tr><td>2 дұрыс жауап</td><td>2-еуі де дұрыс</td><td>1 дұрыс</td><td>3, 4, 5 белгіленсе</td></tr>
@@ -717,64 +758,74 @@
   }
 
   function pageMock(u) {
-    const mocks = u.history.filter(h => h.mode === "mock").slice(-8).reverse();
-    const left = hasPremium(u) ? "" : Math.max(0, FREE_MOCKS - u.mocks);
-    return `<h1 class="page-title">📝 Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ жағдайын модельдеу: таймер, жаңа формат, нәтиже мен толық талдау.</p>
+    const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
+    return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ жағдайын модельдеу: таймер, жаңа формат, нәтиже мен толық талдау.</p>
       <div class="grid g-2">
         <div class="card">
-          <h3>🎯 ${Math.min(MOCK_SIZE, Q.length)} сұрақ · ${MOCK_MIN} минут</h3>
+          <h3>${Math.min(MOCK_SIZE, Q.length)} сұрақ · ${MOCK_MIN} минут</h3>
           <ul class="muted" style="padding-left:18px"><li>Бір және бірнеше дұрыс жауабы бар сұрақтар</li><li>Контекстік тапсырмалар</li><li>Уақыт біткенде тест автоматты түрде аяқталады</li><li>Нәтиже 50 балдық шкалаға келтіріледі</li></ul>
-          ${left === "" ? "" : `<p>Қалған тегін әрекет: <b>${left}</b></p>`}
           <button class="btn btn-cta btn-lg btn-block" data-act="start-mock">Сынаманы бастау</button>
         </div>
         <div class="card">${rulesHtml()}</div>
       </div>
-      <div class="card" style="margin-top:16px"><h3>📈 Соңғы сынамалар</h3>
-        ${mocks.length ? mocks.map(h => `<div class="lb-row"><span class="lb-name">${new Date(h.date).toLocaleDateString("kk-KZ")}</span>
-          <span class="lb-xp">${h.scaled}/50</span><span class="lb-score">${h.score}/${h.max} · ${h.pct}%</span></div>`).join("") :
-          `<p class="muted">Әзірге сынама тапсырылмаған. Алғашқысын баста! 💪</p>`}
+      <div class="card" style="margin-top:16px"><h3>Соңғы сынамалар</h3>
+        ${mocks.length ? mocks.map(h => {
+          const wrong = (h.wrong || []).filter(id => QBY[id]);
+          return `<div class="lb-row hist-row"><span class="lb-name hist-date">${fmtDate(h.date)}</span>
+            <span class="lb-xp">${h.scaled}/50</span><span class="lb-score">${h.score}/${h.max} · ${h.pct}%</span>
+            ${wrong.length ? `<button class="btn btn-ghost btn-sm" data-act="start-hist" data-d="${h.date}">Қатемен жұмыс (${wrong.length})</button>` : `<span class="tag">Қате жоқ</span>`}</div>`; }).join("") :
+          `<p class="muted">Әзірге сынама тапсырылмаған. Алғашқысын баста!</p>`}
       </div>`;
   }
 
   /* ---- Mistakes ---- */
   function pageMistakes(u) {
     const ids = Object.keys(u.mistakes).filter(id => QBY[id]);
-    if (!ids.length) return `<h1 class="page-title">❌ Қателер банкі</h1>
-      <div class="card empty"><div class="e-ico">🌟</div><h3>Қателер банкі бос</h3><p>Тест тапсыр — қате жіберген сұрақтарың осында жиналады.</p>
+    if (!ids.length) return `<h1 class="page-title">Қатемен жұмыс</h1>
+      <div class="card empty"><div class="e-ico">${ic("check", 40)}</div><h3>Қате сұрақтар жоқ</h3><p>Тест тапсыр — қате жауап берген сұрақтарыңнан осында тест құрылады.</p>
       <button class="btn btn-primary" data-act="start-express">Экспресс-тест тапсыру</button></div>`;
     const byMod = MODULES.map(m => ({ m, list: ids.filter(id => QBY[id].module === m.id) })).filter(x => x.list.length);
-    return `<h1 class="page-title">❌ Қателер банкі</h1><p class="page-sub">Сенде <b>${ids.length}</b> қате сұрақ бар. Дұрыс жауап берсең, сұрақ банктен өшіріледі. Түзетілгені: <b>${u.fixed}</b></p>
-      <button class="btn btn-cta btn-lg" data-act="start-mistakes" style="margin-bottom:16px">🔄 Барлығын қайта тапсыру</button>
+    return `<h1 class="page-title">Қатемен жұмыс</h1><p class="page-sub">Осы уақытқа дейін тапсырған тесттеріңде қате жауап берген <b>${ids.length}</b> сұрақтан тест құрылады. Дұрыс жауап берсең, сұрақ тізімнен шығады. Түзетілгені: <b>${u.fixed}</b></p>
+      <button class="btn btn-cta btn-lg" data-act="start-mistakes" style="margin-bottom:16px">Тестті бастау · ${ids.length} сұрақ</button>
       <div class="grid g-2">${byMod.map(x => `
-        <div class="card"><div class="row-between" style="margin:0 0 10px"><h3 style="margin:0">${x.m.icon} ${x.m.title} <span class="muted">· ${x.list.length}</span></h3>
-          <button class="btn btn-ghost" style="padding:8px 12px" data-act="start-mistakes" data-id="${x.m.id}">Қайталау</button></div>
-          ${x.list.map(id => `<p style="margin:0 0 8px;font-size:14.5px">• ${QBY[id].q}</p>`).join("")}</div>`).join("")}
+        <div class="card"><div class="row-between" style="margin:0 0 10px"><h3 style="margin:0">${x.m.title} <span class="muted">· ${x.list.length}</span></h3>
+          <button class="btn btn-ghost btn-sm" data-act="start-mistakes" data-id="${x.m.id}">Тест</button></div>
+          ${x.list.map(id => `<p class="mistake-q">${QBY[id].q}</p>`).join("")}</div>`).join("")}
       </div>`;
   }
 
-  /* ---- Notes ---- */
-  function pageNotes(u) {
-    return `<div class="row-between" style="margin:0"><div><h1 class="page-title">📖 Конспектілер мен шпаргалкалар</h1><p class="page-sub">Әр тараудың ең маңызды фактілері — бір жерде.</p></div>
-      <button class="btn btn-primary no-print" data-act="${hasPremium(u) ? "print" : "upgrade"}">📄 PDF ретінде сақтау ${hasPremium(u) ? "" : "⭐"}</button></div>
-      <div class="grid g-2">${MODULES.map(m => `
-        <div class="card cheat"><h3>${m.icon} ${m.title}</h3><ul>${m.cheat.map(c => `<li>${c}</li>`).join("")}</ul>
-          ${m.examples.map(e => `<div class="example"><b>Есеп:</b> ${e.q}<br><b style="color:var(--green)">Шешуі:</b> ${e.a}</div>`).join("")}</div>`).join("")}
+  /* ---- Real UBT questions ---- */
+  function pageReal(u, mod) {
+    const all = window.REAL_UBT || [];
+    if (!all.length) return `<h1 class="page-title">Нағыз ҰБТ-да келген сұрақтар</h1>
+      <div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
+    const mods = MODULES.filter(m => all.some(x => x.module === m.id));
+    const list = mod ? all.filter(x => x.module === mod) : all;
+    return `<h1 class="page-title">Нағыз ҰБТ-да келген сұрақтар</h1><p class="page-sub">Сұрақ-жауап түріндегі шпаргалка · ${all.length} сұрақ</p>
+      <div class="chips" style="margin-bottom:16px"><a class="chip ${!mod ? "active" : ""}" href="#/app/real">Барлығы</a>
+        ${mods.map(m => `<a class="chip ${mod === m.id ? "active" : ""}" href="#/app/real/${m.id}">${m.title}</a>`).join("")}</div>
+      <div class="grid g-2">${list.map((x, i) => `
+        <div class="card qa-item"><div class="q-meta"><span class="tag">${i + 1}</span>${x.module ? `<span class="tag">${modTitle(x.module)}</span>` : ""}${x.year ? `<span class="tag t-context">ҰБТ ${esc(x.year)}</span>` : ""}</div>
+          <p class="qa-q">${x.q}</p><div class="qa-a"><b>Жауабы:</b> ${x.a}</div></div>`).join("")}
       </div>`;
   }
 
   /* ---- Leaderboard ---- */
   function pageLeaderboard(u) {
-    return `<h1 class="page-title">🏆 Рейтинг</h1><p class="page-sub">Сенің орның: <b>${myRank(u)}</b>. Тест тапсырып, XP жина! <br><small>Рейтингте осы құрылғыда тіркелген оқушылар көрсетіледі.</small></p>
-      <div class="card">${lbWidget(u, true)}</div>`;
+    const month = MONTH_NAMES[new Date().getMonth()];
+    return `<h1 class="page-title">Рейтинг</h1><p class="page-sub">${esc(month)} айы · оқушылар осы айда тесттерден жинаған балл бойынша орналасады. Сенің орның: <b>${myRank(u)}</b></p>
+      ${prizeHtml()}
+      <div class="card">${lbWidget(u, true)}</div>
+      <p class="hint">Әр тестте алған баллың (әр сұраққа 0, 1 немесе 2 балл) айлық есепке қосылады. «ҰБТ» — осы айдағы толық сынамадағы ең жоғары нәтиже.</p>`;
   }
 
   /* ---- Settings ---- */
   function pageSettings(u) {
     const theme = store.get(THEME_KEY, "auto");
-    return `<h1 class="page-title">⚙️ Баптаулар / Профиль</h1><p class="page-sub">Деректеріңді өзгерт, құпия сөзді ауыстыр.</p>
+    return `<h1 class="page-title">Баптаулар / Профиль</h1><p class="page-sub">Деректеріңді өзгерт, құпия сөзді ауыстыр.</p>
       <div class="grid g-2">
         <form class="card" id="profile-form">
-          <h3>👤 Профиль</h3>
+          <h3>Профиль</h3>
           <div class="field"><label>Аты-жөні</label><input class="input" name="name" value="${esc(u.name)}"></div>
           <div class="field"><label>Телефон</label><input class="input" value="${esc(u.phone || u.email || "—")}" disabled></div>
           <div class="field"><label>Нысаналы балл: <b id="s-tv">${u.target}</b>/50</label><input type="range" name="target" min="10" max="50" value="${u.target}"></div>
@@ -785,17 +836,17 @@
         </form>
         <div class="grid" style="align-content:start">
           <form class="card" id="pass-form">
-            <h3>🔒 Құпия сөзді ауыстыру</h3>
-            ${u.pass ? `<div class="field"><input class="input" type="password" name="old" placeholder="Қазіргі құпия сөз" autocomplete="current-password"></div>` : `<p class="hint">Аккаунт әлеуметтік желі арқылы ашылған — құпия сөз орнатуға болады.</p>`}
+            <h3>Құпия сөзді ауыстыру</h3>
+            ${u.pass ? `<div class="field"><input class="input" type="password" name="old" placeholder="Қазіргі құпия сөз" autocomplete="current-password"></div>` : ""}
             <div class="field"><input class="input" type="password" name="new" placeholder="Жаңа құпия сөз" autocomplete="new-password"></div>
             <button class="btn btn-ghost btn-block">Жаңарту</button>
           </form>
-          <div class="card"><h3>🎨 Тақырып</h3><div class="chips">
-            ${[["auto", "🌓 Авто"], ["light", "☀️ Жарық"], ["dark", "🌙 Қараңғы"]].map(([v, l]) => `<button class="chip ${theme === v ? "active" : ""}" data-act="theme" data-v="${v}">${l}</button>`).join("")}</div></div>
-          <div class="card"><h3>🏅 Жетістіктерім</h3>${badgesHtml(u)}</div>
+          <div class="card"><h3>Тақырып</h3><div class="chips">
+            ${[["auto", "Авто"], ["light", "Жарық"], ["dark", "Қараңғы"]].map(([v, l]) => `<button class="chip ${theme === v ? "active" : ""}" data-act="theme" data-v="${v}">${l}</button>`).join("")}</div></div>
+          <div class="card"><h3>Жетістіктерім</h3>${badgesHtml(u)}</div>
           <div class="card"><div class="btn-row" style="margin:0">
             <button class="btn btn-outline" data-act="reset">Прогресті тазалау</button>
-            <button class="btn btn-outline" style="color:var(--red)" data-act="logout">Шығу</button></div></div>
+            <button class="btn btn-outline" style="color:var(--red)" data-act="logout">${ic("logout", 18)} Шығу</button></div></div>
         </div>
       </div>`;
   }
@@ -808,7 +859,7 @@
       const f = pf.elements, name = f.name.value.trim();
       if (name.length < 2) return toast("Аты-жөніңді енгіз");
       Object.assign(u, { name, target: +f.target.value, city: f.city.value.trim(), school: f.school.value.trim(), month: f.month.value });
-      saveUser(u); toast("✅ Профиль сақталды"); render();
+      saveUser(u); toast("Профиль сақталды"); render();
     });
     const ps = $("#pass-form");
     ps.addEventListener("submit", e => {
@@ -816,7 +867,7 @@
       const f = ps.elements;
       if (u.pass && hash(f.old.value) !== u.pass) return toast("Қазіргі құпия сөз қате");
       if (f.new.value.length < 6) return toast("Жаңа құпия сөз кемінде 6 таңба");
-      u.pass = hash(f.new.value); saveUser(u); ps.reset(); toast("✅ Құпия сөз жаңартылды");
+      u.pass = hash(f.new.value); saveUser(u); ps.reset(); toast("Құпия сөз жаңартылды");
     });
   }
 
@@ -853,15 +904,23 @@
       if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді. Шексіз сынама үшін Премиумға өт!`);
       return startTest(buildMock(u));
     }
-    if (mode === "express") return startTest({ mode: "express", title: "⚡ Экспресс-тест (10 сұрақ)", questions: pick(Q, EXPRESS_SIZE), instant: true });
+    if (mode === "express") return startTest({ mode: "express", title: `Экспресс-тест (${EXPRESS_SIZE} сұрақ)`, questions: pick(Q, EXPRESS_SIZE), instant: true });
+    if (mode === "hist") {
+      const h = u.history.find(x => String(x.date) === String(id));
+      const list = h ? (h.wrong || []).map(k => QBY[k]).filter(Boolean) : [];
+      if (!list.length) return toast("Бұл сынамада қате жоқ");
+      return startTest({ mode: "mistakes", title: "Сынама қателерімен жұмыс", questions: shuffle(list), instant: true });
+    }
     if (mode === "topic") {
       const m = MODULES.find(x => x.id === id);
-      return startTest({ mode: "topic", title: `${m.icon} ${m.title}`, questions: shuffle(Q.filter(q => q.module === id)), instant: true, module: id });
+      const qs = shuffle(Q.filter(q => q.module === id));
+      if (!qs.length) return toast("Бұл тарауға сұрақтар жақында қосылады");
+      return startTest({ mode: "topic", title: `Тараулық тест: ${m.title}`, questions: qs, instant: false, module: id });
     }
     if (mode === "mistakes") {
       const list = Object.keys(u.mistakes).map(k => QBY[k]).filter(q => q && (!id || q.module === id));
-      if (!list.length) { toast("Қателер банкі бос — керемет! 🌟"); return go("#/app/mistakes"); }
-      return startTest({ mode: "mistakes", title: "🔄 Қателермен жұмыс", questions: shuffle(list), instant: true });
+      if (!list.length) { toast("Қате сұрақтар жоқ — керемет!"); return go("#/app/mistakes"); }
+      return startTest({ mode: "mistakes", title: "Қатемен жұмыс", questions: shuffle(list), instant: true });
     }
   }
 
@@ -872,8 +931,8 @@
   function renderTest() {
     const t = state.test, q = t.questions[t.cur], sel = t.answers[t.cur], multi = isMulti(q), checked = t.checked[t.cur];
     const answered = t.answers.filter(a => a.length).length;
-    const typeTag = q.type === "context" ? `<span class="tag t-context">📄 Контекстік тапсырма</span>` :
-      multi ? `<span class="tag t-multi">☑️ Бір немесе бірнеше дұрыс жауап</span>` : `<span class="tag t-single">⚪ Бір дұрыс жауап</span>`;
+    const typeTag = q.type === "context" ? `<span class="tag t-context">Контекстік тапсырма</span>` :
+      multi ? `<span class="tag t-multi">Бір немесе бірнеше дұрыс жауап</span>` : `<span class="tag t-single">Бір дұрыс жауап</span>`;
     const optClass = i => {
       if (!checked) return sel.includes(i) ? "sel" : "";
       const ok = q.correct.includes(i), s = sel.includes(i);
@@ -900,11 +959,11 @@
           <button class="opt ${multi ? "multi" : "single"} ${optClass(i)}" data-act="pick" data-i="${i}" ${checked ? "disabled" : ""} aria-pressed="${sel.includes(i)}">
             <span class="letter">${LETTERS[i]}</span><span>${o}</span></button>`).join("")}
         </div>
-        ${checked ? `<div class="explain"><b>💡 Түсініктеме:</b> ${q.explain}<br><small class="muted">Дұрыс жауап: ${q.correct.map(i => LETTERS[i]).join(", ")}</small></div>` : ""}
+        ${checked ? `<div class="explain">${q.explain ? `<b>Түсініктеме:</b> ${q.explain}<br>` : ""}<small class="muted">Дұрыс жауап: ${q.correct.map(i => LETTERS[i]).join(", ")}</small></div>` : ""}
         <div class="q-nav">
           <button class="btn btn-ghost" data-act="prev" ${t.cur === 0 ? "disabled" : ""}>← Алдыңғы</button>
           ${t.instant && !checked ? `<button class="btn btn-primary" data-act="check" ${sel.length ? "" : "disabled"}>Тексеру</button>` :
-            isLast ? `<button class="btn btn-cta" data-act="finish">Тестті аяқтау ✓</button>` : `<button class="btn btn-primary" data-act="next">Келесі →</button>`}
+            isLast ? `<button class="btn btn-cta" data-act="finish">Тестті аяқтау</button>` : `<button class="btn btn-primary" data-act="next">Келесі →</button>`}
         </div>
       </div>
       <div class="q-grid">${t.questions.map((qq, i) => {
@@ -915,14 +974,14 @@
     </div>`;
 
     if (u && t.mode !== "demo") app.innerHTML = shell(u, "test", inner);
-    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
+    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
       <a class="btn btn-ghost" href="#/register">Тіркелу</a></div></header><div class="content" style="margin:0 auto">${inner}</div>`;
 
     stopTimer();
     if (t.timeLimit) state.timer = setInterval(() => {
       const left = timeLeft(t), el = $("#timer");
       if (el) { el.textContent = "⏱ " + fmtTime(left); el.classList.toggle("low", left < 300); }
-      if (left <= 0) { stopTimer(); toast("⏰ Уақыт бітті! Тест аяқталды."); finishTest(); }
+      if (left <= 0) { stopTimer(); toast("Уақыт бітті! Тест аяқталды."); finishTest(); }
     }, 1000);
   }
 
@@ -940,18 +999,18 @@
     }
     state.result = { test: t, res, xp };
     state.test = null;
-    if (xp) setTimeout(() => toast(`💎 +${xp} XP`, "xp"), 300);
+    if (xp) setTimeout(() => toast(`+${xp} балл`, "xp"), 300);
     go("#/result");
   }
 
   function renderResult() {
     const { test: t, res, xp } = state.result, u = currentUser();
-    const msg = res.pct >= 90 ? "Керемет! Сен 50/50-ге дайынсың! 🏆" : res.pct >= 70 ? "Жақсы нәтиже! Аз ғана қалды 💪" : res.pct >= 40 ? "Жаман емес! Қателерді талдап, қайталайық 📚" : "Бастама жасалды! Түсініктемелерді оқып шық 🌱";
+    const msg = res.pct >= 90 ? "Керемет! Сен 50/50-ге дайынсың!" : res.pct >= 70 ? "Жақсы нәтиже! Аз ғана қалды" : res.pct >= 40 ? "Жаман емес! Қателерді талдап, қайталайық" : "Бастама жасалды! Түсініктемелерді оқып шық";
     const inner = `<div class="test-wrap">
       <div class="result-hero">
         <div style="font-size:15px;opacity:.9">${esc(t.title)}</div>
         <div class="big">${res.scaled}<span style="font-size:24px;opacity:.8">/50</span></div>
-        <p>${res.score} / ${res.max} балл · ${res.pct}%${xp ? ` · 💎 +${xp} XP` : ""}</p>
+        <p>${res.score} / ${res.max} балл · ${res.pct}%</p>
         <p style="font-weight:700">${msg}</p>
       </div>
       <div class="result-stats">
@@ -961,11 +1020,11 @@
         <div class="card"><b>${t.timeLimit ? fmtTime(Math.min(t.timeLimit, Math.floor((Date.now() - t.startedAt) / 1000))) : t.questions.length}</b><span>${t.timeLimit ? "жұмсалған уақыт" : "сұрақ"}</span></div>
       </div>
       ${!u ? `<div class="card" style="text-align:center;margin-bottom:18px;border:2px solid var(--pink)">
-        <h3>🎁 Нәтижеңді сақтап, ${res.full * 10 + res.part * 4} XP ал!</h3><p class="muted">Тіркелсең, қателерің «Қателер банкіне» түседі және жеке статистикаң жүргізіледі.</p>
+        <h3>Нәтижеңді сақтап, рейтингке қатыс!</h3><p class="muted">Тіркелсең, қате сұрақтарың «Қатемен жұмыс» бөліміне түседі және жеке статистикаң жүргізіледі.</p>
         <a class="btn btn-cta btn-lg" href="#/register">Тіркелу — 30 секунд</a></div>` : `
-        <div class="btn-row" style="margin-bottom:18px"><a class="btn btn-primary" href="#/app">🏠 Басты бетке</a>
-          ${res.zero + res.part ? `<button class="btn btn-cta" data-act="start-mistakes">🔄 Қателермен жұмыс</button>` : ""}</div>`}
-      <h2 style="font-size:20px">🔍 Толық талдау</h2>
+        <div class="btn-row" style="margin-bottom:18px"><a class="btn btn-primary" href="#/app">Басты бетке</a>
+          ${res.zero + res.part ? `<button class="btn btn-cta" data-act="start-hist" data-d="${(currentUser().history.slice(-1)[0] || {}).date}">Қатемен жұмыс</button>` : ""}</div>`}
+      <h2 style="font-size:20px">Толық талдау</h2>
       ${t.questions.map((q, i) => {
         const sel = t.answers[i], p = res.per[i];
         const cls = j => { const ok = q.correct.includes(j), s = sel.includes(j); return ok && s ? "ok" : s ? "bad" : ok ? "miss" : ""; };
@@ -974,17 +1033,17 @@
           ${q.context ? `<div class="context-box">${q.context}</div>` : ""}
           <div class="q-text">${q.q}</div>
           <div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>
-          <div class="explain"><b>💡 Түсініктеме:</b> ${q.explain}</div></div>`; }).join("")}
+          ${q.explain ? `<div class="explain"><b>Түсініктеме:</b> ${q.explain}</div>` : ""}</div>`; }).join("")}
       <div class="card" style="margin-top:8px">${rulesHtml()}</div>
     </div>`;
     if (u) app.innerHTML = shell(u, "result", inner);
-    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/"><span class="logo-mark">🧬</span>${esc(SITE)}</a>
+    else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
       <a class="btn btn-primary" href="#/register">Тіркелу</a></div></header><div class="content" style="margin:0 auto">${inner}</div>`;
   }
 
   /* ================= Modals ================= */
   function upgradeModal(reason) {
-    openModal(`<h3>⭐ Премиум рұқсат</h3>
+    openModal(`<h3>Премиум рұқсат</h3>
       ${reason ? `<p class="muted">${reason}</p>` : ""}
       <ul style="padding-left:18px"><li>Шексіз толық ҰБТ сынамалары</li><li>Конспектілерді PDF-ке сақтау</li></ul>
       ${CFG.premium.price ? `<div class="card" style="text-align:center;background:var(--surface-2);border:0;margin-bottom:14px"><b style="font-size:28px">${esc(CFG.premium.price)}</b></div>` : ""}
@@ -998,7 +1057,7 @@
     state.notifOpen = !state.notifOpen;
     if (!state.notifOpen) return pop.classList.add("hidden");
     pop.innerHTML = u.notifications.length ? u.notifications.slice(0, 8).map(n => `
-      <div class="notif"><span style="font-size:20px">${n.icon}</span><div>${esc(n.text)}<time>${new Date(n.time).toLocaleString("kk-KZ", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time></div></div>`).join("") :
+      <div class="notif"><span class="n-ico">${ICONS[n.icon] ? ic(n.icon, 18) : ic("bell", 18)}</span><div>${esc(n.text)}<time>${new Date(n.time).toLocaleString("kk-KZ", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time></div></div>`).join("") :
       `<div class="notif muted">Хабарлама жоқ</div>`;
     pop.classList.remove("hidden");
     u.notifications.forEach(n => n.read = true); saveUser(u);
@@ -1011,7 +1070,7 @@
     "tab-register": () => go("#/register"),
     forgot: forgotModal,
     terms: () => openModal(`<h3>Қолданушы келісімі</h3><p class="muted">${esc(CFG.terms)}</p><button class="btn btn-primary btn-block" data-close>Түсінікті</button>`),
-    eye: el => { const inp = el.parentElement.querySelector("input"); inp.type = inp.type === "password" ? "text" : "password"; el.textContent = inp.type === "password" ? "👁️" : "🙈"; },
+    eye: el => { const inp = el.parentElement.querySelector("input"); inp.type = inp.type === "password" ? "text" : "password"; el.innerHTML = ic(inp.type === "password" ? "eye" : "eyeoff", 20); },
     menu: () => { $("#sidebar").classList.add("open"); $("#backdrop").classList.add("show"); },
     "close-menu": () => { $("#sidebar").classList.remove("open"); $("#backdrop").classList.remove("show"); },
     bell: toggleNotifs,
@@ -1019,7 +1078,7 @@
     print: () => window.print(),
     theme: el => { store.set(THEME_KEY, el.dataset.v); applyTheme(); render(); },
     logout: () => confirmModal("Шығу", "Аккаунттан шыққыңыз келе ме?", "Шығу", () => { store.del(SESSION_KEY); memSession = null; go("#/"); }),
-    reset: () => confirmModal("Прогресті тазалау", "XP, статистика, қателер банкі және жетістіктер өшіріледі. Жалғастырасыз ба?", "Тазалау", () => {
+    reset: () => confirmModal("Прогресті тазалау", "Балл, статистика, қате сұрақтар тізімі және жетістіктер өшіріледі. Жалғастырасыз ба?", "Тазалау", () => {
       const u = currentUser();
       Object.assign(u, { xp: 0, mocks: 0, history: [], solved: {}, mistakes: {}, fixed: 0, activity: {}, modulesTried: {}, badges: [] });
       saveUser(u); toast("Прогресс тазаланды"); render();
@@ -1028,6 +1087,7 @@
     "start-express": () => startMode("express"),
     "start-topic": el => startMode("topic", el.dataset.id),
     "start-mistakes": el => startMode("mistakes", el.dataset.id),
+    "start-hist": el => startMode("hist", el.dataset.d),
     pick: el => {
       const t = state.test, q = t.questions[t.cur], i = +el.dataset.i;
       if (t.checked[t.cur]) return;
@@ -1040,7 +1100,7 @@
     check: () => {
       const t = state.test; t.checked[t.cur] = true;
       const p = scorePoints(t.questions[t.cur], t.answers[t.cur]);
-      toast(p === 2 ? "✅ Дұрыс! +2 балл" : p === 1 ? "🟡 Жартылай дұрыс: 1 балл" : "❌ Қате. Түсініктемені оқы");
+      toast(p === 2 ? "Дұрыс! +2 балл" : p === 1 ? "Жартылай дұрыс: 1 балл" : "Қате жауап");
       renderTestKeepScroll();
     },
     next: () => { const t = state.test; if (t.cur < t.questions.length - 1) { t.cur++; renderTest(); window.scrollTo(0, 0); } },
@@ -1081,7 +1141,7 @@
     if (store.get(k, false)) return;
     store.set(k, true);
     const s = streak(u);
-    if (s >= 2) { notify(u, "🔥", `${s} күн қатарынан! Тізбекті үзбе — бүгін де бір тест тапсыр.`); saveUser(u); }
+    if (s >= 2) { notify(u, "flame", `${s} күн қатарынан! Тізбекті үзбе — бүгін де бір тест тапсыр.`); saveUser(u); }
   })();
 
   applyTheme();

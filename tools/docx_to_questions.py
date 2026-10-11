@@ -9,7 +9,7 @@
 
 .docx ішіндегі формат (әр жол — жеке абзац):
 
-    # Цитология                         <- тарау (cytology, genetics, botany, zoology, anatomy, ecology, evolution
+    # Генетика                          <- тарау (botany, zoology, anatomy, genetics, molecular, cell, biotech, biomed, evolution
                                            немесе қазақша атауы)
     Контекст: Ферменттер — ...          <- (міндетті емес) контекстік мәтін, келесі сұраққа жатады
     1. Жасушаның энергетикалық станциясы:
@@ -32,12 +32,14 @@ except ImportError:
     sys.exit("python-docx орнатылмаған: pip install python-docx")
 
 MODULE_ALIASES = {
-    "cytology": "cytology", "цитология": "cytology",
+    "cell": "cell", "жасушалық биология": "cell", "цитология": "cell",
+    "molecular": "molecular", "молекулалық биология": "molecular",
+    "biotech": "biotech", "биотехнология": "biotech",
+    "biomed": "biomed", "биомедицина": "biomed",
     "genetics": "genetics", "генетика": "genetics",
     "botany": "botany", "ботаника": "botany",
     "zoology": "zoology", "зоология": "zoology",
     "anatomy": "anatomy", "анатомия": "anatomy", "адам анатомиясы": "anatomy",
-    "ecology": "ecology", "экология": "ecology",
     "evolution": "evolution", "эволюция": "evolution",
 }
 
@@ -49,7 +51,7 @@ EXP_RE = re.compile(r"^\s*(түсініктеме|талдау|explain)\s*:\s*(.
 
 def parse(path):
     document = docx.Document(path)
-    questions, module, context, cur = [], "cytology", None, None
+    questions, module, context, cur = [], "genetics", None, None
 
     def flush():
         nonlocal cur
