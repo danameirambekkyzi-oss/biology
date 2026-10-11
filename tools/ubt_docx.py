@@ -125,6 +125,23 @@ def parse_docx(path, save_image):
     return blocks
 
 
+def classify(texts, opts):
+    """Тапсырма түрін мазмұны бойынша анықтау: match / multi / single (+контекст)."""
+    lines = [t for t in texts if t["plain"]]
+    if any(MATCH_HEAD_RE.match(t["plain"]) for t in lines):
+        return "match"
+    items = [t for t in lines if ITEM_RE.match(NUM_RE.sub("", t["plain"], count=1)) and re.search(r"[-–—]\s*[A-FАБВСДЕФГ]\s*$|\s[A-FАБВСДЕФГ]\s*$", t["plain"])]
+    if len(items) >= 2 and not any(o["bold"] for o in opts) and len(opts) == 4:
+        return "match"
+    return "multi" if len(opts) >= 5 else "single"
+
+
+def starts_context(texts):
+    lines = [t for t in texts if t["plain"]]
+    before = lines[:-1]
+    return bool(before) and (sum(len(t["plain"]) for t in before) > 150 or len(before) >= 2)
+
+
 def build_question(idx, texts, opts, qid, warn, ctx_holder):
     imgs_all = [im for t in texts for im in t["imgs"]]
     lines = [t for t in texts if t["plain"]]
@@ -132,7 +149,8 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
     letter_map = {o["letter"]: k for k, o in enumerate(opts)}
     q = {"id": qid, "module": "", "options": options}
 
-    if 30 <= idx <= 34:  # сәйкестендіру
+    kind = classify(texts, opts)
+    if kind == "match":  # сәйкестендіру
         cand = [t for t in lines if not MATCH_HEAD_RE.match(t["plain"])]
         its = []
         for t in cand:
@@ -153,7 +171,7 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
     correct = [k for k, o in enumerate(opts) if o["bold"]]
     q["q"] = qtext
 
-    if idx == 25:  # контекст басталады
+    if kind == "single" and starts_context(texts) and not ctx_holder.get("left"):  # контекст басталады
         # сұрақ жолының өз суреттері сұраққа; одан бұрынғы суреттер контекстке
         qline = lines[-1] if lines else None
         ctx_imgs, q_imgs, seen_q = [], [], False
@@ -163,18 +181,21 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
         title = ""
         if before and len(before[0]["plain"]) < 80 and not before[0]["plain"].endswith("."):
             title, before = before[0]["html"], before[1:]
-        ctx_holder.update({"context": "<br><br>".join(b["html"] for b in before), "contextTitle": title, "contextImg": ctx_imgs})
+        ctx_holder.update({"context": "<br><br>".join(b["html"] for b in before), "contextTitle": title, "contextImg": ctx_imgs, "left": 5})
         imgs_all = q_imgs
-    if 25 <= idx <= 29:
+        before = []
+    if kind == "single" and ctx_holder.get("left"):
+        ctx_holder["left"] -= 1
         q["type"] = "context"
         q["context"] = ctx_holder.get("context", "")
         if ctx_holder.get("contextTitle"): q["contextTitle"] = ctx_holder["contextTitle"]
         if ctx_holder.get("contextImg"): q["contextImg"] = ctx_holder["contextImg"]
-    elif idx >= 35:
+    elif kind == "multi":
+        ctx_holder["left"] = 0
         q["type"] = "multi"
     else:
         q["type"] = "single"
-    if before and idx not in (25,):
+    if before:
         q["q"] = " ".join([b["html"] for b in before] + [qtext])
     if imgs_all: q["img"] = imgs_all
     q["correct"] = correct
