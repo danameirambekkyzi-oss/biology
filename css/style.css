@@ -562,3 +562,8 @@ details.context-box:not([open]) summary::after { content: "▸"; }
 .ml.sel { background: var(--purple); border-color: var(--purple); color: #fff; }
 .ml.ok { background: var(--green); border-color: var(--green); color: #fff; }
 .ml.bad { background: var(--red); border-color: var(--red); color: #fff; }
+.folder-card { display: flex; flex-direction: column; gap: 12px; color: inherit; transition: transform .2s, box-shadow .2s; }
+.folder-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.fc-ico { width: 52px; height: 52px; border-radius: 16px; background: var(--grad); color: #fff; display: grid; place-items: center; }
+.test-card.locked { opacity: .6; }
+.test-card.locked .btn { font-size: 13px; }

@@ -108,6 +108,7 @@
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/>',
     send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
     camera: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     dna: '<path d="M4 2c0 6 16 6 16 12M20 2c0 6-16 6-16 12M4 22c0-3 4-5 8-6.5M20 22c0-3-4-5-8-6.5"/><path d="M7 5h10M7 11h10M8 19h8"/>'
   };
@@ -877,22 +878,33 @@
       <tr><td>Сәйкестендіру</td><td>2 сәйкестік те дұрыс — 2 балл</td><td>1 сәйкестік дұрыс</td><td>Екеуі де қате</td></tr></tbody></table></div>`;
   }
 
-  function pageMock(u) {
+  function pageMock(u, folderId) {
+    const folder = FOLDERS.find(f => f.id === folderId);
+    const passed = id => u.history.some(h => h.testId === id);
+    const done = f => f.tests.filter(t => passed(t.id)).length;
+    const isOpen = (f, k) => k === 0 || passed(f.tests[k - 1].id);
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
     const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
     return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
       <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
         <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
-      ${FOLDERS.length ? FOLDERS.map(f => `
+      ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
         <div class="folder">
-          <div class="folder-head">${ic("layers", 22)}<h2>${esc(f.title)}</h2><span class="muted">${f.tests.length} тест</span></div>
-          <div class="grid g-3">${f.tests.map(t => { const b = best(t.id); return `
-            <div class="card test-card">
-              <div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : ""}</div>
+          <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2><span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span></div>
+          <p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>
+          <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), open = isOpen(folder, k); return `
+            <div class="card test-card ${open ? "" : "locked"}">
+              <div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
               <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут</small>
-              <button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">Бастау</button>
+              ${open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
+                `<button class="btn btn-ghost btn-block" disabled>${esc(folder.tests[k - 1].title)} тапсырылғаннан кейін ашылады</button>`}
             </div>`; }).join("")}</div>
-        </div>`).join("") : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}
+        </div>` : FOLDERS.length ? `<div class="grid g-3">${FOLDERS.map(f => `
+          <a class="card folder-card" href="#/app/mock/${f.id}">
+            <span class="fc-ico">${ic("layers", 26)}</span>
+            <div><h3 style="margin:0 0 4px">${esc(f.title)}</h3><small class="muted">${f.tests.length} тест · ${done(f)} тапсырылды</small></div>
+            <div class="bar" style="width:100%"><i style="width:${done(f) / f.tests.length * 100}%"></i></div>
+          </a>`).join("")}</div>` : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}
       <div class="grid g-2" style="margin-top:16px">
         <div class="card"><h3>Соңғы сынамалар</h3>
           ${mocks.length ? mocks.map(h => {
@@ -1086,6 +1098,8 @@
     if (!u) return go("#/login");
     if (mode === "test") {
       const t = TESTS.find(x => x.id === id); if (!t) return;
+      const k = t.folder.tests.findIndex(x => x.id === id);
+      if (k > 0 && !u.history.some(h => h.testId === t.folder.tests[k - 1].id)) return toast(`Алдымен ${t.folder.tests[k - 1].title} тапсыр`);
       if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді.`);
       return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
     }
