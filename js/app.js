@@ -178,28 +178,31 @@
 
   /* ================= Scoring ================= */
   /*
-   * Балл жүйесі (әр сұраққа ең көбі 2 балл):
+   * Балл жүйесі (ресми ҰБТ):
    *   3 дұрыс жауабы бар сұрақ: 3-еуі де дұрыс белгіленсе — 2 балл, тек 2 дұрыс белгіленсе — 1 балл, 1, 4, 5 белгіленсе — 0.
    *   2 дұрыс жауабы бар сұрақ: 2-еуі де дұрыс белгіленсе — 2 балл, тек 1 дұрыс белгіленсе — 1 балл, 3, 4, 5 белгіленсе — 0.
-   *   1 дұрыс жауабы бар сұрақ: дұрыс жауап белгіленсе — 2 балл, 2, 3, 4, 5 белгіленсе — 0.
+   *   1 дұрыс жауабы бар сұрақ (контекстік те): дұрыс жауап белгіленсе — 1 балл, 2, 3, 4, 5 белгіленсе — 0.
    *   Белгіленгендердің ішінде бір қате нұсқа болса — 0 балл.
    */
   function scorePoints(q, sel) {
     const k = q.correct.length, s = sel.length;
     if (!s) return 0;
     if (sel.some(i => !q.correct.includes(i))) return 0;
+    if (k === 1) return 1;              // бір дұрыс жауап — 1 балл (ресми ҰБТ)
     if (s === k) return 2;
-    if (k >= 2 && s === k - 1) return 1;
+    if (s === k - 1) return 1;
     return 0;
   }
+  const maxPoints = q => q.correct.length > 1 ? 2 : 1;
+  const ptsCls = (q, p) => p === maxPoints(q) ? 2 : p > 0 ? 1 : 0; // 2 — толық, 1 — жартылай, 0 — қате
 
   function grade(test) {
     const per = test.questions.map((q, i) => scorePoints(q, test.answers[i] || []));
-    const score = per.reduce((a, b) => a + b, 0), max = test.questions.length * 2;
+    const score = per.reduce((a, b) => a + b, 0), max = test.questions.reduce((a, q) => a + maxPoints(q), 0);
     return {
       per, score, max,
-      full: per.filter(p => p === 2).length,
-      part: per.filter(p => p === 1).length,
+      full: per.filter((p, i) => p === maxPoints(test.questions[i])).length,
+      part: per.filter((p, i) => p > 0 && p < maxPoints(test.questions[i])).length,
       zero: per.filter(p => p === 0).length,
       pct: max ? Math.round(score / max * 100) : 0,
       scaled: max ? Math.round(score / max * 50) : 0
@@ -267,7 +270,7 @@
     u.activity[today] = (u.activity[today] || 0) + 1;
     test.questions.forEach((q, i) => {
       u.modulesTried[q.module] = true;
-      if (res.per[i] === 2) {
+      if (res.per[i] === maxPoints(q)) {
         u.solved[q.id] = true;
         if (u.mistakes[q.id]) { delete u.mistakes[q.id]; u.fixed++; }
       } else {
@@ -275,7 +278,7 @@
       }
     });
     if (test.mode === "mock") u.mocks++;
-    const wrong = test.questions.filter((q, i) => res.per[i] < 2).map(q => q.id);
+    const wrong = test.questions.filter((q, i) => res.per[i] < maxPoints(q)).map(q => q.id);
     u.history.push({ date: Date.now(), mode: test.mode, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong });
     u.history = u.history.slice(-200);
     checkBadges(u, res, test);
@@ -796,11 +799,11 @@
 
   /* ---- Mock ---- */
   function rulesHtml() {
-    return `<div class="rules"><h3>Балл жүйесі</h3><p class="muted" style="margin:0">Әр сұрақ — ең көбі 2 балл. Қате нұсқа белгіленсе — 0 балл.</p>
-      <table><thead><tr><th>Дұрыс жауап саны</th><th>2 балл</th><th>1 балл</th><th>0 балл</th></tr></thead><tbody>
-      <tr><td>3 дұрыс жауап</td><td>3-еуі де дұрыс</td><td>2 дұрыс</td><td>1, 4, 5 белгіленсе</td></tr>
-      <tr><td>2 дұрыс жауап</td><td>2-еуі де дұрыс</td><td>1 дұрыс</td><td>3, 4, 5 белгіленсе</td></tr>
-      <tr><td>1 дұрыс жауап</td><td>1 дұрыс</td><td>—</td><td>2, 3, 4, 5 белгіленсе</td></tr></tbody></table></div>`;
+    return `<div class="rules"><h3>Балл жүйесі</h3><p class="muted" style="margin:0">Ресми ҰБТ жүйесі: бір дұрыс жауапты және контекстік сұрақ — 1 балл, бірнеше дұрыс жауапты — 2 балл. Қате нұсқа белгіленсе — 0 балл.</p>
+      <table><thead><tr><th>Дұрыс жауап саны</th><th>Толық балл</th><th>1 балл</th><th>0 балл</th></tr></thead><tbody>
+      <tr><td>3 дұрыс жауап</td><td>3-еуі де дұрыс — 2 балл</td><td>2 дұрыс</td><td>1, 4, 5 белгіленсе</td></tr>
+      <tr><td>2 дұрыс жауап</td><td>2-еуі де дұрыс — 2 балл</td><td>1 дұрыс</td><td>3, 4, 5 белгіленсе</td></tr>
+      <tr><td>1 дұрыс жауап</td><td>Дұрыс жауап — 1 балл</td><td>—</td><td>Қате немесе 2, 3, 4, 5 белгіленсе</td></tr></tbody></table></div>`;
   }
 
   function pageMock(u) {
@@ -929,7 +932,11 @@
 
   function buildMock(u) {
     // ҰБТ құрылымына жақын: алдымен бір жауаптылар, содан кейін контекстік, соңында бірнеше жауаптылар
-    const qs = pick(Q, MOCK_SIZE);
+    // Ресми құрылым: 25 бір жауапты + 5 контекстік + 10 бірнеше жауапты (жетпесе — басқа сұрақтармен толтырылады)
+    const by = t => shuffle(Q.filter(q => (isMulti(q) ? "multi" : q.type === "context" ? "context" : "single") === t));
+    const parts = { single: by("single"), context: by("context"), multi: by("multi") };
+    let qs = [].concat(parts.single.splice(0, CALC.single.count), parts.context.splice(0, CALC.context.count), parts.multi.splice(0, CALC.multi.count));
+    qs = qs.concat(shuffle([].concat(parts.single, parts.context, parts.multi)).slice(0, Math.max(0, MOCK_SIZE - qs.length))).slice(0, MOCK_SIZE);
     const order = { single: 0, context: 1, multi: 2 };
     qs.sort((a, b) => order[a.type] - order[b.type]);
     return { mode: "mock", title: "Толық ҰБТ сынамасы", questions: qs, timeLimit: state.mockMin * 60, instant: false };
@@ -999,7 +1006,7 @@
       <div class="progress-line"><i style="width:${(t.instant ? t.checked.filter(Boolean).length : answered) / t.questions.length * 100}%"></i></div>
       <div class="q-card">
         <div class="q-meta"><span class="tag">${t.cur + 1} / ${t.questions.length}</span>${typeTag}<span class="tag">${modTitle(q.module)}</span>
-          ${checked ? `<span class="pts p${pts}">${pts} балл</span>` : ""}</div>
+          ${checked ? `<span class="pts p${ptsCls(q, pts)}">${pts} балл</span>` : ""}</div>
         ${q.context ? `<div class="context-box">${q.context}</div>` : ""}
         <div class="q-text">${q.q}</div>
         <div class="opts">${q.options.map((o, i) => `
@@ -1015,7 +1022,7 @@
       </div>
       <div class="q-grid">${t.questions.map((qq, i) => {
         let c = t.answers[i].length ? "done" : "";
-        if (t.checked[i]) { const p = scorePoints(qq, t.answers[i]); c = p === 2 ? "r-ok" : p === 1 ? "r-part" : "r-bad"; }
+        if (t.checked[i]) { const p = scorePoints(qq, t.answers[i]); c = ["r-bad", "r-part", "r-ok"][ptsCls(qq, p)]; }
         return `<button class="${c} ${i === t.cur ? "cur" : ""}" data-act="goto" data-i="${i}">${i + 1}</button>`; }).join("")}
       </div>
     </div>`;
@@ -1061,8 +1068,8 @@
         <p style="font-weight:700">${msg}</p>
       </div>
       <div class="result-stats">
-        <div class="card"><b style="color:var(--green)">${res.full}</b><span>толық дұрыс (2 балл)</span></div>
-        <div class="card"><b style="color:var(--amber)">${res.part}</b><span>жартылай (1 балл)</span></div>
+        <div class="card"><b style="color:var(--green)">${res.full}</b><span>толық дұрыс</span></div>
+        <div class="card"><b style="color:var(--amber)">${res.part}</b><span>жартылай дұрыс</span></div>
         <div class="card"><b style="color:var(--red)">${res.zero}</b><span>қате (0 балл)</span></div>
         <div class="card"><b>${t.timeLimit ? fmtTime(Math.min(t.timeLimit, Math.floor((Date.now() - t.startedAt) / 1000))) : t.questions.length}</b><span>${t.timeLimit ? "жұмсалған уақыт" : "сұрақ"}</span></div>
       </div>
@@ -1076,7 +1083,7 @@
         const sel = t.answers[i], p = res.per[i];
         const cls = j => { const ok = q.correct.includes(j), s = sel.includes(j); return ok && s ? "ok" : s ? "bad" : ok ? "miss" : ""; };
         return `<div class="q-card review-item">
-          <div class="q-meta"><span class="tag">${i + 1}</span><span class="tag">${modTitle(q.module)}</span><span class="pts p${p}">${p} балл</span>${sel.length ? "" : `<span class="tag">Жауап берілмеген</span>`}</div>
+          <div class="q-meta"><span class="tag">${i + 1}</span><span class="tag">${modTitle(q.module)}</span><span class="pts p${ptsCls(q, p)}">${p} балл</span>${sel.length ? "" : `<span class="tag">Жауап берілмеген</span>`}</div>
           ${q.context ? `<div class="context-box">${q.context}</div>` : ""}
           <div class="q-text">${q.q}</div>
           <div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>
@@ -1151,7 +1158,7 @@
     check: () => {
       const t = state.test; t.checked[t.cur] = true;
       const p = scorePoints(t.questions[t.cur], t.answers[t.cur]);
-      toast(p === 2 ? "Дұрыс! +2 балл" : p === 1 ? "Жартылай дұрыс: 1 балл" : "Қате жауап");
+      toast(ptsCls(t.questions[t.cur], p) === 2 ? `Дұрыс! +${p} балл` : p ? `Жартылай дұрыс: ${p} балл` : "Қате жауап");
       renderTestKeepScroll();
     },
     next: () => { const t = state.test; if (t.cur < t.questions.length - 1) { t.cur++; renderTest(); window.scrollTo(0, 0); } },
