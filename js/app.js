@@ -6,8 +6,7 @@
   const MODULES = window.MODULES;
   const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
   const CFG = window.CONFIG, SITE = CFG.siteName, AUTHOR = CFG.author || {};
-  const MOCK_SIZE = CFG.test.mockSize, MOCK_MIN = CFG.test.mockMinutes, EXPRESS_SIZE = CFG.test.expressSize;
-  const DEMO_SIZE = CFG.test.demoSize, DEMO_MIN = CFG.test.demoMinutes;
+  const MOCK_SIZE = CFG.test.mockSize, MOCK_OPTS = CFG.test.mockMinuteOptions, EXPRESS_SIZE = CFG.test.expressSize;
   const PREMIUM = !!CFG.premium.enabled, FREE_MOCKS = CFG.premium.freeMocks;
   const hasPremium = u => !PREMIUM || u.premium;
   const GRADS = ["linear-gradient(135deg,#7C3AED,#EC4899)", "linear-gradient(135deg,#3B82F6,#22D3EE)", "linear-gradient(135deg,#EC4899,#F59E0B)", "linear-gradient(135deg,#10B981,#3B82F6)"];
@@ -214,7 +213,7 @@
     while (u.activity[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
     return n;
   }
-  const progressPct = u => Math.round(Object.keys(u.solved).length / Q.length * 100);
+  const progressPct = u => Q.length ? Math.round(Object.keys(u.solved).filter(id => QBY[id]).length / Q.length * 100) : 0;
   function avgScore(u) {
     const h = u.history.slice(-10);
     return h.length ? Math.round(h.reduce((a, r) => a + r.scaled, 0) / h.length) : 0;
@@ -287,7 +286,7 @@
   }
 
   /* ================= Router ================= */
-  let state = { test: null, result: null, timer: null, notifOpen: false, reg: null, authTab: "login" };
+  let state = { mockMin: CFG.test.mockMinutesDefault, test: null, result: null, timer: null, notifOpen: false, reg: null, authTab: "login" };
 
   function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
   window.addEventListener("hashchange", render);
@@ -305,7 +304,6 @@
     switch (parts[0]) {
       case "login": state.authTab = "login"; return u ? go("#/app") : renderAuth();
       case "register": state.authTab = "register"; return u ? go("#/app") : renderAuth();
-      case "demo": return startTest(buildDemo());
       case "test": return state.test ? renderTest() : go(u ? "#/app" : "#/");
       case "result": return state.result ? renderResult() : go(u ? "#/app" : "#/");
       case "app": return u ? renderApp(u, parts[1] || "dashboard", parts[2]) : go("#/login");
@@ -321,6 +319,8 @@
       { ico: "chart", cls: "f3", t: "Статистика мен қатемен жұмыс", d: "Әлсіз тарауларыңды көрсетеміз, қате жауаптарыңнан жеке тест құрып, қайта тапсыруға мүмкіндік береміз." }
     ];
     const results = CFG.results || [];
+    const bioOf = r => { const h = (r.subjects || []).find(x => x[0] === r.highlight); return h ? h[1] : 0; };
+    const top = results.slice().sort((a, b) => bioOf(b) - bioOf(a) || b.total - a.total)[0];
     app.innerHTML = `
       <header class="topbar"><div class="container">
         <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
@@ -334,28 +334,16 @@
         <div>
           ${CFG.hero.pill ? `<span class="pill">${esc(CFG.hero.pill)}</span>` : ""}
           <h1>${CFG.hero.title}</h1>
-          <p class="lead">${esc(CFG.hero.lead.replace("{count}", Q.length))}</p>
+          <p class="lead">${esc(CFG.hero.lead)}</p>
           <div class="hero-cta">
-            <a class="btn btn-cta btn-lg" href="#/demo">Тегін демо-тестті бастау ${ic("arrow", 18)}</a>
-            <a class="btn btn-ghost btn-lg" href="#/register">Тіркелу</a>
+            <a class="btn btn-cta btn-lg" href="${u ? "#/app" : "#/register"}">${u ? "Кабинетке өту" : "Тіркеліп, дайындықты бастау"} ${ic("arrow", 18)}</a>
+            ${results.length ? `<button class="btn btn-ghost btn-lg" data-act="scroll-results">Оқушылар нәтижесі</button>` : ""}
           </div>
           <div class="hero-stats">
-            <div><b>${Q.length}</b><span>сұрақ</span></div>
-            <div><b>${MODULES.length}</b><span>тарау</span></div>
-            <div><b>${MOCK_SIZE}</b><span>сұрақтық ҰБТ сынамасы</span></div>
+            ${(CFG.hero.stats || []).map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("")}
           </div>
         </div>
-        <div class="hero-visual">
-          <div class="hero-card">
-            <div class="q-meta"><span class="tag t-multi">Бірнеше дұрыс жауап</span><span class="tag">Жасушалық биология</span></div>
-            <div class="q-mini">Прокариот жасушаларға тән белгілер:</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Қалыптасқан ядросы жоқ</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>Сақина тәрізді ДНҚ</div>
-            <div class="opt-mini"><span class="om-box"></span>Митохондриялары бар</div>
-            <div class="opt-mini ok"><span class="om-box">${ic("check", 14)}</span>70S рибосомалар</div>
-          </div>
-          <div class="float-badge fb2"><span class="fb-dot"></span>2 балл</div>
-        </div>
+        ${top ? `<div class="hero-visual">${certHtml(top, true)}</div>` : ""}
       </div></section>
 
       <section class="section"><div class="container">
@@ -366,28 +354,35 @@
       </div></section>
 
       ${results.length ? `
-      <section class="section" style="padding-top:0"><div class="container">
-        <div class="section-head"><h2>Оқушыларымның ҰБТ нәтижелері</h2><p class="muted">Нақты ҰБТ-да биологиядан жинаған баллдары</p></div>
-        <div class="results">${results.map((r, k) => `
-          <div class="result-card">
-            ${r.photo ? `<img class="rc-photo" src="${esc(r.photo)}" alt="${esc(r.name)}" loading="lazy">` : `<div class="avatar rc-photo" style="background:${GRADS[k % GRADS.length]}">${esc(initials(r.name))}</div>`}
-            <div class="rc-score">${esc(r.score)}</div><div class="rc-sub">биология</div>
-            <div class="rc-name">${esc(r.name)}</div>
-            <small class="muted">${[r.total ? "Жалпы балл: " + r.total : "", r.school, r.year].filter(Boolean).map(esc).join(" · ")}</small>
-          </div>`).join("")}
-        </div>
+      <section class="section" id="results" style="padding-top:0"><div class="container">
+        <div class="section-head"><h2>Оқушыларымның ҰБТ нәтижелері</h2><p class="muted">Нақты ҰБТ сертификаттарындағы баллдар</p></div>
+        <div class="certs">${results.map(r => certHtml(r)).join("")}</div>
       </div></section>` : ""}
 
       <section class="section" style="padding-top:0">
         <div class="cta-band container">
-          <h2>${DEMO_SIZE} сұрақ. ${DEMO_MIN} минут. Деңгейіңді біл!</h2>
-          <p style="opacity:.9;margin:0 0 20px">Тіркелусіз тегін демо-тест тапсырып көр.</p>
-          <a class="btn btn-cta btn-lg" href="#/demo">Тегін сынап көр</a>
+          <h2>Келесі 50/50 — сенікі болсын!</h2>
+          <p style="opacity:.9;margin:0 0 20px">Тіркел, тараулық тесттер мен толық ҰБТ сынамасын тапсыр, қатемен жұмыс жаса.</p>
+          <a class="btn btn-cta btn-lg" href="${u ? "#/app" : "#/register"}">${u ? "Кабинетке өту" : "Тегін тіркелу"}</a>
         </div>
       </section>
       ${contactsHtml() ? `<section class="section" style="padding-top:0"><div class="container"><div class="card" style="text-align:center">
         <h3>${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
       <footer class="footer">© ${new Date().getFullYear()} ${esc(SITE)} · Биологиядан ҰБТ-ға дайындық${AUTHOR.name ? " · " + esc(AUTHOR.name) : ""}</footer>`;
+  }
+
+  // ҰБТ сертификаты түріндегі нәтиже карточкасы
+  function certHtml(r, compact) {
+    const hl = (r.subjects || []).find(x => x[0] === r.highlight);
+    return `<div class="cert ${compact ? "cert-compact" : ""}">
+      ${hl ? `<div class="cert-badge"><b>${esc(hl[1])}</b><span>${esc(hl[0])}</span></div>` : ""}
+      <div class="cert-name">${esc(r.name)}</div>
+      <div class="cert-meta"><span>ҰБТ тапсырған мерзімі: <b>${esc(r.date)}</b></span><span>Тапсыру тілі: <b>${esc(r.lang || "қазақша")}</b></span></div>
+      <table class="cert-table"><thead><tr><th>№</th><th>Пән атауы</th><th>Балл</th></tr></thead><tbody>
+        ${(r.subjects || []).map((x, i) => `<tr class="${x[0] === r.highlight ? "hl" : ""}"><td>${i + 1}</td><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join("")}
+      </tbody><tfoot><tr><td></td><td>Барлығы</td><td>${esc(r.total)}</td></tr></tfoot></table>
+      <div class="cert-foot">мүмкін болған 140 балдан</div>
+    </div>`;
   }
 
   function contactsHtml() {
@@ -694,8 +689,8 @@
 
       <h2 class="sec-title">Жылдам бастау</h2>
       <div class="grid g-3">
-        <button class="qa-card qa-1" data-act="start-mock"><span class="qa-ico">${ic("target", 26)}</span><h3>Толық ҰБТ сынамасын бастау</h3>
-          <p>${MOCK_SIZE} сұрақ / ${MOCK_MIN} минут · кері санақ таймері</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
+        <button class="qa-card qa-1" data-act="goto-mock"><span class="qa-ico">${ic("target", 26)}</span><h3>Толық ҰБТ сынамасын бастау</h3>
+          <p>${MOCK_SIZE} сұрақ · уақытты өзің таңда: ${MOCK_OPTS.join(" / ")} минут</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
         <button class="qa-card qa-2" data-act="start-mistakes"><span class="qa-ico">${ic("refresh", 26)}</span><h3>Қатемен жұмыс</h3>
           <p>Қате жауап берген сұрақтарыңнан тест</p>
           ${weak ? `<span class="warn">Сізде ${weak.m.abl} ${weak.n} қате бар, қайталау керек!</span>` : `<span class="warn">Әзірге қате жоқ</span>`}
@@ -762,7 +757,8 @@
     return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ жағдайын модельдеу: таймер, жаңа формат, нәтиже мен толық талдау.</p>
       <div class="grid g-2">
         <div class="card">
-          <h3>${Math.min(MOCK_SIZE, Q.length)} сұрақ · ${MOCK_MIN} минут</h3>
+          <h3>${MOCK_SIZE} сұрақ</h3>
+          <div class="field"><label>Уақытты таңда</label><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div>
           <ul class="muted" style="padding-left:18px"><li>Бір және бірнеше дұрыс жауабы бар сұрақтар</li><li>Контекстік тапсырмалар</li><li>Уақыт біткенде тест автоматты түрде аяқталады</li><li>Нәтиже 50 балдық шкалаға келтіріледі</li></ul>
           <button class="btn btn-cta btn-lg btn-block" data-act="start-mock">Сынаманы бастау</button>
         </div>
@@ -879,17 +875,17 @@
 
   /* ================= Tests ================= */
   function pick(list, n) { return shuffle(list).slice(0, Math.min(n, list.length)); }
-  function buildDemo() { return { mode: "demo", title: "Тегін демо-тест", questions: pick(Q, DEMO_SIZE), timeLimit: DEMO_MIN * 60, instant: false }; }
 
   function buildMock(u) {
     // ҰБТ құрылымына жақын: алдымен бір жауаптылар, содан кейін контекстік, соңында бірнеше жауаптылар
     const qs = pick(Q, MOCK_SIZE);
     const order = { single: 0, context: 1, multi: 2 };
     qs.sort((a, b) => order[a.type] - order[b.type]);
-    return { mode: "mock", title: "Толық ҰБТ сынамасы", questions: qs, timeLimit: MOCK_MIN * 60, instant: false };
+    return { mode: "mock", title: "Толық ҰБТ сынамасы", questions: qs, timeLimit: state.mockMin * 60, instant: false };
   }
 
   function startTest(t) {
+    if (!t.questions.length) return toast("Сұрақтар жақында қосылады");
     t.answers = t.questions.map(() => []);
     t.checked = t.questions.map(() => false);
     t.cur = 0; t.startedAt = Date.now();
@@ -1084,6 +1080,9 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "start-mock": () => startMode("mock"),
+    "goto-mock": () => go("#/app/mock"),
+    "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
+    "scroll-results": () => { const el = document.getElementById("results"); if (el) el.scrollIntoView({ behavior: "smooth" }); },
     "start-express": () => startMode("express"),
     "start-topic": el => startMode("topic", el.dataset.id),
     "start-mistakes": el => startMode("mistakes", el.dataset.id),
