@@ -10,8 +10,11 @@
   const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
   const CFG = window.CONFIG, SITE = CFG.siteName, AUTHOR = CFG.author || {};
   const MOCK_SIZE = CFG.test.mockSize, MOCK_OPTS = CFG.test.mockMinuteOptions, EXPRESS_SIZE = CFG.test.expressSize;
-  const PREMIUM = !!CFG.premium.enabled, FREE_MOCKS = CFG.premium.freeMocks;
-  const hasPremium = u => !PREMIUM || u.premium;
+  const PREMIUM = !!CFG.premium.enabled, PLANS = CFG.premium.plans || [];
+  const UBT_END = new Date(CFG.premium.ubtEnd + "T23:59:59").getTime();
+  const hasPremium = u => !PREMIUM || u.role === "teacher" || (u.premiumUntil || 0) > Date.now();
+  const planUntil = (pl, from) => pl.untilUbt ? UBT_END : Math.max(from || 0, Date.now()) + pl.days * 864e5;
+  const fmtPrice = n => n.toLocaleString("ru-RU").replace(/,/g, " ") + " ₸";
   const CLOUD = !!(CFG.firebase && CFG.firebase.apiKey && CFG.firebase.enabled !== false); // Firebase қосылған ба
   const GRADS = ["linear-gradient(135deg,#7C3AED,#EC4899)", "linear-gradient(135deg,#3B82F6,#22D3EE)", "linear-gradient(135deg,#EC4899,#F59E0B)", "linear-gradient(135deg,#10B981,#3B82F6)"];
   const DB_KEY = "bioubt_db_v1", SESSION_KEY = "bioubt_session", THEME_KEY = "bioubt_theme", DEMO_KEY = "bioubt_demo";
@@ -57,7 +60,7 @@
   function newUser(id, data) {
     return Object.assign({
       id, name: "", phone: "", email: "", pass: "", target: 45, city: "", school: "", month: MONTHS[2],
-      xp: 0, premium: false, mocks: 0, history: [], solved: {}, mistakes: {}, fixed: 0, activity: {},
+      xp: 0, premiumUntil: 0, mocks: 0, history: [], solved: {}, mistakes: {}, fixed: 0, activity: {},
       modulesTried: {}, badges: [], notifications: [], created: Date.now()
     }, data);
   }
@@ -700,8 +703,8 @@
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
           ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
             <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
-          ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Шексіз ҰБТ сынамалары.<br>
-            <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Тарифті жаңарту</button></div>`}
+          ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
+            <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Премиум алу</button></div>`}
         </aside>
         <div class="backdrop" id="backdrop" data-act="close-menu"></div>
         <div class="main-col">
@@ -714,8 +717,8 @@
             <div class="header-right">
               <span class="stat-pill" title="Күн қатарынан дайындық">${ic("flame", 18)} ${streak(u)}<span class="lbl">&nbsp;күн</span></span>
               <span class="stat-pill pts-pill" title="Барлық жинаған балл">${ic("star", 18)} ${fmtNum(u.xp)}<span class="lbl">&nbsp;балл</span></span>
-              ${!PREMIUM ? "" : u.premium ? `<span class="tariff pro">Премиум рұқсат (ҰБТ-ға дейін активті)</span>` :
-                `<span class="tariff free">Тегін режим</span><button class="btn btn-cta btn-upgrade" data-act="upgrade">${ic("star", 16)}<span class="up-txt">&nbsp;Тарифті жаңарту</span></button>`}
+              ${!PREMIUM || u.role === "teacher" ? "" : hasPremium(u) ? `<span class="tariff pro">Премиум · ${fmtDate(u.premiumUntil)} дейін</span>` :
+                `<span class="tariff free">Тегін режим</span><button class="btn btn-cta btn-upgrade" data-act="upgrade">${ic("star", 16)}<span class="up-txt">&nbsp;Премиум алу</span></button>`}
               <button class="bell" data-act="bell" aria-label="Хабарламалар">${ic("bell")}${unread ? `<span class="dot"></span>` : ""}</button>
             </div>
             <div id="notif-pop" class="notif-pop hidden"></div>
@@ -728,7 +731,13 @@
   function verifySession() {
     if (Date.now() - (state.verifiedAt || 0) < 60000) return;
     state.verifiedAt = Date.now();
-    window.Cloud.verify().catch(e => { cloudUser = null; state.lb = null; stopTimer(); state.test = null; toast(e.message); go("#/login"); });
+    window.Cloud.verify().then(d => {
+      if (d && cloudUser && (d.premiumUntil || 0) !== (cloudUser.premiumUntil || 0)) {
+        const was = hasPremium(cloudUser); cloudUser.premiumUntil = d.premiumUntil || 0;
+        if (!was && hasPremium(cloudUser)) toast("Премиум ашылды! Барлық тесттер қолжетімді.", "xp");
+        if (!location.hash.startsWith("#/test")) render();
+      }
+    }).catch(e => { cloudUser = null; state.lb = null; stopTimer(); state.test = null; toast(e.message); go("#/login"); });
   }
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
@@ -892,11 +901,12 @@
         <div class="folder">
           <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2><span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span></div>
           <p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>
-          <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), open = isOpen(folder, k); return `
-            <div class="card test-card ${open ? "" : "locked"}">
-              <div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
-              <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут</small>
-              ${open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
+          <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
+            <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}">
+              <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
+              <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут${k === 0 && b != null ? ` · ең жақсы: ${b}/50` : ""}</small>
+              ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
+                open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
                 `<button class="btn btn-ghost btn-block" disabled>${esc(folder.tests[k - 1].title)} тапсырылғаннан кейін ашылады</button>`}
             </div>`; }).join("")}</div>
         </div>` : FOLDERS.length ? `<div class="grid g-3">${FOLDERS.map(f => `
@@ -980,7 +990,7 @@
         <div class="row-between" style="margin:0 0 12px"><input class="input" id="t-search" placeholder="Аты, нөмірі, мектебі бойынша іздеу" value="${esc(state.tq || "")}" style="max-width:360px">
           <button class="btn btn-ghost btn-sm" data-act="t-reload">${ic("refresh", 16)} Жаңарту</button></div>
         <div class="t-table-wrap"><table class="t-table"><thead><tr>
-          <th>#</th><th>Оқушы</th><th>Байланыс</th><th>Осы ай</th><th>ҰБТ (ай)</th><th>Тест</th><th>Соңғы кіру</th><th>Құрылғы</th><th></th></tr></thead><tbody>
+          <th>#</th><th>Оқушы</th><th>Байланыс</th><th>Осы ай</th><th>ҰБТ (ай)</th><th>Тест</th><th>Соңғы кіру</th><th>Премиум</th><th>Құрылғы</th><th></th></tr></thead><tbody>
           ${rows.map((x, i) => `<tr class="${x.blocked ? "blocked" : ""}">
             <td>${i + 1}</td>
             <td><b>${esc(x.name)}</b><br><small class="muted">${esc([x.city, x.school].filter(Boolean).join(" · ") || "—")}</small></td>
@@ -989,14 +999,17 @@
             <td>${x._best != null ? x._best + "/50" : "—"}</td>
             <td>${(x.history || []).length}</td>
             <td>${x.lastSeen ? fmtDate(x.lastSeen) : "—"}</td>
+            <td>${(x.premiumUntil || 0) > Date.now() ? `<span class="tag t-single">${fmtDate(x.premiumUntil)} дейін</span>` : `<span class="muted">Жоқ</span>`}
+              <div class="t-prem">${PLANS.map(p => `<button class="btn btn-ghost btn-sm" data-act="t-premium" data-id="${x.id}" data-plan="${p.id}">+ ${esc(p.title)}</button>`).join("")}
+              ${(x.premiumUntil || 0) > Date.now() ? `<button class="btn btn-outline btn-sm" data-act="t-premium" data-id="${x.id}" data-plan="off">Өшіру</button>` : ""}</div></td>
             <td>${x.deviceId ? `${esc(x.device || "Бекітілген")}<br><small class="muted">${x.deviceAt ? fmtDate(x.deviceAt) : ""}</small>` : `<span class="muted">Бос</span>`}</td>
             <td class="t-actions">
               ${x.deviceId ? `<button class="btn btn-ghost btn-sm" data-act="t-device" data-id="${x.id}">Құрылғыны босату</button>` : ""}
               <button class="btn btn-sm ${x.blocked ? "btn-green" : "btn-outline"}" data-act="t-block" data-id="${x.id}" data-b="${x.blocked ? 0 : 1}">${x.blocked ? "Ашу" : "Бұғаттау"}</button>
-            </td></tr>`).join("") || `<tr><td colspan="9" class="muted" style="text-align:center;padding:20px">Оқушы табылмады</td></tr>`}
+            </td></tr>`).join("") || `<tr><td colspan="10" class="muted" style="text-align:center;padding:20px">Оқушы табылмады</td></tr>`}
         </tbody></table></div>
       </div>
-      <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Бұғаттау» — оқушы сайтқа кіре алмайды.</p>`;
+      <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
   }
   function loadStudents() {
     return window.Cloud.students().then(l => { state.students = l; }).catch(e => { toast(window.Cloud.errorText(e)); state.students = []; });
@@ -1100,11 +1113,11 @@
       const t = TESTS.find(x => x.id === id); if (!t) return;
       const k = t.folder.tests.findIndex(x => x.id === id);
       if (k > 0 && !u.history.some(h => h.testId === t.folder.tests[k - 1].id)) return toast(`Алдымен ${t.folder.tests[k - 1].title} тапсыр`);
-      if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді.`);
+      if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.folder.title} · ${t.title} — премиум тест. Әр папкадағы Тест-1 тегін.`);
       return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
     }
     if (mode === "mock") {
-      if (!hasPremium(u) && u.mocks >= FREE_MOCKS) return upgradeModal(`Тегін режимде ${FREE_MOCKS} толық сынама қолжетімді. Шексіз сынама үшін Премиумға өт!`);
+      if (!hasPremium(u)) return upgradeModal();
       return startTest(buildMock(u));
     }
     if (mode === "express") return startTest({ mode: "express", title: `Экспресс-тест (${EXPRESS_SIZE} сұрақ)`, questions: pick(Q, EXPRESS_SIZE), instant: true });
@@ -1268,13 +1281,33 @@
 
   /* ================= Modals ================= */
   function upgradeModal(reason) {
-    openModal(`<h3>Премиум рұқсат</h3>
-      ${reason ? `<p class="muted">${reason}</p>` : ""}
-      <ul style="padding-left:18px"><li>Шексіз толық ҰБТ сынамалары</li><li>Конспектілерді PDF-ке сақтау</li></ul>
-      ${CFG.premium.price ? `<div class="card" style="text-align:center;background:var(--surface-2);border:0;margin-bottom:14px"><b style="font-size:28px">${esc(CFG.premium.price)}</b></div>` : ""}
-      <p class="muted">${esc(CFG.premium.contactText)}</p>
-      ${contactsHtml()}
-      <button class="btn btn-ghost btn-block" style="margin-top:12px" data-close>Жабу</button>`);
+    const u = currentUser(), P = CFG.premium;
+    let sel = (PLANS.find(p => p.best) || PLANS[0] || {}).id;
+    const draw = m => {
+      const pl = PLANS.find(p => p.id === sel);
+      const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
+      m.innerHTML = `<h3>Премиум рұқсат</h3>
+        ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың толық талдауы және қатемен жұмыс</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
+          ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
+          <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
+        <div class="pay-steps">
+          <div class="pay-step"><span>1</span><div>Kaspi арқылы <b>${fmtPrice(pl.price)}</b> аударыңыз:<br>
+            <span class="kaspi-num">${esc(P.kaspiPhone.replace(/^(\d)(\d{3})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4 $5"))}</span>
+            <button class="btn btn-ghost btn-sm" data-copy="${esc(P.kaspiPhone)}">Көшіру</button><br><small class="muted">Алушы: ${esc(P.kaspiName)}</small></div></div>
+          <div class="pay-step"><span>2</span><div>Төлем чегін WhatsApp-қа жіберіңіз.</div></div>
+          <div class="pay-step"><span>3</span><div>Мұғалім тексерген соң премиум сіздің аккаунтыңызда ашылады (әдетте бірнеше сағат ішінде).</div></div>
+        </div>
+        <a class="btn btn-green btn-block" target="_blank" rel="noopener" href="https://wa.me/${esc(P.whatsapp)}?text=${encodeURIComponent(msg)}">${ic("chat", 18)} Чекті WhatsApp-қа жіберу</a>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" data-close>Жабу</button>`;
+      $$("[data-plan]", m).forEach(b => b.onclick = () => { sel = b.dataset.plan; draw(m); });
+      $$("[data-copy]", m).forEach(b => b.onclick = () => {
+        const done = () => toast("Нөмір көшірілді");
+        if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copy).then(done, () => toast(b.dataset.copy)); else toast(b.dataset.copy);
+      });
+    };
+    openModal("", m => draw(m));
   }
 
   function toggleNotifs() {
@@ -1312,6 +1345,14 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
+    "t-premium": el => {
+      const x = (state.students || []).find(s => s.id === el.dataset.id); if (!x) return;
+      const pl = PLANS.find(p => p.id === el.dataset.plan);
+      const until = pl ? planUntil(pl, x.premiumUntil) : 0;
+      const text = pl ? `${esc(x.name)} үшін премиум ${fmtDate(until)} дейін ашылады (${esc(pl.title)}, ${fmtPrice(pl.price)}). Төлемді тексердіңіз бе?` : `${esc(x.name)} премиумы өшіріледі.`;
+      confirmModal(pl ? "Премиум қосу" : "Премиумды өшіру", text, pl ? "Қосу" : "Өшіру", () =>
+        window.Cloud.setPremium(x.id, until).then(() => { toast(pl ? "Премиум қосылды" : "Премиум өшірілді"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e))));
+    },
     "t-device": el => confirmModal("Құрылғыны босату", "Оқушы келесі жолы кірген құрылғыға аккаунт қайта бекітіледі. Жалғастырасыз ба?", "Босату", () =>
       window.Cloud.resetDevice(el.dataset.id).then(() => { toast("Құрылғы босатылды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)))),
     "t-block": el => {
@@ -1398,7 +1439,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><span class="logo-mark">${ic("dna", 22)}</span><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610112310")
+    import("./cloud.js?v=202610112326")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

@@ -56,7 +56,7 @@ const userRef = uid => F.doc(fs, "users", uid);
 const strip = u => { const o = Object.assign({}, u); delete o.pass; return o; };
 // Оқушы өзі өзгерте алмайтын өрістер (оларды тек мұғалім өзгертеді) — сақтағанда жіберілмейді
 const progressOnly = u => {
-  const o = strip(u); ["id", "role", "blocked", "deviceId", "device", "deviceAt"].forEach(k => delete o[k]);
+  const o = strip(u); ["id", "role", "blocked", "deviceId", "device", "deviceAt", "premiumUntil", "premium"].forEach(k => delete o[k]);
   // Firestore бос кілтті қабылдамайды — сақтамас бұрын тазалау
   ["solved", "mistakes", "modulesTried", "activity"].forEach(k => { if (o[k]) { o[k] = Object.assign({}, o[k]); delete o[k][""]; } });
   return o;
@@ -181,6 +181,7 @@ window.Cloud = {
     const bad = !u ? "Аккаунт табылмады." : u.blocked ? "Бұл аккаунт бұғатталған. Мұғаліммен байланысыңыз." :
       (u.role !== "teacher" && u.deviceId && u.deviceId !== deviceId()) ? "Бұл аккаунт басқа құрылғыда ашылды. Құрылғыны ауыстыру үшін мұғаліммен байланысыңыз." : "";
     if (bad) { pending = null; await A.signOut(auth); throw fail(bad); }
+    return u;
   },
 
   // ---- Мұғалім ----
@@ -189,5 +190,6 @@ window.Cloud = {
     return snap.docs.map(d => Object.assign({}, d.data(), { id: d.id })).filter(u => u.role !== "teacher");
   },
   async resetDevice(uid) { await F.updateDoc(userRef(uid), { deviceId: "", device: "", deviceAt: null }); },
-  async setBlocked(uid, blocked) { await F.updateDoc(userRef(uid), { blocked }); }
+  async setBlocked(uid, blocked) { await F.updateDoc(userRef(uid), { blocked }); },
+  async setPremium(uid, until) { await F.updateDoc(userRef(uid), { premiumUntil: until || 0, premiumSetAt: Date.now() }); }
 };

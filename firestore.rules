@@ -13,12 +13,14 @@ service cloud.firestore {
       allow list: if isTeacher();
       // Тіркелу: тек өзіне, тек «оқушы» рөлімен
       allow create: if signedIn() && request.auth.uid == uid
-                    && request.resource.data.role == 'student' && request.resource.data.blocked == false;
+                    && request.resource.data.role == 'student' && request.resource.data.blocked == false
+                    && request.resource.data.get('premiumUntil', 0) == 0;
       // Оқушы: рөлін, бұғатын өзгерте алмайды; құрылғыны тек бос болғанда бекітеді
       allow update: if isTeacher() || (
                       signedIn() && request.auth.uid == uid
                       && resource.data.blocked == false
                       && unchanged('role') && unchanged('blocked')
+                      && unchanged('premiumUntil') && unchanged('premiumSetAt')
                       && (unchanged('deviceId') || resource.data.get('deviceId', '') == ''));
       allow delete: if isTeacher();
     }
