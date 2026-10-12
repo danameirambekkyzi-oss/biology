@@ -118,7 +118,7 @@
   function ic(name, size = 20) {
     return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
   }
-  const LOGO = `<span class="logo-mark">${ic("dna", 20)}</span>`;
+  const LOGO = `<img class="logo-mark" src="img/brand/icon-96.png" alt="" width="36" height="36">`;
 
   function toast(msg, cls = "") {
     const t = document.createElement("div");
@@ -471,7 +471,7 @@
     const isLogin = state.authTab === "login";
     app.innerHTML = `
       <div class="auth-wrap"><div class="auth-card">
-        <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
+        <a class="auth-logo" href="#/"><img src="img/brand/logo.png" alt="${esc(SITE)}"></a>
         <div class="tabs" role="tablist">
           <button class="tab ${isLogin ? "active" : ""}" data-act="tab-login">Кіру</button>
           <button class="tab ${!isLogin ? "active" : ""}" data-act="tab-register">Тіркелу</button>
@@ -1438,8 +1438,8 @@
   applyTheme();
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
-    app.innerHTML = `<div class="boot"><span class="logo-mark">${ic("dna", 22)}</span><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121038")
+    app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
+    import("./cloud.js?v=202610121113")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

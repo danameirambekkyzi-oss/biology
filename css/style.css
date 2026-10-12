@@ -582,3 +582,9 @@ details.context-box:not([open]) summary::after { content: "▸"; }
 .test-card.paid { opacity: 1; }
 .test-card.paid .muted { opacity: .7; }
 .t-prem { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+
+/* ---------- brand logo ---------- */
+img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain; padding: 1px; box-shadow: 0 2px 8px -3px rgba(76, 29, 149, .35); }
+.boot img.logo-mark { background: #fff; padding: 4px; }
+.auth-logo { display: block; text-align: center; margin: -6px auto 14px; }
+.auth-logo img { width: 190px; max-width: 70%; height: auto; border-radius: 16px; background: #fff; }
