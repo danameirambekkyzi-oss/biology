@@ -895,7 +895,7 @@
     const isOpen = (f, k) => teacher || k === 0 || passed(f.tests[k - 1].id);
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
     const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
-    return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
+    return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар мен нағыз ҰБТ сұрақтары. Нәтиже 50 баллдық шкаламен көрсетіледі. Уақытты таңдап, тестті баста.</p>
       <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
         <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
@@ -1441,7 +1441,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121635")
+    import("./cloud.js?v=202610121645")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
