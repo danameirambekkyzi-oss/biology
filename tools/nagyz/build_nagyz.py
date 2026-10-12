@@ -44,14 +44,17 @@ for p in d.paragraphs:
         if cur["opts"]: cur["opts"][-1] += " " + h
         else: cur["q"] += " " + h
 assert [q["n"] for q in qs] == list(range(1, 111)), [q["n"] for q in qs]
-FIX = {40: [0]}  # жауабы белгіленбеген
+FIX = {}  # жауабы белгіленбеген сұрақтар: {нөмір: [индекс]}
 BYN = {q["n"]: q for q in qs}
 for a, b in ((46, 45), (48, 47)): BYN[a]["img"] = BYN[b]["img"][:]  # «жоғарыдағы сурет» сілтемесі
+# Әр тестке: 20 бір жауапты (1–40), 9 сәйкестендіру (93–110), 26 көп жауапты (41–92) — ҰБТ ретімен
+groups = [qs[0:40], qs[92:110], qs[40:92]]
+parts = [[g[:len(g) // 2] for g in groups], [g[len(g) // 2:] for g in groups]]
 tests = []
 for t in (1, 2):
     idir = f"img/tests/nagyz-{t}"; shutil.rmtree(f"{repo}/{idir}", ignore_errors=True); os.makedirs(f"{repo}/{idir}")
     out = []
-    for q in qs[(t-1)*55: t*55]:
+    for q in [x for g in parts[t-1] for x in g]:
         k = len(out) + 1
         files = []
         for j, part in enumerate(q["img"]):
@@ -67,7 +70,9 @@ for t in (1, 2):
             multi = len(q["opts"]) >= 6
             if multi: e["type"] = "multi"
             else: assert len(corr) == 1, q["n"]
-            e.update(q=q["q"] or "Суретке қараңыз", options=q["opts"], correct=corr)
+            text = re.sub(r"^\d+\s*ші суреттегі", "Жоғарыдағы суреттегі", q["q"]).replace("Осы жоғарыдағы сұрақтағы", "Суреттегі")
+            text = re.sub(r"\s*\(\d+\s*(дұрыс\s*)?жауап\)", "", text).strip()
+            e.update(q=text or "Суретке қараңыз", options=q["opts"], correct=corr)
         if files: e["img"] = files
         out.append(e)
     tests.append({"id": f"nagyz-{t}", "title": f"Тест-{t}", "questions": out})
