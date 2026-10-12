@@ -685,7 +685,7 @@
   const NAV = [
     { id: "dashboard",   ico: "home",      t: "Басты бет" },
     { id: "chapters",    ico: "layers",    t: "Тараулық тест" },
-    { id: "mock",        ico: "clipboard", t: "Толық ҰБТ сынамасы" },
+    { id: "mock",        ico: "clipboard", t: "ҰБТ сынамасы және Нағыз ҰБТ базасы" },
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
     { id: "real",        ico: "book",      t: "Нағыз ҰБТ сұрақтары" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
@@ -823,7 +823,7 @@
 
       <h2 class="sec-title">Жылдам бастау</h2>
       <div class="grid g-3">
-        <button class="qa-card qa-1" data-act="goto-mock"><span class="qa-ico">${ic("target", 26)}</span><h3>Толық ҰБТ сынамасын бастау</h3>
+        <button class="qa-card qa-1" data-act="goto-mock"><span class="qa-ico">${ic("target", 26)}</span><h3>ҰБТ сынамасын бастау</h3>
           <p>${MOCK_SIZE} сұрақ · уақытты өзің таңда: ${MOCK_OPTS.join(" / ")} минут</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
         <button class="qa-card qa-2" data-act="start-mistakes"><span class="qa-ico">${ic("refresh", 26)}</span><h3>Қатемен жұмыс</h3>
           <p>Қате жауап берген сұрақтарыңнан тест</p>
@@ -895,7 +895,7 @@
     const isOpen = (f, k) => teacher || k === 0 || passed(f.tests[k - 1].id);
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
     const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
-    return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
+    return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
       <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
         <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
@@ -1096,7 +1096,7 @@
     qs = qs.concat(shuffle([].concat(parts.single, parts.context, parts.multi)).slice(0, Math.max(0, MOCK_SIZE - qs.length))).slice(0, MOCK_SIZE);
     const order = { single: 0, context: 1, multi: 2 };
     qs.sort((a, b) => order[a.type] - order[b.type]);
-    return { mode: "mock", title: "Толық ҰБТ сынамасы", questions: qs, timeLimit: state.mockMin * 60, instant: false };
+    return { mode: "mock", title: "ҰБТ сынамасы", questions: qs, timeLimit: state.mockMin * 60, instant: false };
   }
 
   function startTest(t) {
@@ -1441,7 +1441,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121629")
+    import("./cloud.js?v=202610121635")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
