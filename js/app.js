@@ -900,8 +900,9 @@
         <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
         <div class="folder">
-          <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2><span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span></div>
-          ${teacher ? `<p class="hint" style="margin-top:-6px">Мұғалім аккаунты: барлық тесттер ашық.</p>` : `<p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>`}
+          <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2>${folder.tests.length ? `<span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span>` : ""}</div>
+          ${!folder.tests.length ? "" : teacher ? `<p class="hint" style="margin-top:-6px">Мұғалім аккаунты: барлық тесттер ашық.</p>` : `<p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>`}
+          ${folder.tests.length ? "" : `<div class="card empty"><p>Бұл папкаға тесттер жақында қосылады.</p></div>`}
           <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
             <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}">
               <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
@@ -913,8 +914,8 @@
         </div>` : FOLDERS.length ? `<div class="grid g-3">${FOLDERS.map(f => `
           <a class="card folder-card" href="#/app/mock/${f.id}">
             <span class="fc-ico">${ic("layers", 26)}</span>
-            <div><h3 style="margin:0 0 4px">${esc(f.title)}</h3><small class="muted">${f.tests.length} тест · ${done(f)} тапсырылды</small></div>
-            <div class="bar" style="width:100%"><i style="width:${done(f) / f.tests.length * 100}%"></i></div>
+            <div><h3 style="margin:0 0 4px">${esc(f.title)}</h3><small class="muted">${f.tests.length ? `${f.tests.length} тест · ${done(f)} тапсырылды` : "Жақында қосылады"}</small></div>
+            <div class="bar" style="width:100%"><i style="width:${f.tests.length ? done(f) / f.tests.length * 100 : 0}%"></i></div>
           </a>`).join("")}</div>` : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}
       <div class="grid g-2" style="margin-top:16px">
         <div class="card"><h3>Соңғы сынамалар</h3>
@@ -1440,7 +1441,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121328")
+    import("./cloud.js?v=202610121629")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
