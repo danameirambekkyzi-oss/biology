@@ -78,5 +78,5 @@ for t in (1, 2):
     tests.append({"id": f"nagyz-{t}", "title": f"Тест-{t}", "questions": out})
     from collections import Counter
     print(f"Тест-{t}", len(out), Counter(x.get("type", "single") for x in out))
-js = "/* «2026 жылғы Нағыз ҰБТ базасы» — tools/nagyz/build_nagyz.py арқылы .docx файлдан жасалған */\n(window.TEST_FOLDERS = window.TEST_FOLDERS || []).push(" + json.dumps({"id": "nagyz", "title": "2026 жылғы Нағыз ҰБТ базасы", "tests": tests}, ensure_ascii=False, indent=1) + ");\n"
+js = "/* «2026 жылғы Нағыз ҰБТ базасы» — tools/nagyz/build_nagyz.py арқылы .docx файлдан жасалған */\n(window.TEST_FOLDERS = window.TEST_FOLDERS || []).push(" + json.dumps({"id": "nagyz", "title": "2026 жылғы Нағыз ҰБТ базасы", "desc": "Бұл жерде 2026 жылғы нағыз ҰБТ-да келген тесттер тарау бойынша бөлінген.", "tests": tests}, ensure_ascii=False, indent=1) + ");\n"
 open(f"{repo}/js/tests/nagyz.js", "w").write(js)

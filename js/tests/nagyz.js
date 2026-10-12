@@ -2,6 +2,7 @@
 (window.TEST_FOLDERS = window.TEST_FOLDERS || []).push({
  "id": "nagyz",
  "title": "2026 жылғы Нағыз ҰБТ базасы",
+ "desc": "Бұл жерде 2026 жылғы нағыз ҰБТ-да келген тесттер тарау бойынша бөлінген.",
  "tests": [
   {
    "id": "nagyz-1",

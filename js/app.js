@@ -901,6 +901,7 @@
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
         <div class="folder">
           <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2>${folder.tests.length ? `<span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span>` : ""}</div>
+          ${folder.desc ? `<div class="folder-desc">${ic("book", 20)}<span>${esc(folder.desc)}</span></div>` : ""}
           ${!folder.tests.length ? "" : teacher ? `<p class="hint" style="margin-top:-6px">Мұғалім аккаунты: барлық тесттер ашық.</p>` : `<p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>`}
           ${folder.tests.length ? "" : `<div class="card empty"><p>Бұл папкаға тесттер жақында қосылады.</p></div>`}
           <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
@@ -1441,7 +1442,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121659")
+    import("./cloud.js?v=202610121706")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
