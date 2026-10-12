@@ -891,7 +891,8 @@
     const folder = FOLDERS.find(f => f.id === folderId);
     const passed = id => u.history.some(h => h.testId === id);
     const done = f => f.tests.filter(t => passed(t.id)).length;
-    const isOpen = (f, k) => k === 0 || passed(f.tests[k - 1].id);
+    const teacher = u.role === "teacher";
+    const isOpen = (f, k) => teacher || k === 0 || passed(f.tests[k - 1].id);
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
     const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
     return `<h1 class="page-title">Толық ҰБТ сынамасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар: 40 тапсырма, 50 балл. Уақытты таңдап, тестті баста.</p>
@@ -900,7 +901,7 @@
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
         <div class="folder">
           <div class="folder-head">${ic("layers", 22)}<h2>${esc(folder.title)}</h2><span class="muted">${done(folder)}/${folder.tests.length} тапсырылды</span></div>
-          <p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>
+          ${teacher ? `<p class="hint" style="margin-top:-6px">Мұғалім аккаунты: барлық тесттер ашық.</p>` : `<p class="hint" style="margin-top:-6px">Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады.</p>`}
           <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
             <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}">
               <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
@@ -1112,7 +1113,7 @@
     if (mode === "test") {
       const t = TESTS.find(x => x.id === id); if (!t) return;
       const k = t.folder.tests.findIndex(x => x.id === id);
-      if (k > 0 && !u.history.some(h => h.testId === t.folder.tests[k - 1].id)) return toast(`Алдымен ${t.folder.tests[k - 1].title} тапсыр`);
+      if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.folder.tests[k - 1].id)) return toast(`Алдымен ${t.folder.tests[k - 1].title} тапсыр`);
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.folder.title} · ${t.title} — премиум тест. Әр папкадағы Тест-1 тегін.`);
       return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
     }
@@ -1439,7 +1440,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121113")
+    import("./cloud.js?v=202610121328")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
