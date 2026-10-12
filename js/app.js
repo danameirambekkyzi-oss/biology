@@ -907,6 +907,7 @@
           <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
             <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}">
               <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
+              ${t.sub ? `<small class="tc-sub">${esc(t.sub)}</small>` : ""}
               <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут${k === 0 && b != null ? ` · ең жақсы: ${b}/50` : ""}</small>
               ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
                 open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
@@ -1442,7 +1443,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610121706")
+    import("./cloud.js?v=202610121710")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

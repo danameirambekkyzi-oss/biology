@@ -75,7 +75,7 @@ for t in (1, 2):
             e.update(q=text or "Суретке қараңыз", options=q["opts"], correct=corr)
         if files: e["img"] = files
         out.append(e)
-    tests.append({"id": f"nagyz-{t}", "title": f"Тест-{t}", "questions": out})
+    tests.append({"id": f"nagyz-{t}", "title": f"Тест-{t}", "sub": "Ботаника және зоология бойынша келген сұрақтар", "questions": out})
     from collections import Counter
     print(f"Тест-{t}", len(out), Counter(x.get("type", "single") for x in out))
 js = "/* «2026 жылғы Нағыз ҰБТ базасы» — tools/nagyz/build_nagyz.py арқылы .docx файлдан жасалған */\n(window.TEST_FOLDERS = window.TEST_FOLDERS || []).push(" + json.dumps({"id": "nagyz", "title": "2026 жылғы Нағыз ҰБТ базасы", "desc": "Бұл жерде 2026 жылғы нағыз ҰБТ-да келген тесттер тарау бойынша бөлінген.", "tests": tests}, ensure_ascii=False, indent=1) + ");\n"
