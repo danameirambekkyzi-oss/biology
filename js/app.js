@@ -341,7 +341,7 @@
   function renderLanding(u) {
     const feats = [
       { ico: "target", cls: "f1", t: "ҰБТ жаңа форматына 100% сәйкес", d: "Контекстік сұрақтар, бір және бірнеше дұрыс жауабы бар тапсырмалар — нақты ҰБТ сияқты, сол балл жүйесімен." },
-      { ico: "bulb", cls: "f2", t: "Әр сұраққа толық талдау", d: "Тест соңында әр сұрақтың дұрыс жауабы мен түсініктемесін көресің." },
+      { ico: "bulb", cls: "f2", t: "Әр сұрақтың дұрыс жауабы", d: "Тест соңында әр сұрақтың дұрыс жауабын көресің. Нағыз ҰБТ-да келген сұрақтарды жаттап отырасың." },
       { ico: "chart", cls: "f3", t: "Статистика мен қатемен жұмыс", d: "Әлсіз тарауларыңды көрсетеміз, қате жауаптарыңнан жеке тест құрып, қайта тапсыруға мүмкіндік береміз." }
     ];
     const results = CFG.results || [];
@@ -1298,7 +1298,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың толық талдауы және қатемен жұмыс</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1449,7 +1449,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610130543")
+    import("./cloud.js?v=202610130552")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
