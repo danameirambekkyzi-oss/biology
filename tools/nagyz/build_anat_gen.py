@@ -20,6 +20,8 @@ def even(a, n, front=True):  # қалдықты алдыңғы (немесе с�
     q, r = divmod(len(a), n); z = [q + (1 if (i < r if front else i >= n - r) else 0) for i in range(n)]; return split(a, z)
 if data == "anat_gen.py":  # 39 / 39 / 40: бір жауапты 19+19+18, сәйкестендіру 6+6+7, көп жауапты 14+14+15
     sS, sX, sM = split(S, [19, 19, 18]), split(X, [6, 6, 7]), split(M, [14, 14, 15])
+elif ns.get("SIZES"):
+    z = ns["SIZES"]; sS, sX, sM = split(S, z["S"]), split(X, z["X"]), split(M, z["M"])
 else:
     sS, sX, sM = even(S, count), even(X, count), even(M, count)
 ids = [f"nagyz-{first + k}" for k in range(count)]
@@ -43,6 +45,7 @@ for k in range(count):
             else: e["type"] = "multi"; assert len(opts) >= 6, q
             e.update(q=q[:1].upper() + q[1:], options=opts, correct=corr)
             extra = it[4] if len(it) > 4 else {}
+        if extra.get("explain"): e["explain"] = extra["explain"]
         imgs = extra.get("img") or []
         if isinstance(imgs, str): imgs = [imgs]
         for j, src in enumerate(imgs):
