@@ -51,7 +51,7 @@ for k in range(count):
         for j, src in enumerate(imgs):
             fn = f"q{n}{'' if j == 0 else '_' + str(j)}{os.path.splitext(src)[1]}"; shutil.copy(os.path.join(imgsrc, src), os.path.join(repo, idir, fn)); e.setdefault("img", []).append(f"{idir}/{fn}")
         out.append(e)
-    folder["tests"].append({"id": tid, "title": f"Тест-{first + k}", "sub": "Анатомия және генетика бойынша келген сұрақтар", "questions": out})
+    folder["tests"].append({"id": tid, "title": f"Тест-{first + k}", "sub": ns.get("SUB", "Анатомия және генетика бойынша келген сұрақтар"), "questions": out})
     print(f"Тест-{first + k}", len(out), dict(Counter(x.get("type", "single") for x in out)))
 folder["tests"].sort(key=lambda t: int(t["id"].split("-")[1]))
 open(path, "w", encoding="utf-8").write(head + "push(" + json.dumps(folder, ensure_ascii=False, indent=1) + ");\n")
