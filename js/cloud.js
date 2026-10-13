@@ -91,7 +91,7 @@ async function flush() {
   const pts = (u.history || []).filter(h => monthKey(h.date) === mk).reduce((a, h) => a + h.score, 0);
   const mocks = (u.history || []).filter(h => h.mode === "mock" && monthKey(h.date) === mk);
   await F.setDoc(F.doc(fs, "leaderboard", u.id), {
-    name: u.name || "", month: mk, pts, best: mocks.length ? Math.max(...mocks.map(h => h.scaled)) : null, role: u.role || "student"
+    name: u.name || "", month: mk, pts, best: mocks.length ? (b => `${b.score}/${b.max}`)(mocks.reduce((a, h) => h.score / (h.max || 1) > a.score / (a.max || 1) ? h : a)) : null, role: u.role || "student"
   });
 }
 function monthKey(t) { const d = t ? new Date(t) : new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }

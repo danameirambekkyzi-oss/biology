@@ -247,7 +247,12 @@
   }
   const thisMonth = h => { const d = new Date(h.date), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); };
   const monthPoints = u => u.history.filter(thisMonth).reduce((a, h) => a + h.score, 0);
-  function bestMock(u) { const m = u.history.filter(h => h.mode === "mock" && thisMonth(h)); return m.length ? Math.max(...m.map(h => h.scaled)) : null; }
+  function bestMock(u) { // айдағы ең жақсы сынама — тесттің өз балымен («38/45»)
+    const m = u.history.filter(h => h.mode === "mock" && thisMonth(h) && h.max);
+    if (!m.length) return null;
+    const b = m.reduce((a, h) => h.score / h.max > a.score / a.max ? h : a); return `${b.score}/${b.max}`;
+  }
+  const fmtBest = b => b == null ? null : typeof b === "number" ? `${b}/50` : b; // ескі жазбалар сан түрінде (50-ге келтірілген)
   function leaderboard(u) {
     // Тек нақты тіркелген қолданушылар (осы құрылғыда)
     const rows = CLOUD
@@ -787,7 +792,7 @@
     if (!rows.length) return `<p class="muted">Әзірге рейтингте ешкім жоқ.</p>`;
     const row = r => `<div class="lb-row ${r.me ? "me" : ""}"><span class="lb-rank ${r.rank <= 3 ? "top" + r.rank : ""}">${r.rank}</span>
       <span class="lb-name">${esc(r.me ? `Сен (${(u.name || "Түлек").split(" ")[0]})` : r.name)}</span>
-      <span class="lb-xp">${fmtNum(r.pts)} балл</span><span class="lb-score">${r.best != null ? `ҰБТ: ${r.best}/50` : ""}</span></div>`;
+      <span class="lb-xp">${fmtNum(r.pts)} балл</span><span class="lb-score">${r.best != null ? `ҰБТ: ${fmtBest(r.best)}` : ""}</span></div>`;
     if (full) return rows.map(row).join("");
     return rows.slice(0, 5).map(row).join("") + (me.rank > 5 ? `<div class="lb-gap">⋯</div>${row(me)}` : "");
   }
@@ -1006,7 +1011,7 @@
             <td><b>${esc(x.name)}</b><br><small class="muted">${esc([x.city, x.school].filter(Boolean).join(" · ") || "—")}</small></td>
             <td>${esc(x.phone || "")}<br><small class="muted">${esc(x.email || "")}</small></td>
             <td><b>${x._m}</b> балл</td>
-            <td>${x._best != null ? x._best + "/50" : "—"}</td>
+            <td>${x._best != null ? fmtBest(x._best) : "—"}</td>
             <td>${(x.history || []).length}</td>
             <td>${x.lastSeen ? fmtDate(x.lastSeen) : "—"}</td>
             <td>${(x.premiumUntil || 0) > Date.now() ? `<span class="tag t-single">${fmtDate(x.premiumUntil)} дейін</span>` : `<span class="muted">Жоқ</span>`}
@@ -1449,7 +1454,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610131657")
+    import("./cloud.js?v=202610131701")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
