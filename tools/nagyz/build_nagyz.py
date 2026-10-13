@@ -1,4 +1,5 @@
 import sys, re, json, html, os, shutil
+# Ескерту: бұл скрипт nagyz.js-ті толық қайта жазады; кейін tools/nagyz/build_anat_gen.py-ді іске қосыңыз (Тест-3–5).
 import docx
 from docx.oxml.ns import qn
 src, repo = sys.argv[1], sys.argv[2]
