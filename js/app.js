@@ -900,8 +900,8 @@
     const teacher = u.role === "teacher";
     const isOpen = (f, k) => teacher || k === 0 || passed(f.tests[k - 1].id);
     const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
-    const best = id => { const h = u.history.filter(x => x.testId === id); return h.length ? Math.max(...h.map(x => x.scaled)) : null; };
-    return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар мен нағыз ҰБТ сұрақтары. Нәтиже 50 баллдық шкаламен көрсетіледі. Уақытты таңдап, тестті баста.</p>
+    const best = id => { const h = u.history.filter(x => x.testId === id); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; }; // тесттің өз балы
+    return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар мен нағыз ҰБТ сұрақтары. Уақытты таңдап, тестті баста.</p>
       <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
         <b>Уақыт:</b><div class="chips">${MOCK_OPTS.map(m => `<button class="chip ${state.mockMin === m ? "active" : ""}" data-act="mock-min" data-m="${m}">${m} минут</button>`).join("")}</div></div></div>
       ${folder ? `<a href="#/app/mock" class="back-link">← Барлық папкалар</a>
@@ -912,9 +912,9 @@
           ${folder.tests.length ? "" : `<div class="card empty"><p>Бұл папкаға тесттер жақында қосылады.</p></div>`}
           <div class="grid g-3">${folder.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u), open = !paid && isOpen(folder, k); return `
             <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}">
-              <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}/50</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
+              <div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
               ${t.sub ? `<small class="tc-sub">${esc(t.sub)}</small>` : ""}
-              <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут${k === 0 && b != null ? ` · ең жақсы: ${b}/50` : ""}</small>
+              <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут${k === 0 && b != null ? ` · ең жақсы: ${b}` : ""}</small>
               ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
                 open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
                 `<button class="btn btn-ghost btn-block" disabled>${esc(folder.tests[k - 1].title)} тапсырылғаннан кейін ашылады</button>`}
@@ -930,7 +930,7 @@
           ${mocks.length ? mocks.map(h => {
             const wrong = (h.wrong || []).filter(id => QBY[id]);
             return `<div class="lb-row hist-row"><span class="lb-name hist-date">${fmtDate(h.date)}</span><span class="muted hist-title">${esc(h.title || "")}</span>
-              <span class="lb-xp">${h.scaled}/50</span>
+              <span class="lb-xp">${h.score}/${h.max}</span>
               ${wrong.length ? `<button class="btn btn-ghost btn-sm" data-act="start-hist" data-d="${h.date}">Қатемен жұмыс (${wrong.length})</button>` : `<span class="tag">Қате жоқ</span>`}</div>`; }).join("") :
             `<p class="muted">Әзірге сынама тапсырылмаған. Алғашқысын баста!</p>`}
         </div>
@@ -1256,7 +1256,7 @@
     const inner = `<div class="test-wrap">
       <div class="result-hero">
         <div style="font-size:15px;opacity:.9">${esc(t.title)}</div>
-        <div class="big">${res.scaled}<span style="font-size:24px;opacity:.8">/50</span></div>
+        <div class="big">${res.score}<span style="font-size:24px;opacity:.8">/${res.max}</span></div>
         <p>${res.score} / ${res.max} балл · ${res.pct}%</p>
         <p style="font-weight:700">${msg}</p>
       </div>
@@ -1449,7 +1449,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610131652")
+    import("./cloud.js?v=202610131657")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
