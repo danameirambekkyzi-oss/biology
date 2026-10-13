@@ -196,16 +196,16 @@
    *   3 дұрыс жауабы бар сұрақ: 3-еуі де дұрыс белгіленсе — 2 балл, тек 2 дұрыс белгіленсе — 1 балл, 1, 4, 5 белгіленсе — 0.
    *   2 дұрыс жауабы бар сұрақ: 2-еуі де дұрыс белгіленсе — 2 балл, тек 1 дұрыс белгіленсе — 1 балл, 3, 4, 5 белгіленсе — 0.
    *   1 дұрыс жауабы бар сұрақ (контекстік те): дұрыс жауап белгіленсе — 1 балл, 2, 3, 4, 5 белгіленсе — 0.
-   *   Белгіленгендердің ішінде бір қате нұсқа болса — 0 балл.
+   *   Яғни дұрыс жауаптар санынан көп нұсқа белгіленсе — 0; әйтпесе белгіленген дұрыс жауаптар саны есептеледі
+   *   (мысалы, 3 дұрыс жауапты сұрақта 2 дұрыс + 1 қате белгіленсе — 1 балл).
    */
   function scorePoints(q, sel) {
     if (q.type === "match") return q.items.reduce((a, it, k) => a + (sel[k] === it.answer ? 1 : 0), 0);
-    const k = q.correct.length, s = sel.length;
-    if (!s) return 0;
-    if (sel.some(i => !q.correct.includes(i))) return 0;
-    if (k === 1) return q.type === "multi" ? 2 : 1; // бір дұрыс жауап — 1 балл; «бірнеше жауапты» түрде — 2 балл
-    if (s === k) return 2;
-    if (s === k - 1) return 1;
+    const k = q.correct.length, s = sel.length, c = sel.filter(i => q.correct.includes(i)).length;
+    if (!s || s > k) return 0;
+    if (k === 1) return c === 1 ? (q.type === "multi" ? 2 : 1) : 0; // бір дұрыс жауап — 1 балл; «бірнеше жауапты» түрде — 2 балл
+    if (c === k) return 2;
+    if (c === k - 1) return 1;
     return 0;
   }
   const maxPoints = q => q.type === "match" ? q.items.length : (q.type === "multi" || q.correct.length > 1) ? 2 : 1;
@@ -879,7 +879,7 @@
 
   /* ---- Mock ---- */
   function rulesHtml() {
-    return `<div class="rules"><h3>Балл жүйесі</h3><p class="muted" style="margin:0">Ресми ҰБТ жүйесі: бір дұрыс жауапты және контекстік сұрақ — 1 балл, бірнеше дұрыс жауапты — 2 балл. Қате нұсқа белгіленсе — 0 балл.</p>
+    return `<div class="rules"><h3>Балл жүйесі</h3><p class="muted" style="margin:0">Ресми ҰБТ жүйесі: бір дұрыс жауапты және контекстік сұрақ — 1 балл, бірнеше дұрыс жауапты — 2 балл. Дұрыс жауаптар санынан көп нұсқа белгіленсе — 0 балл.</p>
       <table><thead><tr><th>Дұрыс жауап саны</th><th>Толық балл</th><th>1 балл</th><th>0 балл</th></tr></thead><tbody>
       <tr><td>3 дұрыс жауап</td><td>3-еуі де дұрыс — 2 балл</td><td>2 дұрыс</td><td>1, 4, 5 белгіленсе</td></tr>
       <tr><td>2 дұрыс жауап</td><td>2-еуі де дұрыс — 2 балл</td><td>1 дұрыс</td><td>3, 4, 5 белгіленсе</td></tr>
@@ -1443,7 +1443,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610130524")
+    import("./cloud.js?v=202610130530")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
