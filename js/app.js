@@ -207,7 +207,7 @@
     const k = q.correct.length, c = sel.filter(i => q.correct.includes(i)).length, w = sel.length - c;
     if (!sel.length) return 0;
     if (q.type !== "multi" && k === 1) return c === 1 && w === 0 ? 1 : 0;
-    if (sel.length > Math.max(k, Math.min(k + 1, 3))) return 0; // 4 және одан көп нұсқа белгіленсе — бірден 0 (2 дұрыс: 3-тен, 1 дұрыс: 2-ден көп); 4 дұрыс жауапты сұрақта — 5-тен көп
+    if (sel.length > Math.min(k + 1, 3)) return 0; // 4 және одан көп нұсқа белгіленсе — бірден 0 (2 дұрыс: 3-тен, 1 дұрыс: 2-ден көп)
     const need = Math.max(k - 1, 1); // «бір жетіспейді» шегі
     if (w === 0) return c === k ? 2 : c >= need && k > 1 ? 1 : 0;
     if (w === 1) return c >= need ? 1 : 0;
@@ -1454,7 +1454,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610131729")
+    import("./cloud.js?v=202610131739")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
