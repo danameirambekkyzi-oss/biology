@@ -714,7 +714,7 @@
         <aside class="sidebar" id="sidebar">
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
           ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
-            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
+            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}${n.id === "plants" && !hasPremium(u) ? `<span class="ni-lock">${ic("lock", 14)}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Премиум алу</button></div>`}
         </aside>
@@ -998,6 +998,16 @@
         <a class="pl-mode ${mode === "learn" ? "active" : ""}" href="#/app/plants/learn">${ic("eye", 18)} Жаттау</a>
         <a class="pl-mode ${mode === "quiz" ? "active" : ""}" href="#/app/plants/quiz">${ic("target", 18)} Өзіңді тексер</a>
       </div>`;
+    if (!hasPremium(u)) {
+      const sample = PLANT_ROWS.slice(0, 4);
+      return head.replace(/<div class="pl-modes">[\s\S]*$/, "") + `<div class="card pl-locked">
+          <div class="pl-lock-ico">${ic("lock", 30)}</div>
+          <h2>Бұл бөлім — премиум</h2>
+          <p class="muted">Ботаникадағы барлық өсімдіктер тізімі (${PLANT_ROWS.length} белгі), жаттау режимі және «Өзіңді тексер» ойыны премиум оқушыларға ашық.</p>
+          <div class="pl-list pl-blur" aria-hidden="true">${sample.map(r => `<div class="pl-row"><div class="pl-f">${esc(r.f)}</div><div class="pl-p">${plantsHtml(r.p)}</div></div>`).join("")}</div>
+          <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button>
+        </div>`;
+    }
     if (mode === "quiz") {
       if (!state.pq) newPlantQuiz();
       const q = state.pq, done = q.pick != null;
@@ -1361,7 +1371,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Ботаникадағы өсімдіктер тізімі: жаттау және өзіңді тексер</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1516,7 +1526,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610141743")
+    import("./cloud.js?v=202610141747")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
