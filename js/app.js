@@ -981,12 +981,62 @@
   /* ---- Ботаникадағы өсімдіктер тізімі ---- */
   const PLANT_GROUPS = window.PLANTS || [];
   const PLANT_ROWS = [].concat(...PLANT_GROUPS.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p }))));
-  const plantTags = p => { if (/[()—]/.test(p)) return null; const parts = p.split(/\s*[;,]\s*/).filter(Boolean); return parts.every(x => x.length <= 42) ? parts : null; };
+  // Тегтер: «;» болса — бөліктерге (әр бөлік бір тег), әйтпесе үтір бойынша
+  const plantTags = p => {
+    if (p.includes(";")) return p.split(/\s*;\s*/).filter(Boolean);
+    if (/[()—]/.test(p)) return null;
+    const parts = p.split(/\s*,\s*/).filter(Boolean); return parts.every(x => x.length <= 42) ? parts : null;
+  };
   const plantsHtml = p => { const t = plantTags(p); return t ? t.map(x => `<span class="pl-tag">${esc(x)}</span>`).join("") : `<span class="pl-text">${esc(p)}</span>`; };
-  function newPlantQuiz() {
-    const r = PLANT_ROWS[Math.floor(Math.random() * PLANT_ROWS.length)];
-    const others = shuffle(PLANT_ROWS.filter(x => x.p !== r.p && x.f !== r.f)).slice(0, 3);
-    state.pq = { row: r, opts: shuffle([r].concat(others)), pick: null, ok: (state.pq && state.pq.ok) || 0, n: (state.pq && state.pq.n) || 0 };
+  // «Өзіңді тексер» үшін жеке өсімдік атаулары (жақшасы, ұзын түсіндірмесі жоқ жолдардан)
+  const plantNames = r => {
+    if (r.g.id === "origin") return null;
+    if (/[()—]|\d/.test(r.p)) return null;
+    const names = [].concat(...r.p.split(/\s*[;,]\s*/).map(x => x.replace(/^[^:]+:\s*/, "").split(/\s+(?:және|мен|немесе)\s+/))).map(x => x.trim()).filter(Boolean);
+    return names.length && names.every(x => x.length <= 28 && !/\s.*\s.*\s/.test(x)) ? names : null;
+  };
+  const PQ_SIZE = { single: 14, multi: 10, match: 6 };
+  const PQ_STOP = new Set(["өсімдіктер", "өсімдік", "тұқымдастар", "тұқымдас", "дақылдары", "дақылдар", "дақылдардың", "көптеген", "жеміс", "көкөніс", "және", "немесе", "кейбір", "сатыдағы", "ағаштар", "ағаштары", "түрлері", "жапырақтары", "жапырағы"]);
+  const pqWords = r => new Set(r.p.toLowerCase().replace(/[^a-zа-яәғқңөұүһіё\s-]/gi, " ").split(/\s+/).filter(w => w.length >= 4 && !PQ_STOP.has(w)).map(w => w.slice(0, 6)));
+  const pqClash = (a, b) => { const A = pqWords(a); for (const w of pqWords(b)) if (A.has(w)) return true; return a.p === b.p; };
+  function buildPlantQuiz() {
+    const rows = shuffle(PLANT_ROWS), used = new Set(), qs = [];
+    const short = r => r.p.length <= 75 && r.f.length <= 140;
+    const take = r => { used.add(r.id); return r; };
+    // көп жауапты: кемінде 3 өсімдігі бар жол → 3 дұрыс + 3 басқа жолдардан
+    for (const r of rows) {
+      if (qs.filter(q => q.type === "multi").length >= PQ_SIZE.multi) break;
+      const names = plantNames(r); if (!names || names.length < 3 || used.has(r.id)) continue;
+      const correct = shuffle(names).slice(0, 3);
+      const pool = shuffle([].concat(...PLANT_ROWS.filter(x => x.g === r.g && x !== r).map(x => plantNames(x) || [])).concat(...shuffle(PLANT_ROWS).slice(0, 30).map(x => plantNames(x) || [])))
+        .filter((x, k, a) => a.indexOf(x) === k && !r.p.toLowerCase().includes(x.toLowerCase().slice(0, 5)) && !names.includes(x));
+      if (pool.length < 3) continue;
+      const opts = shuffle(correct.concat(pool.slice(0, 3)));
+      qs.push({ type: "multi", row: take(r), q: r.f, options: opts, correct: correct.map(c => opts.indexOf(c)) });
+    }
+    // сәйкестендіру: бір тақырыптағы екі жол
+    for (const g of shuffle(PLANT_GROUPS)) {
+      if (qs.filter(q => q.type === "match").length >= PQ_SIZE.match) break;
+      const cand = shuffle(PLANT_ROWS.filter(x => x.g === g && !used.has(x.id) && short(x) && x.f.length <= 90));
+      if (cand.length < 4) continue;
+      const pick = [];
+      for (const x of cand) { if (pick.length < 4 && pick.every(y => !pqClash(x, y))) pick.push(x); }
+      if (pick.length < 4) continue;
+      const [a, b] = pick; const opts = shuffle(pick);
+      take(a); take(b);
+      qs.push({ type: "match", row: { g }, q: "Белгілерді өсімдіктермен сәйкестендіріңіз", options: opts.map(o => o.p), items: [a, b].map(x => ({ text: x.f, answer: opts.indexOf(x) })), correct: [opts.indexOf(a), opts.indexOf(b)] });
+    }
+    // бір жауапты: белгі → 4 нұсқа (мүмкіндігінше сол тақырыптан)
+    for (const r of rows) {
+      if (qs.filter(q => q.type === "single").length >= PQ_SIZE.single) break;
+      if (used.has(r.id) || !short(r)) continue;
+      const dis = shuffle(PLANT_ROWS.filter(x => x !== r && short(x) && !pqClash(x, r))).sort((x, y) => (y.g === r.g) - (x.g === r.g)).slice(0, 3);
+      if (dis.length < 3 || dis.some((x, k) => dis.slice(k + 1).some(y => pqClash(x, y)))) continue;
+      const opts = shuffle([r].concat(dis));
+      qs.push({ type: "single", row: take(r), q: r.f, options: opts.map(o => o.p), correct: [opts.indexOf(r)] });
+    }
+    const order = { single: 0, match: 1, multi: 2 };
+    state.pq = { qs: qs.sort((a, b) => order[a.type] - order[b.type]), i: 0, sel: [], checked: false, pts: 0, ok: 0 };
   }
   function pagePlants(u, arg) {
     const mode = arg === "learn" || arg === "quiz" ? arg : "table";
@@ -1009,13 +1059,36 @@
         </div>`;
     }
     if (mode === "quiz") {
-      if (!state.pq) newPlantQuiz();
-      const q = state.pq, done = q.pick != null;
+      if (!state.pq || !state.pq.qs) buildPlantQuiz();
+      const P = state.pq, total = P.qs.length, max = P.qs.reduce((a, q) => a + maxPoints(q), 0);
+      if (P.i >= total) return head + `<div class="card pl-quiz pl-done"><div class="pl-lock-ico">${ic("trophy", 30)}</div>
+          <h2>Тест аяқталды!</h2><p class="pl-score">${P.pts} / ${max} балл</p><p class="muted">${total} сұрақтың ${P.ok}-не толық дұрыс жауап бердің.</p>
+          <button class="btn btn-cta btn-lg" data-act="pq-restart">${ic("refresh", 18)} Жаңа сұрақтармен қайта бастау</button></div>`;
+      const q = P.qs[P.i], done = P.checked, sel = P.sel;
+      const typeTag = { single: "Бір дұрыс жауап", multi: "Бірнеше дұрыс жауап", match: "Сәйкестендіру" }[q.type];
+      const pts = done ? scorePoints(q, sel) : null;
+      let body;
+      if (q.type === "match") {
+        body = `<div class="pl-opts">${q.options.map((o, i) => `<div class="pl-opt static"><b>${LETTERS[i]}.</b> ${esc(o)}</div>`).join("")}</div>
+          <div class="pl-match">${q.items.map((it, k) => `<div class="pl-mi"><div class="pl-mi-t"><b>${k + 1}.</b> ${esc(it.text)}</div><div class="pl-mi-b">${q.options.map((o, i) => {
+            const c = done ? (i === it.answer ? "ok" : sel[k] === i ? "bad" : "") : sel[k] === i ? "on" : "";
+            return `<button class="pl-ml ${c}" data-act="pq-match" data-k="${k}" data-i="${i}" ${done ? "disabled" : ""}>${LETTERS[i]}</button>`; }).join("")}</div></div>`).join("")}</div>`;
+      } else {
+        body = `<div class="pl-opts">${q.options.map((o, i) => {
+          const ok = q.correct.includes(i), on = sel.includes(i);
+          const c = done ? (ok && on ? "ok" : on ? "bad" : ok ? "miss" : "") : on ? "on" : "";
+          return `<button class="pl-opt ${c}" data-act="pq-pick" data-i="${i}" ${done ? "disabled" : ""}><b>${LETTERS[i]}.</b> ${esc(o)}</button>`; }).join("")}</div>`;
+      }
+      const canCheck = q.type === "match" ? sel.filter(x => x != null).length === q.items.length : sel.length > 0;
       return head + `<div class="card pl-quiz">
-          <div class="row-between" style="margin:0 0 6px"><span class="tag">${esc(q.row.g.title)}</span><span class="muted">Дұрыс: <b>${q.ok}</b> / ${q.n}</span></div>
-          <p class="pl-q">${esc(q.row.f)}</p>
-          <div class="pl-opts">${q.opts.map((o, i) => `<button class="pl-opt ${done ? (o === q.row ? "ok" : i === q.pick ? "bad" : "") : ""}" data-act="pq-pick" data-i="${i}" ${done ? "disabled" : ""}>${esc(o.p)}</button>`).join("")}</div>
-          ${done ? `<div class="pl-next"><b>${q.opts[q.pick] === q.row ? "Дұрыс! 🎉" : "Қате. Дұрыс жауабы жасыл түспен белгіленді."}</b><button class="btn btn-cta" data-act="pq-next">Келесі сұрақ ${ic("arrow", 18)}</button></div>` : ""}
+          <div class="pl-prog"><div class="pl-prog-bar"><i style="width:${P.i / total * 100}%"></i></div><b>Сұрақ ${P.i + 1} / ${total}</b><span class="muted">Балл: ${P.pts}</span></div>
+          <div class="row-between" style="margin:10px 0 0"><span class="tag t-${q.type === "multi" ? "multi" : q.type === "match" ? "context" : "single"}">${typeTag}</span><span class="tag">${esc((q.row && q.row.g.title) || "")}</span></div>
+          <p class="pl-q">${esc(q.q)}</p>${q.type === "multi" ? `<p class="hint" style="margin-top:-8px">Дұрыс жауаптың бәрін белгіле (3 жауап)</p>` : ""}
+          ${body}
+          <div class="pl-next">${done ? `<b>${pts === maxPoints(q) ? "Дұрыс! 🎉" : pts > 0 ? `Жартылай дұрыс: ${pts} балл` : "Қате. Дұрыс жауабы жасыл түспен белгіленді."}</b>
+            <button class="btn btn-cta" data-act="pq-next">${P.i + 1 < total ? "Келесі сұрақ" : "Нәтижені көру"} ${ic("arrow", 18)}</button>`
+            : `<span class="muted">${q.type === "single" ? "Бір нұсқаны таңда" : q.type === "match" ? "Әр белгіге бір әріп таңда" : "Нұсқаларды белгілеп, «Тексеру» бас"}</span>
+            <button class="btn btn-primary" data-act="pq-check" ${canCheck ? "" : "disabled"}>Тексеру</button>`}</div>
         </div>`;
     }
     const groups = grp ? [grp] : PLANT_GROUPS;
@@ -1449,8 +1522,12 @@
     "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
     "pl-flip": el => el.classList.toggle("hide"),
     "pl-reveal": () => document.querySelectorAll(".pl-row.hide").forEach(r => r.classList.remove("hide")),
-    "pq-pick": el => { const q = state.pq; if (!q || q.pick != null) return; q.pick = +el.dataset.i; q.n++; if (q.opts[q.pick] === q.row) q.ok++; render(); },
-    "pq-next": () => { newPlantQuiz(); render(); },
+    "pq-pick": el => { const P = state.pq; if (!P || P.checked) return; const q = P.qs[P.i], i = +el.dataset.i;
+      if (q.type === "single") P.sel = [i]; else P.sel = P.sel.includes(i) ? P.sel.filter(x => x !== i) : P.sel.concat(i); render(); },
+    "pq-match": el => { const P = state.pq; if (!P || P.checked) return; P.sel[+el.dataset.k] = +el.dataset.i; render(); },
+    "pq-check": () => { const P = state.pq; if (!P || P.checked) return; const q = P.qs[P.i], pts = scorePoints(q, P.sel); P.pts += pts; if (pts === maxPoints(q)) P.ok++; P.checked = true; render(); },
+    "pq-next": () => { const P = state.pq; if (!P) return; P.i++; P.sel = []; P.checked = false; render(); window.scrollTo(0, 0); },
+    "pq-restart": () => { buildPlantQuiz(); render(); },
     "scroll-to": el => { const t = document.getElementById(el.dataset.id); if (t) t.scrollIntoView({ behavior: "smooth" }); },
     "calc-step": el => { const inp = document.getElementById(el.dataset.for); inp.value = +inp.value + +el.dataset.d; updateCalc(); },
     "start-express": () => startMode("express"),
@@ -1526,7 +1603,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610141751")
+    import("./cloud.js?v=202610141800")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

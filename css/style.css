@@ -636,3 +636,20 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .pl-blur { filter: blur(5px); pointer-events: none; user-select: none; margin: 18px 0 20px; text-align: left; }
 .pl-loc { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; color: var(--muted); margin: -2px 0 8px; line-height: 1.4; }
 .pl-loc .ic { margin-top: 2px; }
+.pl-prog { display: flex; align-items: center; gap: 12px; }
+.pl-prog-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.pl-prog-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--purple)); border-radius: 99px; }
+.pl-opt b { color: var(--muted); margin-right: 4px; }
+.pl-opt.on { border-color: var(--purple); background: var(--purple-50); }
+.pl-opt.miss { border-color: var(--green); border-style: dashed; }
+.pl-opt.static { cursor: default; }
+.pl-match { display: grid; gap: 10px; margin-top: 14px; }
+.pl-mi { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.pl-mi-t { flex: 1; min-width: 200px; font-weight: 600; line-height: 1.4; }
+.pl-mi-b { display: flex; gap: 6px; }
+.pl-ml { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
+.pl-ml.on { background: var(--purple); border-color: var(--purple); color: #fff; }
+.pl-ml.ok { background: var(--green); border-color: var(--green); color: #fff; }
+.pl-ml.bad { background: var(--red); border-color: var(--red); color: #fff; }
+.pl-done { text-align: center; }
+.pl-score { font-size: 34px; font-weight: 800; margin: 6px 0; color: var(--green-600); }
