@@ -111,6 +111,7 @@
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/>',
     send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
     camera: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     dna: '<path d="M4 2c0 6 16 6 16 12M20 2c0 6-16 6-16 12M4 22c0-3 4-5 8-6.5M20 22c0-3-4-5-8-6.5"/><path d="M7 5h10M7 11h10M8 19h8"/>'
@@ -698,6 +699,7 @@
     { id: "mock",        ico: "clipboard", t: "ҰБТ сынамасы және Нағыз ҰБТ базасы" },
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
     { id: "real",        ico: "book",      t: "Нағыз ҰБТ сұрақтары" },
+    { id: "plants",      ico: "seed",      t: "Ботаникадағы өсімдіктер тізімі" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
     { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
   ];
@@ -752,11 +754,12 @@
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
   function renderApp(u, page, arg) {
-    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, leaderboard: pageLeaderboard, settings: pageSettings };
+    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings };
     if (CLOUD && u.role === "teacher") pages.teacher = pageTeacher;
     const fn = pages[page] || (CLOUD && u.role === "teacher" ? pageTeacher : pageDashboard);
     app.innerHTML = shell(u, page, fn(u, arg));
     if (page === "teacher" || (!pages[page] && u.role === "teacher")) bindTeacher();
+    if (page === "plants") bindPlants();
     if (CLOUD) verifySession();
     if (CLOUD && (page === "dashboard" || page === "leaderboard") && (!state.lb || Date.now() - state.lb.at > 60000) && !state.lbLoading) {
       state.lbLoading = true;
@@ -973,6 +976,61 @@
         <div class="card qa-item"><div class="q-meta"><span class="tag">${i + 1}</span>${x.module ? `<span class="tag">${modTitle(x.module)}</span>` : ""}${x.year ? `<span class="tag t-context">ҰБТ ${esc(x.year)}</span>` : ""}</div>
           <p class="qa-q">${x.q}</p><div class="qa-a"><b>Жауабы:</b> ${x.a}</div></div>`).join("")}
       </div>`;
+  }
+
+  /* ---- Ботаникадағы өсімдіктер тізімі ---- */
+  const PLANT_GROUPS = window.PLANTS || [];
+  const PLANT_ROWS = [].concat(...PLANT_GROUPS.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p }))));
+  const plantTags = p => { if (/[()—]/.test(p)) return null; const parts = p.split(/\s*[;,]\s*/).filter(Boolean); return parts.every(x => x.length <= 42) ? parts : null; };
+  const plantsHtml = p => { const t = plantTags(p); return t ? t.map(x => `<span class="pl-tag">${esc(x)}</span>`).join("") : `<span class="pl-text">${esc(p)}</span>`; };
+  function newPlantQuiz() {
+    const r = PLANT_ROWS[Math.floor(Math.random() * PLANT_ROWS.length)];
+    const others = shuffle(PLANT_ROWS.filter(x => x.p !== r.p && x.f !== r.f)).slice(0, 3);
+    state.pq = { row: r, opts: shuffle([r].concat(others)), pick: null, ok: (state.pq && state.pq.ok) || 0, n: (state.pq && state.pq.n) || 0 };
+  }
+  function pagePlants(u, arg) {
+    const mode = arg === "learn" || arg === "quiz" ? arg : "table";
+    const grp = mode === "table" && PLANT_GROUPS.find(g => g.id === arg);
+    const head = `<div class="pl-hero"><div class="pl-hero-ico">${ic("seed", 34)}</div>
+        <div><h1>Ботаникадағы өсімдіктер тізімі</h1><p>2027 жылға жаңартылған кесте · ${PLANT_GROUPS.length} тақырып · ${PLANT_ROWS.length} белгі. ҰБТ-да өсімдіктердің мысалдары жиі сұралады — осы тізімді жаттап ал!</p></div></div>
+      <div class="pl-modes">
+        <a class="pl-mode ${mode === "table" ? "active" : ""}" href="#/app/plants">${ic("book", 18)} Кесте</a>
+        <a class="pl-mode ${mode === "learn" ? "active" : ""}" href="#/app/plants/learn">${ic("eye", 18)} Жаттау</a>
+        <a class="pl-mode ${mode === "quiz" ? "active" : ""}" href="#/app/plants/quiz">${ic("target", 18)} Өзіңді тексер</a>
+      </div>`;
+    if (mode === "quiz") {
+      if (!state.pq) newPlantQuiz();
+      const q = state.pq, done = q.pick != null;
+      return head + `<div class="card pl-quiz">
+          <div class="row-between" style="margin:0 0 6px"><span class="tag">${esc(q.row.g.title)}</span><span class="muted">Дұрыс: <b>${q.ok}</b> / ${q.n}</span></div>
+          <p class="pl-q">${esc(q.row.f)}</p>
+          <div class="pl-opts">${q.opts.map((o, i) => `<button class="pl-opt ${done ? (o === q.row ? "ok" : i === q.pick ? "bad" : "") : ""}" data-act="pq-pick" data-i="${i}" ${done ? "disabled" : ""}>${esc(o.p)}</button>`).join("")}</div>
+          ${done ? `<div class="pl-next"><b>${q.opts[q.pick] === q.row ? "Дұрыс! 🎉" : "Қате. Дұрыс жауабы жасыл түспен белгіленді."}</b><button class="btn btn-cta" data-act="pq-next">Келесі сұрақ ${ic("arrow", 18)}</button></div>` : ""}
+        </div>`;
+    }
+    const groups = grp ? [grp] : PLANT_GROUPS;
+    return head + `<div class="pl-tools">
+        <div class="pl-search">${ic("search", 18)}<input id="pl-search" type="search" placeholder="Өсімдікті немесе белгіні іздеу… (мысалы: қызғалдақ)" autocomplete="off"></div>
+        ${mode === "learn" ? `<button class="btn btn-ghost btn-sm" data-act="pl-reveal">${ic("eye", 16)} Барлығын ашу</button>` : ""}
+      </div>
+      ${mode === "table" ? `<div class="chips pl-chips" style="margin-bottom:16px"><a class="chip ${!grp ? "active" : ""}" href="#/app/plants">Барлығы</a>${PLANT_GROUPS.map(g => `<a class="chip ${grp === g ? "active" : ""}" href="#/app/plants/${g.id}">${esc(g.title)}</a>`).join("")}</div>` : `<p class="hint" style="margin-top:0">Жаттау режимі: өсімдіктер жасырылған. Белгіні оқып, жауабын есіңе түсір, сосын карточканы басып тексер.</p>`}
+      <p class="muted pl-empty" hidden>Ештеңе табылмады.</p>
+      ${groups.map(g => `<section class="pl-group" data-g="${g.id}">
+        <h2 class="pl-gh">${ic(g.icon, 20)}${esc(g.title)}<span class="muted">${g.rows.length}</span></h2>
+        <div class="pl-list">${g.rows.map(([f, p]) => `<div class="pl-row ${mode === "learn" ? "hide" : ""}" data-s="${esc((f + " " + p).toLowerCase())}" ${mode === "learn" ? `data-act="pl-flip"` : ""}>
+          <div class="pl-f">${esc(f)}</div><div class="pl-p">${plantsHtml(p)}</div>${mode === "learn" ? `<div class="pl-cover">${ic("eye", 16)} Жауабын көру</div>` : ""}</div>`).join("")}</div>
+      </section>`).join("")}`;
+  }
+  function bindPlants() {
+    const inp = $("#pl-search"); if (!inp) return;
+    inp.addEventListener("input", () => {
+      const v = inp.value.trim().toLowerCase(); let any = false;
+      document.querySelectorAll(".pl-group").forEach(sec => {
+        let n = 0; sec.querySelectorAll(".pl-row").forEach(r => { const hit = !v || r.dataset.s.includes(v); r.hidden = !hit; if (hit) n++; });
+        sec.hidden = !n; if (n) any = true;
+      });
+      const e = document.querySelector(".pl-empty"); if (e) e.hidden = any;
+    });
   }
 
   /* ---- Leaderboard ---- */
@@ -1379,6 +1437,10 @@
     "start-test": el => startMode("test", el.dataset.id),
     "goto-mock": () => go("#/app/mock"),
     "mock-min": el => { state.mockMin = +el.dataset.m; render(); },
+    "pl-flip": el => el.classList.toggle("hide"),
+    "pl-reveal": () => document.querySelectorAll(".pl-row.hide").forEach(r => r.classList.remove("hide")),
+    "pq-pick": el => { const q = state.pq; if (!q || q.pick != null) return; q.pick = +el.dataset.i; q.n++; if (q.opts[q.pick] === q.row) q.ok++; render(); },
+    "pq-next": () => { newPlantQuiz(); render(); },
     "scroll-to": el => { const t = document.getElementById(el.dataset.id); if (t) t.scrollIntoView({ behavior: "smooth" }); },
     "calc-step": el => { const inp = document.getElementById(el.dataset.for); inp.value = +inp.value + +el.dataset.d; updateCalc(); },
     "start-express": () => startMode("express"),
@@ -1454,7 +1516,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610140708")
+    import("./cloud.js?v=202610141743")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

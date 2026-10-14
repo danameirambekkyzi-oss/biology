@@ -592,3 +592,40 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .folder-desc { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px; background: var(--purple-50); color: var(--purple); font-weight: 600; line-height: 1.45; }
 .folder-desc .ic { flex-shrink: 0; }
 .tc-sub { display: block; margin: -4px 0 4px; font-size: 12.5px; font-weight: 600; color: var(--purple); }
+
+/* ---------- Ботаникадағы өсімдіктер тізімі ---------- */
+.pl-hero { display: flex; gap: 18px; align-items: center; padding: 22px 24px; border-radius: 22px; color: #fff; margin-bottom: 16px;
+  background: linear-gradient(135deg, #16A34A 0%, #10B981 45%, #7C3AED 100%); box-shadow: 0 14px 34px -16px rgba(16, 185, 129, .7); }
+.pl-hero h1 { margin: 0 0 6px; font-size: 26px; line-height: 1.2; }
+.pl-hero p { margin: 0; opacity: .93; line-height: 1.5; }
+.pl-hero-ico { flex-shrink: 0; width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: rgba(255,255,255,.18); }
+.pl-modes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.pl-mode { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 14px; font-weight: 700; color: var(--text); background: var(--surface); border: 1.5px solid var(--border); }
+.pl-mode.active { background: var(--green); border-color: var(--green); color: #fff; }
+.pl-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.pl-search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 14px; background: var(--surface); border: 1.5px solid var(--border); color: var(--muted); }
+.pl-search input { flex: 1; border: 0; outline: 0; background: transparent; padding: 13px 0; font: inherit; color: var(--text); }
+.pl-group { margin-bottom: 22px; }
+.pl-gh { display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 0 0 10px; color: var(--green-600); }
+.pl-gh .muted { font-size: 13px; font-weight: 600; margin-left: auto; }
+.pl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.pl-row { position: relative; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 14px; padding: 12px 14px; overflow: hidden; }
+.pl-f { font-weight: 700; font-size: 14.5px; line-height: 1.4; margin-bottom: 8px; }
+.pl-p { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-tag { padding: 4px 10px; border-radius: 999px; font-size: 13.5px; font-weight: 600; background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green-600); }
+.pl-text { font-size: 14px; color: var(--green-600); font-weight: 600; line-height: 1.45; }
+.pl-row[data-act] { cursor: pointer; }
+.pl-cover { display: none; }
+.pl-row.hide .pl-p { visibility: hidden; height: 30px; overflow: hidden; }
+.pl-row.hide .pl-cover { display: flex; align-items: center; gap: 6px; position: absolute; left: 14px; right: 14px; bottom: 10px; padding: 6px 10px; border-radius: 10px;
+  background: var(--purple-50); color: var(--purple); font-weight: 700; font-size: 13px; justify-content: center; }
+.pl-quiz { max-width: 760px; }
+.pl-q { font-size: 19px; font-weight: 700; line-height: 1.45; margin: 10px 0 16px; }
+.pl-opts { display: grid; gap: 10px; }
+.pl-opt { text-align: left; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface); font: inherit; font-weight: 600; color: var(--text); cursor: pointer; line-height: 1.45; }
+.pl-opt:hover:not([disabled]) { border-color: var(--green); }
+.pl-opt.ok { border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }
+.pl-opt.bad { border-color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+.pl-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+@media (max-width: 640px) { .pl-hero { padding: 18px; } .pl-hero h1 { font-size: 21px; } .pl-hero-ico { width: 52px; height: 52px; } .pl-list { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .pl-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; } .pl-chips .chip { white-space: nowrap; flex-shrink: 0; } }
