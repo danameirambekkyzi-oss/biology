@@ -1023,7 +1023,7 @@
         <div class="pl-search">${ic("search", 18)}<input id="pl-search" type="search" placeholder="Өсімдікті немесе белгіні іздеу… (мысалы: қызғалдақ)" autocomplete="off"></div>
         ${mode === "learn" ? `<button class="btn btn-ghost btn-sm" data-act="pl-reveal">${ic("eye", 16)} Барлығын ашу</button>` : ""}
       </div>
-      ${mode === "table" ? `<div class="chips pl-chips" style="margin-bottom:16px"><a class="chip ${!grp ? "active" : ""}" href="#/app/plants">Барлығы</a>${PLANT_GROUPS.map(g => `<a class="chip ${grp === g ? "active" : ""}" href="#/app/plants/${g.id}">${esc(g.title)}</a>`).join("")}</div>` : `<p class="hint" style="margin-top:0">Жаттау режимі: өсімдіктер жасырылған. Белгіні оқып, жауабын есіңе түсір, сосын карточканы басып тексер.</p>`}
+      ${mode === "table" ? "" : `<p class="hint" style="margin-top:0">Жаттау режимі: өсімдіктер жасырылған. Белгіні оқып, жауабын есіңе түсір, сосын карточканы басып тексер.</p>`}
       <p class="muted pl-empty" hidden>Ештеңе табылмады.</p>
       ${groups.map(g => `<section class="pl-group" data-g="${g.id}">
         <h2 class="pl-gh">${ic(g.icon, 20)}${esc(g.title)}<span class="muted">${g.rows.length}</span></h2>
@@ -1526,7 +1526,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610141747")
+    import("./cloud.js?v=202610141749")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
