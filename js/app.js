@@ -1027,8 +1027,8 @@
       <p class="muted pl-empty" hidden>Ештеңе табылмады.</p>
       ${groups.map(g => `<section class="pl-group" data-g="${g.id}">
         <h2 class="pl-gh">${ic(g.icon, 20)}${esc(g.title)}<span class="muted">${g.rows.length}</span></h2>
-        <div class="pl-list">${g.rows.map(([f, p]) => `<div class="pl-row ${mode === "learn" ? "hide" : ""}" data-s="${esc((f + " " + p).toLowerCase())}" ${mode === "learn" ? `data-act="pl-flip"` : ""}>
-          <div class="pl-f">${esc(f)}</div><div class="pl-p">${plantsHtml(p)}</div>${mode === "learn" ? `<div class="pl-cover">${ic("eye", 16)} Жауабын көру</div>` : ""}</div>`).join("")}</div>
+        <div class="pl-list">${g.rows.map(([f, p, loc]) => `<div class="pl-row ${mode === "learn" ? "hide" : ""}" data-s="${esc((f + " " + p + " " + (loc || "")).toLowerCase())}" ${mode === "learn" ? `data-act="pl-flip"` : ""}>
+          <div class="pl-f">${esc(f)}</div>${loc ? `<div class="pl-loc">${ic("compass", 14)} ${esc(loc)}</div>` : ""}<div class="pl-p">${plantsHtml(p)}</div>${mode === "learn" ? `<div class="pl-cover">${ic("eye", 16)} Жауабын көру</div>` : ""}</div>`).join("")}</div>
       </section>`).join("")}`;
   }
   function bindPlants() {
@@ -1526,7 +1526,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610141749")
+    import("./cloud.js?v=202610141751")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

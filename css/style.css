@@ -634,3 +634,5 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .pl-locked h2 { margin: 10px 0 6px; }
 .pl-lock-ico { width: 64px; height: 64px; margin: 0 auto; border-radius: 18px; display: grid; place-items: center; background: var(--purple-50); color: var(--purple); }
 .pl-blur { filter: blur(5px); pointer-events: none; user-select: none; margin: 18px 0 20px; text-align: left; }
+.pl-loc { display: flex; gap: 6px; align-items: flex-start; font-size: 13px; color: var(--muted); margin: -2px 0 8px; line-height: 1.4; }
+.pl-loc .ic { margin-top: 2px; }
