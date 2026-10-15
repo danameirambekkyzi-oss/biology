@@ -698,7 +698,7 @@
     { id: "chapters",    ico: "layers",    t: "Тараулық тест" },
     { id: "mock",        ico: "clipboard", t: "ҰБТ сынамасы және Нағыз ҰБТ базасы" },
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
-    { id: "real",        ico: "book",      t: "Нағыз ҰБТ сұрақтары" },
+    { id: "real",        ico: "book",      t: "ҰБТ-да жиі кездесетін сұрақтар тізімі" },
     { id: "plants",      ico: "seed",      t: "Ботаникадағы өсімдіктер тізімі" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
     { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
@@ -965,11 +965,11 @@
   /* ---- Real UBT questions ---- */
   function pageReal(u, mod) {
     const all = window.REAL_UBT || [];
-    if (!all.length) return `<h1 class="page-title">Нағыз ҰБТ-да келген сұрақтар</h1>
+    if (!all.length) return `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>
       <div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
     const mods = MODULES.filter(m => all.some(x => x.module === m.id));
     const list = mod ? all.filter(x => x.module === mod) : all;
-    return `<h1 class="page-title">Нағыз ҰБТ-да келген сұрақтар</h1><p class="page-sub">Сұрақ-жауап түріндегі шпаргалка · ${all.length} сұрақ</p>
+    return `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1><p class="page-sub">Сұрақ-жауап түріндегі шпаргалка · ${all.length} сұрақ</p>
       <div class="chips" style="margin-bottom:16px"><a class="chip ${!mod ? "active" : ""}" href="#/app/real">Барлығы</a>
         ${mods.map(m => `<a class="chip ${mod === m.id ? "active" : ""}" href="#/app/real/${m.id}">${m.title}</a>`).join("")}</div>
       <div class="grid g-2">${list.map((x, i) => `
@@ -1603,7 +1603,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610141800")
+    import("./cloud.js?v=202610151745")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
