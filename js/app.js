@@ -760,6 +760,7 @@
     app.innerHTML = shell(u, page, fn(u, arg));
     if (page === "teacher" || (!pages[page] && u.role === "teacher")) bindTeacher();
     if (page === "plants") bindPlants();
+    if (page === "real") bindReal();
     if (CLOUD) verifySession();
     if (CLOUD && (page === "dashboard" || page === "leaderboard") && (!state.lb || Date.now() - state.lb.at > 60000) && !state.lbLoading) {
       state.lbLoading = true;
@@ -962,20 +963,104 @@
       </div>`;
   }
 
-  /* ---- Real UBT questions ---- */
-  function pageReal(u, mod) {
-    const all = window.REAL_UBT || [];
-    if (!all.length) return `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>
-      <div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
-    const mods = MODULES.filter(m => all.some(x => x.module === m.id));
-    const list = mod ? all.filter(x => x.module === mod) : all;
-    return `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1><p class="page-sub">Сұрақ-жауап түріндегі шпаргалка · ${all.length} сұрақ</p>
-      <div class="chips" style="margin-bottom:16px"><a class="chip ${!mod ? "active" : ""}" href="#/app/real">Барлығы</a>
-        ${mods.map(m => `<a class="chip ${mod === m.id ? "active" : ""}" href="#/app/real/${m.id}">${m.title}</a>`).join("")}</div>
-      <div class="grid g-2">${list.map((x, i) => `
-        <div class="card qa-item"><div class="q-meta"><span class="tag">${i + 1}</span>${x.module ? `<span class="tag">${modTitle(x.module)}</span>` : ""}${x.year ? `<span class="tag t-context">ҰБТ ${esc(x.year)}</span>` : ""}</div>
-          <p class="qa-q">${x.q}</p><div class="qa-a"><b>Жауабы:</b> ${x.a}</div></div>`).join("")}
-      </div>`;
+  /* ---- ҰБТ-да жиі кездесетін сұрақтар: күніне 20 сұрақ + жазбаша тест ---- */
+  const RQ = window.REAL_UBT || [];
+  const RQ_PER = 20, RQ_QUIZ = 7, RQ_DAYS = Math.ceil(RQ.length / RQ_PER);
+  const rqDay = d => RQ.slice((d - 1) * RQ_PER, d * RQ_PER).map((x, j) => Object.assign({ n: (d - 1) * RQ_PER + j + 1 }, x));
+  function rqOpenDays(u) {
+    if (u.role === "teacher") return RQ_DAYS;
+    if (!u.realStart) { u.realStart = dayKey(); saveUser(u); }
+    const passed = Math.round((new Date(dayKey() + "T00:00") - new Date(u.realStart + "T00:00")) / 864e5);
+    return Math.max(1, Math.min(RQ_DAYS, passed + 1));
+  }
+  // Жауапты салыстыру: регистр, қазақ әріптері (ә→а, қ→к …), сызықша, бос орын, бір әріп қатесі есепке алынбайды
+  const RQ_FOLD = { "ә": "а", "ғ": "г", "қ": "к", "ң": "н", "ө": "о", "ұ": "у", "ү": "у", "һ": "х", "і": "и", "ы": "и", "й": "и", "ё": "е", "ъ": "", "ь": "",
+    a: "а", e: "е", o: "о", p: "р", c: "с", x: "х", k: "к", m: "м", h: "н", t: "т", b: "в", y: "у" };
+  const rqNorm = s => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, m => /[,.]/.test(m) ? "." : " ")
+    .replace(/(\d)\.(?=\d)/g, "$1,").replace(/\./g, " ").replace(/./g, ch => RQ_FOLD[ch] ?? ch).replace(/\s+/g, " ").trim();
+  function rqDist(a, b) {
+    if (Math.abs(a.length - b.length) > 2) return 9;
+    let p = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) { const c = [i]; for (let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; }
+    return p[b.length];
+  }
+  function rqMatch(x, ans) {
+    const v = rqNorm(ans); if (!v) return false;
+    return x.k.some(k => { const w = rqNorm(k); if (v === w || v.replace(/ /g, "") === w.replace(/ /g, "")) return true;
+      if (/^[a-zа-я]{3,5}$/i.test(k) && k === k.toUpperCase()) return [...v].sort().join("") === [...w].sort().join("");
+      return !/\d/.test(w) && w.length >= 5 && rqDist(v, w) <= (w.length >= 10 ? 2 : 1); });
+  }
+  const RQ_NUM = ["", "бір", "екі", "үш", "төрт"];
+  function rqHint(x) {
+    const k = x.k[0];
+    if (/\d/.test(k)) return /\p{L}/u.test(k) ? "Жауабын санмен, өлшем бірлігімен жаз" : "Жауабын санмен жаз";
+    if (k.length <= 5 && k === k.toUpperCase()) return "Жауабы әріптерден тұрады";
+    const n = k.trim().split(/\s+/).length;
+    return `Жауабы ${RQ_NUM[n] || n} сөзден тұрады`;
+  }
+  function rqStart(day, only) {
+    const pool = only || shuffle(rqDay(day).filter(x => x.k)).slice(0, RQ_QUIZ);
+    state.rq = { day, qs: pool, i: 0, ans: [], ok: [], checked: false, fix: !!only };
+  }
+  const rqAnswerHtml = a => esc(a).replace(/\n/g, "<br>");
+
+  function pageReal(u, arg) {
+    const title = `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>`;
+    if (!RQ.length) return title + `<div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
+    const open = rqOpenDays(u), done = u.realDone || {};
+    let day = +arg || 0;
+    if (!day || day > RQ_DAYS) { day = 1; for (let d = 1; d <= open; d++) { day = d; if (!done["d" + d]) break; } }
+    const banner = `<div class="card rq-banner">${ic("flame", 26)}<div><b>Әр күн сайын саған жаттауға арналған ${RQ_PER} сұрақ ашылады.</b>
+      <span>Жаттап, қатемен жұмыс жасау маңызды.</span></div></div>`;
+    const chips = `<div class="chips rq-days">${Array.from({ length: RQ_DAYS }, (_, j) => j + 1).map(d => {
+      const r = done["d" + d], lock = d > open;
+      return lock ? `<span class="chip rq-lock" title="${d - open} күннен кейін ашылады">${ic("lock", 14)} ${d}-күн</span>`
+        : `<a class="chip ${d === day ? "active" : ""}" href="#/app/real/${d}">${r ? ic("check", 14) + " " : ""}${d}-күн${r ? ` · ${r.s}/${r.n}` : ""}</a>`; }).join("")}</div>`;
+    const head = title + `<p class="page-sub">Барлығы ${RQ.length} сұрақ · ${RQ_DAYS} күн · ашылғаны: ${open}-күнге дейін</p>` + banner + chips;
+    if (day > open) return head + `<div class="card empty"><div class="e-ico">${ic("lock", 40)}</div><h3>${day}-күн әлі ашылмаған</h3><p>Бұл сұрақтар ${day - open} күннен кейін ашылады. Әзірге ашылған күндерді жатта.</p></div>`;
+
+    const R = state.rq && state.rq.day === day ? state.rq : null;
+    if (R) return head + rqQuizHtml(u, R);
+    const list = rqDay(day), r = done["d" + day];
+    return head + `<div class="row-between rq-top"><h2 style="margin:0">${day}-күн · ${list.length} сұрақ</h2>${r ? `<span class="tag">Соңғы нәтиже: ${r.s}/${r.n}</span>` : ""}</div>
+      <div class="grid g-2">${list.map(x => `
+        <div class="card qa-item"><div class="q-meta"><span class="tag">${x.n}</span></div>
+          <p class="qa-q">${esc(x.q)}</p><div class="qa-a"><b>Жауабы:</b> ${rqAnswerHtml(x.a)}</div>
+          ${(x.img || []).map(s => `<img class="rq-img" src="${s}" alt="" loading="lazy">`).join("")}</div>`).join("")}
+      </div>
+      <div class="card rq-finish"><div><h3 style="margin:0 0 4px">Жаттап болдың ба?</h3><p class="muted" style="margin:0">Батырманы бас — осы күннің сұрақтарынан ${Math.min(RQ_QUIZ, list.filter(x => x.k).length)} сұрақ беріледі. Жауабын өзің жазасың.</p></div>
+        <button class="btn btn-cta btn-lg" data-act="rq-start" data-d="${day}">${ic("check", 18)} Жаттап аяқтадым</button></div>`;
+  }
+
+  function rqQuizHtml(u, R) {
+    const total = R.qs.length;
+    if (R.i >= total) {
+      const s = R.ok.filter(Boolean).length, wrong = R.qs.filter((_, j) => !R.ok[j]);
+      return `<div class="card rq-result"><div class="e-ico">${ic(s === total ? "trophy" : "target", 40)}</div>
+        <h2>${R.fix ? "Қатемен жұмыс" : R.day + "-күн тесті"}: ${s}/${total}</h2>
+        <p class="muted">${s === total ? "Керемет! Барлығы дұрыс." : "Қате жауаптарыңды қайта жаттап, қатемен жұмыс жаса."}</p>
+        ${wrong.length ? `<div class="rq-wrong">${wrong.map(x => `<div class="qa-item rq-w"><p class="qa-q">${esc(x.kq || x.q)}</p>
+          <p class="rq-your">Сенің жауабың: <s>${esc(R.ans[R.qs.indexOf(x)] || "—")}</s></p><div class="qa-a"><b>Дұрыс жауабы:</b> ${esc(x.k[0])}</div></div>`).join("")}</div>` : ""}
+        <div class="rq-btns">${wrong.length ? `<button class="btn btn-cta" data-act="rq-fix">Қатемен жұмыс (${wrong.length})</button>` : ""}
+          <button class="btn btn-primary" data-act="rq-start" data-d="${R.day}">Қайта тапсыру</button>
+          <button class="btn btn-ghost" data-act="rq-back">Сұрақтарға оралу</button></div></div>`;
+    }
+    const x = R.qs[R.i], ok = R.ok[R.i];
+    return `<div class="card rq-quiz">
+      <div class="row-between"><span class="tag">Сұрақ ${R.i + 1} / ${total}</span><span class="muted">Дұрыс: ${R.ok.filter(Boolean).length}</span></div>
+      <div class="pl-prog-bar rq-bar"><i style="width:${R.i / total * 100}%"></i></div>
+      <p class="rq-q">${esc(x.kq || x.q)}</p>
+      <p class="rq-hint">${ic("bulb", 15)} ${rqHint(x)}</p>
+      <input id="rq-inp" class="input rq-inp ${R.checked ? (ok ? "ok" : "bad") : ""}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Жауабын жаз…" value="${esc(R.ans[R.i] || "")}" ${R.checked ? "disabled" : ""}>
+      ${R.checked ? `<div class="rq-fb ${ok ? "ok" : "bad"}">${ok ? ic("check", 18) + " Дұрыс!" : ic("refresh", 18) + " Қате."} Жауабы: <b>${esc(x.k[0])}</b></div>
+        <button class="btn btn-cta" data-act="rq-next">${R.i + 1 < total ? "Келесі сұрақ" : "Нәтижені көру"} ${ic("arrow", 18)}</button>`
+        : `<button class="btn btn-primary" data-act="rq-check">Тексеру</button>`}
+      <button class="btn btn-ghost btn-sm rq-cancel" data-act="rq-back">Тестті тоқтату</button></div>`;
+  }
+  function bindReal() {
+    const inp = $("#rq-inp"); if (!inp || inp.disabled) return;
+    inp.focus();
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); actions["rq-check"](); } });
   }
 
   /* ---- Ботаникадағы өсімдіктер тізімі ---- */
@@ -1528,6 +1613,15 @@
     "pq-check": () => { const P = state.pq; if (!P || P.checked) return; const q = P.qs[P.i], pts = scorePoints(q, P.sel); P.pts += pts; if (pts === maxPoints(q)) P.ok++; P.checked = true; render(); },
     "pq-next": () => { const P = state.pq; if (!P) return; P.i++; P.sel = []; P.checked = false; render(); window.scrollTo(0, 0); },
     "pq-restart": () => { buildPlantQuiz(); render(); },
+    "rq-start": el => { rqStart(+el.dataset.d); go("#/app/real/" + el.dataset.d); window.scrollTo(0, 0); },
+    "rq-fix": () => { const R = state.rq; if (!R) return; rqStart(R.day, R.qs.filter((_, j) => !R.ok[j])); render(); window.scrollTo(0, 0); },
+    "rq-back": () => { state.rq = null; render(); window.scrollTo(0, 0); },
+    "rq-check": () => { const R = state.rq, inp = $("#rq-inp"); if (!R || R.checked || !inp) return;
+      const v = inp.value.trim(); if (!v) { toast("Жауабын жаз"); inp.focus(); return; }
+      R.ans[R.i] = v; R.ok[R.i] = rqMatch(R.qs[R.i], v); R.checked = true; render(); },
+    "rq-next": () => { const R = state.rq; if (!R) return; R.i++; R.checked = false;
+      if (R.i >= R.qs.length && !R.fix) { const u = currentUser(); u.realDone = Object.assign({}, u.realDone, { ["d" + R.day]: { s: R.ok.filter(Boolean).length, n: R.qs.length, at: Date.now() } }); saveUser(u); }
+      render(); window.scrollTo(0, 0); },
     "scroll-to": el => { const t = document.getElementById(el.dataset.id); if (t) t.scrollIntoView({ behavior: "smooth" }); },
     "calc-step": el => { const inp = document.getElementById(el.dataset.for); inp.value = +inp.value + +el.dataset.d; updateCalc(); },
     "start-express": () => startMode("express"),
@@ -1603,7 +1697,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610151745")
+    import("./cloud.js?v=202610160145")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
