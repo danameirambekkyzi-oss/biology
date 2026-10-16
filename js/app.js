@@ -1075,7 +1075,8 @@
     desc: "2027 жылға жаңартылған кесте. ҰБТ-да өсімдіктердің мысалдары жиі сұралады — осы тізімді жаттап ал!",
     matchQ: "Белгілерді өсімдіктермен сәйкестендіріңіз", search: "Өсімдікті немесе белгіні іздеу… (мысалы: қызғалдақ)",
     groups: (window.PLANTS || []).map(g => g.id === "origin" ? Object.assign({ noMulti: true }, g) : g) }].concat(window.NOTES || []);
-  NOTE_FILES.forEach(n => { n.rows = [].concat(...n.groups.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p })))); });
+  NOTE_FILES.forEach(n => { n.groups.forEach(g => { g.entity = n.entity && !g.general; g.noMultiF = n.noMultiF || []; });
+    n.rows = [].concat(...n.groups.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p })))); });
   const noteFile = id => NOTE_FILES.find(n => n.id === id);
   // Тегтер: «;» болса — бөліктерге (әр бөлік бір тег), әйтпесе үтір бойынша
   const plantTags = p => {
@@ -1086,7 +1087,7 @@
   const plantsHtml = p => { const t = plantTags(p); return t ? t.map(x => `<span class="pl-tag">${esc(x)}</span>`).join("") : `<span class="pl-text">${esc(p)}</span>`; };
   // «Өзіңді тексер» көп жауапты сұрақтары үшін жеке атаулар (жақшасы, ұзын түсіндірмесі жоқ жолдардан)
   const plantNames = r => {
-    if (r.g.noMulti) return null;
+    if (r.g.noMulti || (r.g.entity && r.g.noMultiF.includes(r.f))) return null;
     if (/[()—]|\d/.test(r.p)) return null;
     const names = [].concat(...r.p.split(/\s*[;,]\s*/).map(x => x.replace(/^[^:]+:\s*/, "").split(/\s+(?:және|мен|немесе)\s+/))).map(x => x.trim()).filter(Boolean);
     return names.length && names.every(x => x.length <= 28 && !/\s.*\s.*\s/.test(x)) ? names : null;
@@ -1098,8 +1099,8 @@
   // көп жауапты сұрақта дұрыс жауапқа ұқсас (түбірі ортақ) нұсқа болмасын
   const pqStems = t => t.toLowerCase().split(/[\s,;()]+/).filter(w => w.length >= 3).map(w => w.slice(0, 4));
   // бір жауапты сұрақтың қате нұсқалары: сол тақырыптан, түрі (сан бар/жоқ) және ұзындығы ұқсас
-  const pqLike = (x, r) => (x.g === r.g) * 4 + (/\d/.test(x.p) === /\d/.test(r.p)) * 2 + ((x.p.length <= 30) === (r.p.length <= 30));
-  const pqAsk = r => r.g.ask ? r.g.ask.replace("{f}", r.f) : r.f;
+  const pqLike = (x, r) => (r.g.entity ? (x.f === r.f) * 6 + (x.g.entity && x.g !== r.g) : (x.g === r.g) * 4) + (/\d/.test(x.p) === /\d/.test(r.p)) * 2 + ((x.p.length <= 30) === (r.p.length <= 30));
+  const pqAsk = r => r.g.entity ? `${r.g.title} — ${r.f.charAt(0).toLowerCase() + r.f.slice(1)}` : r.g.ask ? r.g.ask.replace("{f}", r.f) : r.f;
   function buildPlantQuiz(file) {
     const N = noteFile(file) || NOTE_FILES[0], ROWS = N.rows;
     const rows = shuffle(ROWS), used = new Set(), qs = [];
@@ -1111,8 +1112,9 @@
       const names = plantNames(r); if (!names || names.length < 3 || used.has(r.id)) continue;
       const correct = shuffle(names).slice(0, 3);
       const own = pqStems(r.p);
-      const pool = shuffle([].concat(...ROWS.filter(x => x.g === r.g && x !== r).map(x => plantNames(x) || []))).concat(shuffle([].concat(...ROWS.filter(x => x.g !== r.g).map(x => plantNames(x) || []))))
-        .filter((x, k, a) => a.indexOf(x) === k && !names.includes(x) && !pqStems(x).some(w => own.includes(w)));
+      const near = x => x !== r && (r.g.entity ? x.f === r.f : x.g === r.g);
+      const pool = shuffle([].concat(...ROWS.filter(near).map(x => plantNames(x) || []))).concat(shuffle([].concat(...ROWS.filter(x => x !== r && !near(x)).map(x => plantNames(x) || []))))
+        .filter((x, k, a) => a.indexOf(x) === k && !names.includes(x) && !pqStems(x).some(w => own.some(o => o.startsWith(w) || w.startsWith(o))));
       if (pool.length < 3) continue;
       const opts = shuffle(correct.concat(pool.slice(0, 3)));
       qs.push({ type: "multi", row: take(r), q: pqAsk(r), options: opts, correct: correct.map(c => opts.indexOf(c)) });
@@ -1127,7 +1129,7 @@
       if (pick.length < 4) continue;
       const [a, b] = pick; const opts = shuffle(pick);
       take(a); take(b);
-      qs.push({ type: "match", row: { g }, q: g.ask ? `Сәйкестендіріңіз: ${g.title}` : N.matchQ, options: opts.map(o => o.p), items: [a, b].map(x => ({ text: x.f, answer: opts.indexOf(x) })), correct: [opts.indexOf(a), opts.indexOf(b)] });
+      qs.push({ type: "match", row: { g }, q: g.ask || g.entity ? `Сәйкестендіріңіз: ${g.title}` : N.matchQ, options: opts.map(o => o.p), items: [a, b].map(x => ({ text: x.f, answer: opts.indexOf(x) })), correct: [opts.indexOf(a), opts.indexOf(b)] });
     }
     // бір жауапты: белгі → 4 нұсқа (мүмкіндігінше сол тақырыптан)
     for (const r of rows) {
@@ -1733,7 +1735,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610160218")
+    import("./cloud.js?v=202610160824")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
