@@ -1092,7 +1092,7 @@
     return names.length && names.every(x => x.length <= 28 && !/\s.*\s.*\s/.test(x)) ? names : null;
   };
   const PQ_SIZE = { single: 14, multi: 10, match: 6 };
-  const PQ_STOP = new Set(["өсімдіктер", "өсімдік", "тұқымдастар", "тұқымдас", "дақылдары", "дақылдар", "дақылдардың", "көптеген", "жеміс", "көкөніс", "және", "немесе", "кейбір", "сатыдағы", "ағаштар", "ағаштары", "түрлері", "жапырақтары", "жапырағы", "дәрумені", "дәрумендер", "облысы"]);
+  const PQ_STOP = new Set(["өсімдіктер", "өсімдік", "тұқымдастар", "тұқымдас", "дақылдары", "дақылдар", "дақылдардың", "көптеген", "жеміс", "көкөніс", "және", "немесе", "кейбір", "сатыдағы", "ағаштар", "ағаштары", "түрлері", "жапырақтары", "жапырағы", "дәрумені", "дәрумендер", "облысы", "синдромы", "синдром", "трисомиясы", "хромосоманың", "бактериялар", "саңырауқұлақтар"]);
   const pqWords = r => new Set(r.p.toLowerCase().replace(/[^a-zа-яәғқңөұүһіё\s-]/gi, " ").split(/\s+/).filter(w => w.length >= 4 && !PQ_STOP.has(w)).map(w => w.slice(0, 6)));
   const pqClash = (a, b) => { const A = pqWords(a); for (const w of pqWords(b)) if (A.has(w)) return true; return a.p === b.p; };
   // көп жауапты сұрақта дұрыс жауапқа ұқсас (түбірі ортақ) нұсқа болмасын
@@ -1733,7 +1733,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610160205")
+    import("./cloud.js?v=202610160218")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
