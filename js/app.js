@@ -714,7 +714,7 @@
         <aside class="sidebar" id="sidebar">
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
           ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
-            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}${n.id === "plants" && !hasPremium(u) ? `<span class="ni-lock">${ic("lock", 14)}</span>` : ""}</a>`).join("")}
+            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}${(n.id === "plants" || n.id === "real") && !hasPremium(u) ? `<span class="ni-lock">${ic("lock", 14)}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Премиум алу</button></div>`}
         </aside>
@@ -1007,6 +1007,13 @@
   function pageReal(u, arg) {
     const title = `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>`;
     if (!RQ.length) return title + `<div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
+    if (!hasPremium(u)) return title + `<div class="card rq-banner">${ic("flame", 26)}<div><b>Әр күн сайын саған жаттауға арналған ${RQ_PER} сұрақ ашылады.</b>
+      <span>Жаттап, қатемен жұмыс жасау маңызды.</span></div></div>
+      <div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>Бұл бөлім — премиум</h2>
+        <p class="muted">ҰБТ-да жиі кездесетін ${RQ.length} сұрақ-жауап, күн сайын ашылатын ${RQ_PER} сұрақ және «Жаттап аяқтадым» жазбаша тесті премиум оқушыларға ашық.</p>
+        <div class="grid g-2 pl-blur" aria-hidden="true">${RQ.slice(0, 2).map(x => `<div class="card qa-item"><p class="qa-q">${esc(x.q)}</p><div class="qa-a"><b>Жауабы:</b> ${rqAnswerHtml(x.a)}</div></div>`).join("")}</div>
+        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
     const open = rqOpenDays(u), done = u.realDone || {};
     let day = +arg || 0;
     if (!day || day > RQ_DAYS) { day = 1; for (let d = 1; d <= open; d++) { day = d; if (!done["d" + d]) break; } }
@@ -1697,7 +1704,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610160145")
+    import("./cloud.js?v=202610160148")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
