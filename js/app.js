@@ -338,7 +338,7 @@
       case "register": state.authTab = "register"; return u ? go("#/app") : renderAuth();
       case "test": return state.test ? renderTest() : go(u ? "#/app" : "#/");
       case "result": return state.result ? renderResult() : go(u ? "#/app" : "#/");
-      case "app": return u ? renderApp(u, parts[1] || "dashboard", parts[2]) : go("#/login");
+      case "app": return u ? renderApp(u, parts[1] || "dashboard", parts[1] === "plants" ? parts.slice(2).join("/") : parts[2]) : go("#/login");
       default: return go("#/");
     }
   }
@@ -699,7 +699,7 @@
     { id: "mock",        ico: "clipboard", t: "ҰБТ сынамасы және Нағыз ҰБТ базасы" },
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
     { id: "real",        ico: "book",      t: "ҰБТ-да жиі кездесетін сұрақтар тізімі" },
-    { id: "plants",      ico: "seed",      t: "Ботаникадағы өсімдіктер тізімі" },
+    { id: "plants",      ico: "bulb",      t: "Негізгі жаттау керек ақпараттар" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
     { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
   ];
@@ -1070,9 +1070,13 @@
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); actions["rq-check"](); } });
   }
 
-  /* ---- Ботаникадағы өсімдіктер тізімі ---- */
-  const PLANT_GROUPS = window.PLANTS || [];
-  const PLANT_ROWS = [].concat(...PLANT_GROUPS.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p }))));
+  /* ---- Негізгі жаттау керек ақпараттар (ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап) ---- */
+  const NOTE_FILES = [{ id: "plants", title: "Ботаникадағы өсімдіктер тізімі", icon: "seed", unit: "белгі",
+    desc: "2027 жылға жаңартылған кесте. ҰБТ-да өсімдіктердің мысалдары жиі сұралады — осы тізімді жаттап ал!",
+    matchQ: "Белгілерді өсімдіктермен сәйкестендіріңіз", search: "Өсімдікті немесе белгіні іздеу… (мысалы: қызғалдақ)",
+    groups: (window.PLANTS || []).map(g => g.id === "origin" ? Object.assign({ noMulti: true }, g) : g) }].concat(window.NOTES || []);
+  NOTE_FILES.forEach(n => { n.rows = [].concat(...n.groups.map(g => g.rows.map(([f, p], i) => ({ id: g.id + "-" + i, g, f, p })))); });
+  const noteFile = id => NOTE_FILES.find(n => n.id === id);
   // Тегтер: «;» болса — бөліктерге (әр бөлік бір тег), әйтпесе үтір бойынша
   const plantTags = p => {
     if (p.includes(";")) return p.split(/\s*;\s*/).filter(Boolean);
@@ -1080,78 +1084,103 @@
     const parts = p.split(/\s*,\s*/).filter(Boolean); return parts.every(x => x.length <= 42) ? parts : null;
   };
   const plantsHtml = p => { const t = plantTags(p); return t ? t.map(x => `<span class="pl-tag">${esc(x)}</span>`).join("") : `<span class="pl-text">${esc(p)}</span>`; };
-  // «Өзіңді тексер» үшін жеке өсімдік атаулары (жақшасы, ұзын түсіндірмесі жоқ жолдардан)
+  // «Өзіңді тексер» көп жауапты сұрақтары үшін жеке атаулар (жақшасы, ұзын түсіндірмесі жоқ жолдардан)
   const plantNames = r => {
-    if (r.g.id === "origin") return null;
+    if (r.g.noMulti) return null;
     if (/[()—]|\d/.test(r.p)) return null;
     const names = [].concat(...r.p.split(/\s*[;,]\s*/).map(x => x.replace(/^[^:]+:\s*/, "").split(/\s+(?:және|мен|немесе)\s+/))).map(x => x.trim()).filter(Boolean);
     return names.length && names.every(x => x.length <= 28 && !/\s.*\s.*\s/.test(x)) ? names : null;
   };
   const PQ_SIZE = { single: 14, multi: 10, match: 6 };
-  const PQ_STOP = new Set(["өсімдіктер", "өсімдік", "тұқымдастар", "тұқымдас", "дақылдары", "дақылдар", "дақылдардың", "көптеген", "жеміс", "көкөніс", "және", "немесе", "кейбір", "сатыдағы", "ағаштар", "ағаштары", "түрлері", "жапырақтары", "жапырағы"]);
+  const PQ_STOP = new Set(["өсімдіктер", "өсімдік", "тұқымдастар", "тұқымдас", "дақылдары", "дақылдар", "дақылдардың", "көптеген", "жеміс", "көкөніс", "және", "немесе", "кейбір", "сатыдағы", "ағаштар", "ағаштары", "түрлері", "жапырақтары", "жапырағы", "дәрумені", "дәрумендер", "облысы"]);
   const pqWords = r => new Set(r.p.toLowerCase().replace(/[^a-zа-яәғқңөұүһіё\s-]/gi, " ").split(/\s+/).filter(w => w.length >= 4 && !PQ_STOP.has(w)).map(w => w.slice(0, 6)));
   const pqClash = (a, b) => { const A = pqWords(a); for (const w of pqWords(b)) if (A.has(w)) return true; return a.p === b.p; };
-  function buildPlantQuiz() {
-    const rows = shuffle(PLANT_ROWS), used = new Set(), qs = [];
+  // көп жауапты сұрақта дұрыс жауапқа ұқсас (түбірі ортақ) нұсқа болмасын
+  const pqStems = t => t.toLowerCase().split(/[\s,;()]+/).filter(w => w.length >= 3).map(w => w.slice(0, 4));
+  // бір жауапты сұрақтың қате нұсқалары: сол тақырыптан, түрі (сан бар/жоқ) және ұзындығы ұқсас
+  const pqLike = (x, r) => (x.g === r.g) * 4 + (/\d/.test(x.p) === /\d/.test(r.p)) * 2 + ((x.p.length <= 30) === (r.p.length <= 30));
+  const pqAsk = r => r.g.ask ? r.g.ask.replace("{f}", r.f) : r.f;
+  function buildPlantQuiz(file) {
+    const N = noteFile(file) || NOTE_FILES[0], ROWS = N.rows;
+    const rows = shuffle(ROWS), used = new Set(), qs = [];
     const short = r => r.p.length <= 75 && r.f.length <= 140;
     const take = r => { used.add(r.id); return r; };
-    // көп жауапты: кемінде 3 өсімдігі бар жол → 3 дұрыс + 3 басқа жолдардан
+    // көп жауапты: кемінде 3 атауы бар жол → 3 дұрыс + 3 басқа жолдардан
     for (const r of rows) {
       if (qs.filter(q => q.type === "multi").length >= PQ_SIZE.multi) break;
       const names = plantNames(r); if (!names || names.length < 3 || used.has(r.id)) continue;
       const correct = shuffle(names).slice(0, 3);
-      const pool = shuffle([].concat(...PLANT_ROWS.filter(x => x.g === r.g && x !== r).map(x => plantNames(x) || [])).concat(...shuffle(PLANT_ROWS).slice(0, 30).map(x => plantNames(x) || [])))
-        .filter((x, k, a) => a.indexOf(x) === k && !r.p.toLowerCase().includes(x.toLowerCase().slice(0, 5)) && !names.includes(x));
+      const own = pqStems(r.p);
+      const pool = shuffle([].concat(...ROWS.filter(x => x.g === r.g && x !== r).map(x => plantNames(x) || []))).concat(shuffle([].concat(...ROWS.filter(x => x.g !== r.g).map(x => plantNames(x) || []))))
+        .filter((x, k, a) => a.indexOf(x) === k && !names.includes(x) && !pqStems(x).some(w => own.includes(w)));
       if (pool.length < 3) continue;
       const opts = shuffle(correct.concat(pool.slice(0, 3)));
-      qs.push({ type: "multi", row: take(r), q: r.f, options: opts, correct: correct.map(c => opts.indexOf(c)) });
+      qs.push({ type: "multi", row: take(r), q: pqAsk(r), options: opts, correct: correct.map(c => opts.indexOf(c)) });
     }
     // сәйкестендіру: бір тақырыптағы екі жол
-    for (const g of shuffle(PLANT_GROUPS)) {
+    for (const g of shuffle(N.groups)) {
       if (qs.filter(q => q.type === "match").length >= PQ_SIZE.match) break;
-      const cand = shuffle(PLANT_ROWS.filter(x => x.g === g && !used.has(x.id) && short(x) && x.f.length <= 90));
+      const cand = shuffle(ROWS.filter(x => x.g === g && !used.has(x.id) && short(x) && x.f.length <= 90));
       if (cand.length < 4) continue;
       const pick = [];
       for (const x of cand) { if (pick.length < 4 && pick.every(y => !pqClash(x, y))) pick.push(x); }
       if (pick.length < 4) continue;
       const [a, b] = pick; const opts = shuffle(pick);
       take(a); take(b);
-      qs.push({ type: "match", row: { g }, q: "Белгілерді өсімдіктермен сәйкестендіріңіз", options: opts.map(o => o.p), items: [a, b].map(x => ({ text: x.f, answer: opts.indexOf(x) })), correct: [opts.indexOf(a), opts.indexOf(b)] });
+      qs.push({ type: "match", row: { g }, q: g.ask ? `Сәйкестендіріңіз: ${g.title}` : N.matchQ, options: opts.map(o => o.p), items: [a, b].map(x => ({ text: x.f, answer: opts.indexOf(x) })), correct: [opts.indexOf(a), opts.indexOf(b)] });
     }
     // бір жауапты: белгі → 4 нұсқа (мүмкіндігінше сол тақырыптан)
     for (const r of rows) {
       if (qs.filter(q => q.type === "single").length >= PQ_SIZE.single) break;
       if (used.has(r.id) || !short(r)) continue;
-      const dis = shuffle(PLANT_ROWS.filter(x => x !== r && short(x) && !pqClash(x, r))).sort((x, y) => (y.g === r.g) - (x.g === r.g)).slice(0, 3);
+      const dis = shuffle(ROWS.filter(x => x !== r && short(x) && !pqClash(x, r))).sort((x, y) => pqLike(y, r) - pqLike(x, r)).slice(0, 3);
       if (dis.length < 3 || dis.some((x, k) => dis.slice(k + 1).some(y => pqClash(x, y)))) continue;
       const opts = shuffle([r].concat(dis));
-      qs.push({ type: "single", row: take(r), q: r.f, options: opts.map(o => o.p), correct: [opts.indexOf(r)] });
+      qs.push({ type: "single", row: take(r), q: pqAsk(r), options: opts.map(o => o.p), correct: [opts.indexOf(r)] });
     }
     const order = { single: 0, match: 1, multi: 2 };
-    state.pq = { qs: qs.sort((a, b) => order[a.type] - order[b.type]), i: 0, sel: [], checked: false, pts: 0, ok: 0 };
+    state.pq = { file: N.id, qs: qs.sort((a, b) => order[a.type] - order[b.type]), i: 0, sel: [], checked: false, pts: 0, ok: 0 };
   }
-  function pagePlants(u, arg) {
-    const mode = arg === "learn" || arg === "quiz" ? arg : "table";
-    const grp = mode === "table" && PLANT_GROUPS.find(g => g.id === arg);
-    const head = `<div class="pl-hero"><div class="pl-hero-ico">${ic("seed", 34)}</div>
-        <div><h1>Ботаникадағы өсімдіктер тізімі</h1><p>2027 жылға жаңартылған кесте · ${PLANT_GROUPS.length} тақырып · ${PLANT_ROWS.length} белгі. ҰБТ-да өсімдіктердің мысалдары жиі сұралады — осы тізімді жаттап ал!</p></div></div>
-      <div class="pl-modes">
-        <a class="pl-mode ${mode === "table" ? "active" : ""}" href="#/app/plants">${ic("book", 18)} Кесте</a>
-        <a class="pl-mode ${mode === "learn" ? "active" : ""}" href="#/app/plants/learn">${ic("eye", 18)} Жаттау</a>
-        <a class="pl-mode ${mode === "quiz" ? "active" : ""}" href="#/app/plants/quiz">${ic("target", 18)} Өзіңді тексер</a>
-      </div>`;
-    if (!hasPremium(u)) {
-      const sample = PLANT_ROWS.slice(0, 4);
-      return head.replace(/<div class="pl-modes">[\s\S]*$/, "") + `<div class="card pl-locked">
+  const NOTES_TITLE = "Негізгі жаттау керек ақпараттар";
+  function notesLocked(sample) {
+    return `<div class="card pl-locked">
           <div class="pl-lock-ico">${ic("lock", 30)}</div>
           <h2>Бұл бөлім — премиум</h2>
-          <p class="muted">Ботаникадағы барлық өсімдіктер тізімі (${PLANT_ROWS.length} белгі), жаттау режимі және «Өзіңді тексер» ойыны премиум оқушыларға ашық.</p>
+          <p class="muted">${NOTE_FILES.map(n => n.title).join(", ")} — кестелер, жаттау режимі және «Өзіңді тексер» тесті премиум оқушыларға ашық.</p>
           <div class="pl-list pl-blur" aria-hidden="true">${sample.map(r => `<div class="pl-row"><div class="pl-f">${esc(r.f)}</div><div class="pl-p">${plantsHtml(r.p)}</div></div>`).join("")}</div>
           <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button>
         </div>`;
+  }
+  function pagePlants(u, arg) {
+    let parts = String(arg || "").split("/").filter(Boolean);
+    if (!parts.length) {
+      const total = NOTE_FILES.reduce((a, n) => a + n.rows.length, 0);
+      const head = `<div class="pl-hero"><div class="pl-hero-ico">${ic("book", 34)}</div>
+        <div><h1>${NOTES_TITLE}</h1><p>${NOTE_FILES.length} файл · ${total} ақпарат. Әр файлда кесте, жаттау режимі және «Өзіңді тексер» тесті бар — ҰБТ-ға дейін міндетті түрде жаттап ал!</p></div></div>`;
+      if (!hasPremium(u)) return head + notesLocked(NOTE_FILES[0].rows.slice(0, 4));
+      return head + `<div class="nt-grid">${NOTE_FILES.map(n => `
+        <div class="card nt-card"><a class="nt-main" href="#/app/plants/${n.id}"><div class="nt-ico">${ic(n.icon, 26)}</div>
+          <div><h3>${esc(n.title)}</h3><p class="muted">${esc(n.desc)}</p><span class="tag">${n.groups.length} тақырып · ${n.rows.length} ${n.unit || "ақпарат"}</span></div></a>
+          <div class="nt-acts"><a class="btn btn-ghost btn-sm" href="#/app/plants/${n.id}">${ic("book", 16)} Кесте</a>
+            <a class="btn btn-ghost btn-sm" href="#/app/plants/${n.id}/learn">${ic("eye", 16)} Жаттау</a>
+            <a class="btn btn-primary btn-sm" href="#/app/plants/${n.id}/quiz">${ic("target", 16)} Өзіңді тексер</a></div></div>`).join("")}</div>`;
     }
+    // ескі сілтемелер (#/app/plants/learn) — ботаника файлына
+    if (!noteFile(parts[0])) parts = ["plants"].concat(parts);
+    const N = noteFile(parts[0]), base = "#/app/plants/" + N.id, sub = parts[1];
+    const mode = sub === "learn" || sub === "quiz" ? sub : "table";
+    const grp = mode === "table" && N.groups.find(g => g.id === sub);
+    const head = `<a class="nt-back" href="#/app/plants">${ic("arrow", 16)} ${NOTES_TITLE}</a>
+      <div class="pl-hero"><div class="pl-hero-ico">${ic(N.icon, 34)}</div>
+        <div><h1>${esc(N.title)}</h1><p>${N.groups.length} тақырып · ${N.rows.length} ${N.unit || "ақпарат"}. ${esc(N.desc)}</p></div></div>
+      <div class="pl-modes">
+        <a class="pl-mode ${mode === "table" ? "active" : ""}" href="${base}">${ic("book", 18)} Кесте</a>
+        <a class="pl-mode ${mode === "learn" ? "active" : ""}" href="${base}/learn">${ic("eye", 18)} Жаттау</a>
+        <a class="pl-mode ${mode === "quiz" ? "active" : ""}" href="${base}/quiz">${ic("target", 18)} Өзіңді тексер</a>
+      </div>`;
+    if (!hasPremium(u)) return head.replace(/<div class="pl-modes">[\s\S]*$/, "") + notesLocked(N.rows.slice(0, 4));
     if (mode === "quiz") {
-      if (!state.pq || !state.pq.qs) buildPlantQuiz();
+      if (!state.pq || !state.pq.qs || state.pq.file !== N.id) buildPlantQuiz(N.id);
       const P = state.pq, total = P.qs.length, max = P.qs.reduce((a, q) => a + maxPoints(q), 0);
       if (P.i >= total) return head + `<div class="card pl-quiz pl-done"><div class="pl-lock-ico">${ic("trophy", 30)}</div>
           <h2>Тест аяқталды!</h2><p class="pl-score">${P.pts} / ${max} балл</p><p class="muted">${total} сұрақтың ${P.ok}-не толық дұрыс жауап бердің.</p>
@@ -1183,12 +1212,12 @@
             <button class="btn btn-primary" data-act="pq-check" ${canCheck ? "" : "disabled"}>Тексеру</button>`}</div>
         </div>`;
     }
-    const groups = grp ? [grp] : PLANT_GROUPS;
+    const groups = grp ? [grp] : N.groups;
     return head + `<div class="pl-tools">
-        <div class="pl-search">${ic("search", 18)}<input id="pl-search" type="search" placeholder="Өсімдікті немесе белгіні іздеу… (мысалы: қызғалдақ)" autocomplete="off"></div>
+        <div class="pl-search">${ic("search", 18)}<input id="pl-search" type="search" placeholder="${esc(N.search || "Іздеу… (сөз немесе атау)")}" autocomplete="off"></div>
         ${mode === "learn" ? `<button class="btn btn-ghost btn-sm" data-act="pl-reveal">${ic("eye", 16)} Барлығын ашу</button>` : ""}
       </div>
-      ${mode === "table" ? "" : `<p class="hint" style="margin-top:0">Жаттау режимі: өсімдіктер жасырылған. Белгіні оқып, жауабын есіңе түсір, сосын карточканы басып тексер.</p>`}
+      ${mode === "table" ? "" : `<p class="hint" style="margin-top:0">Жаттау режимі: жауаптар жасырылған. Белгіні оқып, жауабын есіңе түсір, сосын карточканы басып тексер.</p>`}
       <p class="muted pl-empty" hidden>Ештеңе табылмады.</p>
       ${groups.map(g => `<section class="pl-group" data-g="${g.id}">
         <h2 class="pl-gh">${ic(g.icon, 20)}${esc(g.title)}<span class="muted">${g.rows.length}</span></h2>
@@ -1536,7 +1565,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Ботаникадағы өсімдіктер тізімі: жаттау және өзіңді тексер</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1619,7 +1648,7 @@
     "pq-match": el => { const P = state.pq; if (!P || P.checked) return; P.sel[+el.dataset.k] = +el.dataset.i; render(); },
     "pq-check": () => { const P = state.pq; if (!P || P.checked) return; const q = P.qs[P.i], pts = scorePoints(q, P.sel); P.pts += pts; if (pts === maxPoints(q)) P.ok++; P.checked = true; render(); },
     "pq-next": () => { const P = state.pq; if (!P) return; P.i++; P.sel = []; P.checked = false; render(); window.scrollTo(0, 0); },
-    "pq-restart": () => { buildPlantQuiz(); render(); },
+    "pq-restart": () => { buildPlantQuiz(state.pq && state.pq.file); render(); },
     "rq-start": el => { rqStart(+el.dataset.d); go("#/app/real/" + el.dataset.d); window.scrollTo(0, 0); },
     "rq-fix": () => { const R = state.rq; if (!R) return; rqStart(R.day, R.qs.filter((_, j) => !R.ok[j])); render(); window.scrollTo(0, 0); },
     "rq-back": () => { state.rq = null; render(); window.scrollTo(0, 0); },
@@ -1704,7 +1733,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610160152")
+    import("./cloud.js?v=202610160205")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
