@@ -1,0 +1,240 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/font.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#120D2E;font-family:"Montserrat",sans-serif}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:linear-gradient(180deg,#1A1240 0%,#120D2E 55%,#0E0A24 100%)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity}
+.blob{position:absolute;left:0;top:0;border-radius:50%;filter:blur(150px)}
+
+.laptop{width:1000px}
+.laptop .scr{position:relative;background:#0a0a10;border-radius:30px 30px 6px 6px;padding:20px 20px 26px;box-shadow:0 0 0 2px #2a2838 inset,0 40px 90px rgba(0,0,0,.5)}
+.laptop .view{position:relative;width:960px;height:600px;overflow:hidden;border-radius:6px;background:#F6F4FF}
+.laptop .base{height:30px;margin:0 -60px;background:linear-gradient(#e7e5ee,#a9a6b5 60%,#7d7a89);border-radius:0 0 26px 26px;position:relative;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.laptop .base::before{content:"";position:absolute;left:50%;top:0;width:160px;height:12px;margin-left:-80px;background:linear-gradient(#bdbac8,#d9d7e2);border-radius:0 0 12px 12px}
+.laptop iframe{width:1440px;height:900px;border:0;transform:scale(.66667);transform-origin:0 0;display:block;pointer-events:none}
+
+.phone{background:#0b0b12;border-radius:66px;padding:16px;box-shadow:0 0 0 3px #3b3850 inset,0 0 0 1px #000,0 40px 90px rgba(0,0,0,.5)}
+.phone .view{position:relative;width:819px;height:1401px;overflow:hidden;border-radius:52px;background:#F6F4FF}
+.phone iframe{width:390px;height:667px;border:0;transform:scale(2.1);transform-origin:0 0;display:block}
+
+.cap{width:1000px;text-align:center}
+.cap .k{display:inline-block;font:700 26px Montserrat;color:#E9D5FF;padding:8px 20px;border-radius:24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);margin-bottom:18px}
+.cap h2{font-size:46px;line-height:1.12;font-weight:800;color:#fff;letter-spacing:-.5px}
+.cap p{font-size:30px;font-weight:600;color:#C4B5FD;margin-top:12px}
+.title{font-weight:900;color:#fff;letter-spacing:-2px;white-space:nowrap;text-align:center}
+.grad{background:linear-gradient(100deg,#A78BFA,#EC4899 60%,#F9A8D4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-weight:700;color:#E9D5FF;font-size:50px;white-space:nowrap;text-align:center}
+.cta{font-size:46px;font-weight:800;color:#fff;padding:30px 58px;border-radius:60px;background:linear-gradient(135deg,#EC4899,#F472B6);box-shadow:0 18px 50px rgba(236,72,153,.45);white-space:nowrap}
+
+#cursor{position:absolute;left:0;top:0;width:0;height:0;z-index:30}
+#cursor svg{position:absolute;left:-6px;top:-4px;width:52px;height:52px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+#ring{position:absolute;left:0;top:0;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:4px solid rgba(236,72,153,.9);background:rgba(236,72,153,.14);box-shadow:0 0 24px rgba(236,72,153,.45)}
+#fade{position:absolute;inset:0;background:#000;opacity:0;z-index:60;pointer-events:none}
+</style></head>
+<body><div id="stage">
+  <div class="blob" id="b1" style="width:900px;height:900px;background:#7C3AED;opacity:.45"></div>
+  <div class="blob" id="b2" style="width:800px;height:800px;background:#EC4899;opacity:.25"></div>
+
+  <!-- intro / outro texts -->
+  <div id="t1" class="abs title" style="font-size:170px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="t1s" class="abs sub">Биологиядан ҰБТ-ға дайындық</div>
+  <div id="t5" class="abs title" style="font-size:150px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="t5s" class="abs sub" style="font-size:54px;color:#fff">Биологияны бірге меңгерейік!</div>
+  <div id="t5c" class="abs cta">Дайындықты бүгін баста!</div>
+  <div id="t5u" class="abs sub" style="font-size:30px;font-weight:600;color:#C4B5FD">danameirambekkyzi-oss.github.io/biology</div>
+
+  <div id="lap" class="abs laptop"><div class="scr"><div class="view"><iframe id="landf" src="http://127.0.0.1:8765/#/"></iframe></div></div><div class="base"></div></div>
+
+  <div id="cap" class="abs cap"><div class="k" id="capk"></div><h2 id="capt"></h2><p id="caps"></p></div>
+  <div id="ph" class="abs phone"><div class="view"><iframe id="appf" src="about:blank"></iframe></div></div>
+
+  <div id="cursor"><div id="ring"></div><svg viewBox="0 0 24 24"><path d="M4 2.5l6.5 18 2.4-7.3 7.4-2.6z" fill="#fff" stroke="#1b1530" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+  <div id="fade"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const ss = p => p * p * (3 - 2 * p);                 // smoothstep
+const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eo = p => 1 - Math.pow(1 - p, 3);
+function put(el, { x = 540, y = 960, s = 1, op = 1 }) {
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) scale(${s})`;
+  el.style.opacity = op; el.style.visibility = op <= .001 ? "hidden" : "visible";
+}
+const appf = $("appf");
+let W = null, D = null;
+const SPEC = { app: "http://localhost:8765/#/app/dashboard" };
+
+// ---------- helpers inside the site ----------
+const q = (sel, text) => {
+  const els = [...D.querySelectorAll(sel)];
+  return text ? els.find(e => e.textContent.replace(/\s+/g, " ").includes(text)) : els[0];
+};
+const navItem = text => q(".sidebar .nav-item", text);
+function correctOpt() {   // the real correct option of the question on screen
+  const txt = q(".q-text").innerHTML.trim();
+  const all = (W.QUESTIONS || []).concat(...(W.TEST_FOLDERS || []).map(f => [].concat(...f.tests.map(t => t.questions))));
+  const qq = all.find(x => String(x.q).trim() === txt);
+  return D.querySelector(`.opt[data-i="${qq ? qq.correct[0] : 0}"]`);
+}
+
+// ---------- captions ----------
+const CAPS = [
+  [6.3, "2-қадам · Навигация", "Сайттың негізгі мәзірі", "Барлық бөлім бір жерде"],
+  [9.6, "2-қадам · Навигация", "ҰБТ сынамасы және Нағыз ҰБТ базасы", "Уақытты таңда: 30 / 40 / 60 минут"],
+  [13.4, "2-қадам · Навигация", "ҰБТ-да жиі кездесетін сұрақтар тізімі", "Сұрақ пен оның толық жауабы"],
+  [16.5, "3-қадам · Оқу материалдары", "Негізгі жаттау керек ақпараттар", "8 файл · кесте, жаттау, «Өзіңді тексер»"],
+  [19.2, "3-қадам · Оқу материалдары", "Ботаникадағы өсімдіктер тізімі", "Тақырыптарға бөлінген кесте"],
+  [26.9, "4-қадам · Интерактивті тест", "Күнделікті 10 сұрақтық экспресс-тест", "Барлық тараулардан жылдам жаттығу"],
+  [28.7, "4-қадам · Интерактивті тест", "Сұрақты оқып, жауапты таңда", "Содан кейін «Тексеру» батырмасын бас"],
+  [31.9, "4-қадам · Интерактивті тест", "Нәтиже бірден көрсетіледі", "Дұрыс жауап жасыл түспен белгіленеді"]
+];
+
+// ---------- cursor keyframes (t = arrival) ----------
+// to: () => element | {x,y} (site css px). click: fire a real click on arrival
+const K = [
+  { t: 6.7, to: () => ({ x: 250, y: 430 }), show: true },
+  { t: 7.7, to: () => q(".burger"), click: true },
+  { t: 8.5, to: () => navItem("Басты бет") },
+  { t: 9.3, to: () => navItem("ҰБТ сынамасы"), click: true },
+  { t: 10.5, to: () => q(".chip", "40 минут"), ring: true },
+  { t: 11.6, to: () => q(".card", "2026 жылғы"), ring: true, dx: 0.3 },
+  { t: 12.5, to: () => q(".burger"), click: true },
+  { t: 13.3, to: () => navItem("жиі кездесетін"), click: true },
+  { t: 14.2, to: () => ({ x: 330, y: 560 }) },
+  { t: 15.6, to: () => q(".burger"), click: true },
+  { t: 16.4, to: () => navItem("Негізгі жаттау"), click: true },
+  { t: 17.4, to: () => ({ x: 320, y: 520 }) },
+  { t: 19.0, to: () => q(".nt-acts .btn", "Кесте"), click: true },
+  { t: 20.0, to: () => ({ x: 335, y: 560 }) },
+  { t: 23.2, to: () => q(".pl-row") && [...D.querySelectorAll(".pl-row")].find(r => r.getBoundingClientRect().top > 260), ring: true, dx: 0.25 },
+  { t: 24.4, to: () => ({ x: 335, y: 580 }) },
+  { t: 26.2, to: () => q(".burger"), click: true },
+  { t: 27.0, to: () => navItem("Басты бет"), click: true },
+  { t: 28.5, to: () => q("[data-act='start-express']"), click: true },
+  { t: 29.4, to: () => ({ x: 330, y: 600 }) },
+  { t: 31.0, to: () => correctOpt(), click: true, dx: 0.35 },
+  { t: 31.8, to: () => q("[data-act='check']"), click: true },
+  { t: 32.8, to: () => ({ x: 335, y: 600 }) },
+  { t: 34.6, to: () => ({ x: 335, y: 600 }), hide: true }
+];
+// ---------- scroll: [t0, t1, y | fn] (holds afterwards; nav resets to 0) ----------
+const SCROLL = [
+  [9.4, 9.4, 0], [10.9, 11.5, 140],
+  [12.6, 12.6, 140], [13.4, 13.4, 0], [14.2, 15.4, 420],
+  [16.5, 16.5, 0], [17.5, 18.4, 230],
+  [19.1, 19.1, 0], [20.5, 22.3, 560], [23.7, 25.5, 1150],
+  [27.1, 27.1, 0], [27.4, 28.1, () => q("[data-act='start-express']").getBoundingClientRect().top + W.scrollY - 360],
+  [28.6, 28.6, 0], [32.2, 32.9, () => Math.max(0, q(".q-nav").getBoundingClientRect().bottom + W.scrollY - 640)]
+];
+let resolved = {};
+function scrollAt(t) {
+  let y = 0;
+  SCROLL.forEach((s, i) => {
+    if (t < s[0]) return;
+    let target = s[2];
+    if (typeof target === "function") { if (resolved[i] == null) resolved[i] = target(); target = resolved[i]; }
+    y = s[1] > s[0] ? lerp(y, target, eio(seg(t, s[0], s[1]))) : target;
+  });
+  return y;
+}
+
+let ki = 0, prevPos = null, pressAt = -9;
+function frameRect() { const r = appf.getBoundingClientRect(); return { x: r.left, y: r.top, k: r.width / 390 }; }
+function posOf(k) {
+  const v = k.to(); if (!v) return prevPos || { x: 200, y: 400 };
+  if (v.getBoundingClientRect) {
+    const r = v.getBoundingClientRect();
+    return { x: r.left + r.width * (k.dx != null ? k.dx : .5), y: r.top + r.height * .5 };
+  }
+  return v;
+}
+
+function step(t) {
+  let acted = false;
+  // background
+  $("b1").style.transform = `translate(${-150 + Math.sin(t * .2) * 120}px,${200 + Math.cos(t * .15) * 150}px)`;
+  $("b2").style.transform = `translate(${450 + Math.cos(t * .17) * 140}px,${1200 + Math.sin(t * .13) * 160}px)`;
+
+  // ---------- Scene 1 (0–6) & Scene 5 (35–40): laptop + homepage ----------
+  const in5 = seg(t, 35.0, 35.9);
+  const lapOp = t < 6.3 ? clamp(seg(t, 0, .8)) * (1 - ss(seg(t, 5.2, 5.9))) : in5;
+  const z1 = lerp(.94, 1.06, ss(seg(t, .3, 5.6)));            // zoom #1: slow push-in
+  const z5 = lerp(1, 1.04, ss(seg(t, 35.2, 39.5)));           // zoom #2: very gentle
+  put($("lap"), t < 20 ? { y: 1180 - (z1 - .94) * 600, s: z1, op: lapOp } : { y: 1240, s: .92 * z5, op: lapOp });
+  const a1 = ss(seg(t, .5, 1.4)), a1s = ss(seg(t, 1.2, 2.1)), o1 = 1 - seg(t, 5.0, 5.7);
+  put($("t1"), { y: 420 + (1 - a1) * 30, op: a1 * o1 });
+  put($("t1s"), { y: 560 + (1 - a1s) * 24, op: a1s * o1 });
+  const a5 = ss(seg(t, 35.8, 36.6)), a5s = ss(seg(t, 36.4, 37.2)), a5c = ss(seg(t, 37.1, 37.9)), a5u = ss(seg(t, 37.6, 38.3));
+  put($("t5"), { y: 330 + (1 - a5) * 30, op: a5 });
+  put($("t5s"), { y: 480 + (1 - a5s) * 24, op: a5s });
+  put($("t5c"), { y: 1690 + (1 - a5c) * 24, op: a5c });
+  put($("t5u"), { y: 1800, op: a5u });
+
+  // ---------- Scenes 2–4: phone with the live site ----------
+  const phOp = ss(seg(t, 5.8, 6.5)) * (1 - ss(seg(t, 34.9, 35.6)));
+  put($("ph"), { y: 1120 + (1 - ss(seg(t, 5.8, 6.5))) * 40, op: phOp });
+  // caption
+  let ci = -1; CAPS.forEach((c, i) => { if (t >= c[0]) ci = i; });
+  if (ci >= 0) {
+    const c = CAPS[ci]; $("capk").textContent = c[1]; $("capt").textContent = c[2]; $("caps").textContent = c[3];
+    const nxt = CAPS[ci + 1] ? CAPS[ci + 1][0] : 35.0;
+    const op = ss(seg(t, c[0], c[0] + .45)) * (1 - ss(seg(t, nxt - .3, nxt)));
+    put($("cap"), { y: 205 + (1 - ss(seg(t, c[0], c[0] + .45))) * 16, op: op * phOp });
+  } else put($("cap"), { op: 0 });
+
+  if (D) {
+    // cursor keyframes: fire clicks
+    while (ki < K.length && t >= K[ki].t) {
+      const k = K[ki]; prevPos = posOf(k);
+      if (k.click) { const el = k.to(); if (el) { el.click(); acted = true; } pressAt = k.t; }
+      ki++;
+    }
+    // site scroll
+    if (!acted) W.scrollTo({ top: scrollAt(t), behavior: "instant" });
+    // cursor
+    const cur = $("cursor"), ring = $("ring");
+    const visible = t >= 6.5 && t < 34.7;
+    let pos = prevPos || posOf(K[0]);
+    const nk = K[ki];
+    if (nk && prevPos) {
+      const startMove = Math.max(K[ki - 1].t + .25, nk.t - .95);
+      const p = eio(seg(t, startMove, nk.t - .05));
+      const np = posOf(nk);
+      pos = { x: lerp(prevPos.x, np.x, p), y: lerp(prevPos.y, np.y, p) };
+    }
+    const fr = frameRect();
+    const sx = fr.x + pos.x * fr.k, sy = fr.y + pos.y * fr.k;
+    cur.style.transform = `translate(${sx}px,${sy}px)`;
+    cur.style.opacity = visible ? ss(seg(t, 6.5, 6.9)) * (1 - ss(seg(t, 34.2, 34.7))) : 0;
+    // ring: on hover-highlight keyframes and around clicks
+    const last = K[ki - 1];
+    const pd = t - pressAt;
+    let rs = 0, rop = 0;
+    if (pd >= -.35 && pd < .6) { rop = pd < 0 ? seg(pd, -.35, -.1) : 1 - seg(pd, .15, .6); rs = pd < 0 ? 1 : lerp(.8, 1.25, eo(seg(pd, 0, .5))); }
+    if (last && last.ring && nk) { const h = t - last.t; const o = ss(seg(h, 0, .3)) * (1 - ss(seg(t, nk.t - .9, nk.t - .6))); if (o > rop) { rop = o; rs = 1 + Math.sin(h * 4) * .05; } }
+    if (nk && nk.ring) { const o = ss(seg(t, nk.t - .25, nk.t)); if (o > rop) { rop = o; rs = 1; } }
+    ring.style.opacity = rop; ring.style.transform = `scale(${rs || 1})`;
+    // sync the site's own CSS animations/transitions to video time
+    syncAnims(D, t);
+  }
+  $("fade").style.opacity = ss(seg(t, 39.0, 40.0));
+  return acted;
+}
+function syncAnims(doc, t) {
+  for (const a of doc.getAnimations()) {
+    if (a.__t0 == null) a.__t0 = t;
+    a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000);
+  }
+}
+window.step = step;
+window.ready = new Promise(res => {
+  appf.addEventListener("load", () => { W = appf.contentWindow; D = appf.contentDocument;
+    setTimeout(() => Promise.all([document.fonts.ready, D.fonts.ready]).then(res), 1200); }, { once: true });
+  appf.src = SPEC.app;
+});
+</script></body></html>
