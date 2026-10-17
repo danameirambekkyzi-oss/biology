@@ -89,10 +89,11 @@ const PQ_RIGHT = window.PQ_RIGHT != null ? window.PQ_RIGHT : 0;   // correct opt
 // ---------- captions [t, step, title, sub] ----------
 const CAPS = [
   [5.4, "2-қадам · ҰБТ сынамасы", "ҰБТ сынамасы және Нағыз ҰБТ базасы", "Уақытты таңда: 30 / 40 / 60 минут"],
-  [9.7, "2-қадам · ҰБТ сынамасы", "Тест-1: сұрақтарға жауап бер", "Сосын «Аяқтау» батырмасын бас"],
-  [14.7, "2-қадам · ҰБТ сынамасы", "Толық талдау", "Әр сұрақтың дұрыс жауабы мен балы"],
+  [8.1, "2-қадам · ҰБТ сынамасы", "Барлығы 46 тест", "Нағыз ҰБТ 2026 — 25 · Наурыз ҰБТ — 6 · ҰТО — 15"],
+  [10.2, "2-қадам · ҰБТ сынамасы", "Тест-1: сұрақтарға жауап бер", "1-сұрақ — дұрыс, 5-сұрақ — қате"],
+  [14.7, "2-қадам · ҰБТ сынамасы", "Толық талдау", "1-сұрақ — 1 балл · 5-сұрақ — 0 балл"],
   [20.5, "2-қадам · Қатемен жұмыс", "Қатемен жұмыс", "Барлық қате сұрақтарың бір жерде"],
-  [30.8, "2-қадам · Қатемен жұмыс", "Қате сұрақтардан тест", "Дұрыс жауап бірден көрсетіледі"],
+  [30.8, "2-қадам · Қатемен жұмыс", "Қате сұрақтардан тест", "Бір немесе бірнеше дұрыс жауап"],
   [34.5, "3-қадам · Оқу материалдары", "ҰБТ-да жиі кездесетін сұрақтар", "ҰБТ-да келген сұрақтар мен жауаптары"],
   [40.6, "3-қадам · Оқу материалдары", "Күн сайын 20 сұрақ ашылады", "Жаттап болған соң — «Жаттап аяқтадым»"],
   [45.0, "3-қадам · Оқу материалдары", "Өз жауабыңды жазып, тексер", "Жауабың бірден тексеріледі"],
@@ -105,15 +106,18 @@ const CAPS = [
 
 // ---------- cursor keyframes (t = arrival; click = real click on arrival) ----------
 const K = [
-  { t: 5.6, to: () => ({ x: 250, y: 430 }) },
-  { t: 6.3, to: () => q(".burger"), click: true },
-  { t: 7.1, to: () => navItem("Басты бет") },
-  { t: 7.9, to: () => navItem("ҰБТ сынамасы"), click: true },
-  { t: 8.8, to: () => q(".chip", "40 минут"), ring: true },
-  { t: 9.9, to: () => q(".card", "2026 жылғы") || q("a", "2026 жылғы"), click: true, dx: .3 },
-  { t: 10.8, to: () => q("[data-act='start-test']"), click: true },
+  { t: 5.5, to: () => ({ x: 250, y: 430 }) },
+  { t: 5.95, to: () => q(".burger"), click: true },
+  { t: 6.5, to: () => navItem("Басты бет") },
+  { t: 7.1, to: () => navItem("ҰБТ сынамасы"), click: true },
+  { t: 7.8, to: () => q(".chip", "40 минут"), ring: true },
+  { t: 8.75, to: () => q(".card", "2026 жылғы"), ring: true, dx: .62 },
+  { t: 9.2, to: () => q(".card", "Наурыз ҰБТ"), ring: true, dx: .62 },
+  { t: 9.65, to: () => q(".card", "ҰТО"), ring: true, dx: .62 },
+  { t: 10.2, to: () => q(".card", "2026 жылғы") || q("a", "2026 жылғы"), click: true, dx: .3 },
+  { t: 11.0, to: () => q("[data-act='start-test']"), click: true },
   { t: 11.7, to: () => rightOpt(), click: true, dx: .3 },
-  { t: 12.3, to: () => q("[data-act='next']"), click: true },
+  { t: 12.3, to: () => q(".q-grid [data-i='4']"), click: true },
   { t: 13.1, to: () => wrongOpt(), click: true, dx: .3 },
   { t: 13.9, to: () => q("[data-act='finish']"), click: true },
   { t: 14.6, to: () => D.getElementById("m-ok"), click: true },
@@ -122,9 +126,11 @@ const K = [
   { t: 21.5, to: () => navItem("Қатемен жұмыс"), click: true },
   { t: 24.6, to: () => q(".page-sub"), ring: true, dx: .45 },
   { t: 26.0, to: () => ({ x: 340, y: 520 }) },
-  { t: 30.9, to: () => q("[data-act='start-mistakes']"), click: true },
-  { t: 32.3, to: () => rightOpt(), click: true, dx: .3 },
-  { t: 33.1, to: () => q("[data-act='check']"), click: true },
+  { t: 30.9, to: () => q("[data-act='start-mistakes']"), click: true,
+    pre: () => { W.__rnd = W.Math.random; W.Math.random = () => 0.9999999; }, post: () => { W.Math.random = W.__rnd; } },
+  { t: 31.9, to: () => optEl(1), click: true, dx: .3 },
+  { t: 32.5, to: () => optEl(5), click: true, dx: .3 },
+  { t: 33.2, to: () => q("[data-act='check']"), click: true },
   { t: 33.9, to: () => ({ x: 340, y: 560 }) },
   { t: 34.6, to: () => q(".burger"), click: true },
   { t: 35.4, to: () => navItem("жиі кездесетін"), click: true },
@@ -141,14 +147,17 @@ const K = [
   { t: 54.0, to: () => q(".nt-main"), click: true, dx: .3 },
   { t: 55.6, to: () => q(".pl-row"), ring: true, dx: .2 },
   { t: 56.5, to: () => q(".pl-mode", "Жаттау"), click: true },
-  { t: 58.0, to: () => [...D.querySelectorAll(".pl-row")].find(r => r.getBoundingClientRect().top > 330), click: true, dx: .3, lock: true },
+  { t: 58.0, to: () => { if (!window._ls) { const r = [...D.querySelectorAll(".pl-row")].find(r => r.getBoundingClientRect().top > 330); if (r) window._ls = r.dataset.s; }
+      return window._ls && [...D.querySelectorAll(".pl-row")].find(r => r.dataset.s === window._ls); }, click: true, dx: .3 },
   { t: 59.0, to: () => q(".pl-mode", "Өзіңді тексер"), click: true },
   { t: 60.4, to: () => D.querySelector(`.pl-opt[data-i="${PQ_RIGHT}"]`), click: true, dx: .3 },
   { t: 61.1, to: () => q("[data-act='pq-check']"), click: true },
   { t: 61.7, to: () => ({ x: 340, y: 560 }) },
   { t: 62.3, to: () => q(".burger"), click: true },
   { t: 62.9, to: () => navItem("Басты бет"), click: true },
-  { t: 64.0, to: () => q("[data-act='start-express']"), click: true },
+  { t: 64.0, to: () => q("[data-act='start-express']"), click: true,   // fixed seed → a single-choice first question
+    pre: () => { W.__rnd = W.Math.random; let s = 6; W.Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; },
+    post: () => { W.Math.random = W.__rnd; } },
   { t: 65.0, to: () => rightOpt(), click: true, dx: .3 },
   { t: 65.6, to: () => q("[data-act='check']"), click: true },
   { t: 66.3, to: () => ({ x: 340, y: 600 }) }
@@ -158,10 +167,12 @@ const TYPE = { t0: 45.9, t1: 47.2 };
 
 // ---------- scroll: [t0, t1, y | fn]; held afterwards ----------
 const topOf = (sel, off) => () => { const e = q(sel); return e ? Math.max(0, e.getBoundingClientRect().top + W.scrollY - off) : 0; };
+const reviewTop = (i, off) => () => { const e = D.querySelectorAll(".review-item")[i]; return e ? Math.max(0, e.getBoundingClientRect().top + W.scrollY - off) : 0; };
 const SCROLL = [
-  [7.9, 7.9, 0], [10.8, 10.8, 0],
-  [11.0, 11.4, topOf(".q-text", 150)],
-  [14.6, 14.6, 0], [15.6, 16.6, topOf(".test-wrap h2", 70)], [17.6, 18.8, topOf(".review-item:nth-of-type(1)", 60)], [19.0, 19.9, topOf(".review-item:nth-of-type(2)", 60)],
+  [7.1, 7.1, 0], [8.1, 8.6, topOf(".card", 40)], [10.2, 10.2, 0], [11.0, 11.0, 0],
+  [11.15, 11.45, topOf(".q-text", 150)], [12.3, 12.3, topOf(".q-text", 150)],
+  [14.6, 14.6, 0], [15.2, 15.9, topOf(".test-wrap h2", 70)], [16.3, 17.2, reviewTop(0, 60)],
+  [17.9, 18.8, reviewTop(4, 60)],
   [20.6, 20.6, 0], [21.5, 21.5, 0], [25.6, 27.2, 420], [29.4, 30.2, 0],
   [30.9, 30.9, 0], [31.1, 31.5, topOf(".q-text", 150)],
   [35.4, 35.4, 0], [37.0, 38.6, topOf(".qa-item", 70)], [38.9, 40.2, topOf(".qa-item:nth-of-type(3)", 70)], [40.5, 41.1, 0],
@@ -245,7 +256,7 @@ function step(t) {
     if (!D.getElementById("vstyle")) { const st = D.createElement("style"); st.id = "vstyle"; st.textContent = "html{scroll-behavior:auto!important}#toast-root{display:none!important}"; D.head.appendChild(st); }
     while (ki < K.length && t >= K[ki].t) {
       const k = K[ki]; prevPos = posOf(k);
-      if (k.click) { let el = k._el || null; if (!el) try { el = k.to(); } catch (e) { console.log('miss', k.t); } if (el) { el.click(); acted = true; } pressAt = k.t; }
+      if (k.click) { let el = k._el || null; if (!el) try { el = k.to(); } catch (e) { console.log('miss', k.t); } if (el) { if (k.pre) k.pre(); el.click(); if (k.post) k.post(); acted = true; } pressAt = k.t; }
       ki++;
     }
     // typing

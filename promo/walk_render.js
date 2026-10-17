@@ -12,6 +12,13 @@ const hist = [[31, 40], [34, 40], [38, 40], [36, 40], [41, 50], [44, 50]].map(([
 const user = { id: '77011234567', name: 'Айгерім Нұрланқызы', phone: '+7 (701) 123-45-67', email: '', pass: 'x', target: 45, city: 'Алматы', school: '', month: 'Мамыр–Маусым',
   xp: 1240, premiumUntil: now + 200 * day, mocks: 3, history: hist, solved: {}, mistakes: {}, fixed: 4, activity, modulesTried: { genetics: 1, botany: 1, anatomy: 1 },
   badges: ['first', 'streak3'], notifications: [], created: now - 30 * day, role: 'student' };
+if (process.env.MISTAKES) {   // seed past mistakes so «Қатемен жұмыс» starts with a chosen question
+  global.window = {}; for (const f of ['nagyz', 'naurz', 'uto']) require('../js/tests/' + f + '.js');
+  const all = [].concat(...window.TEST_FOLDERS.map(f => [].concat(...f.tests.map(t => t.questions))));
+  const [first, n] = process.env.MISTAKES.split(':'); const m = { [first]: true };
+  for (const q of all) { if (Object.keys(m).length >= +n) break; if (!q.id.startsWith('nagyz-1-')) m[q.id] = true; }
+  user.mistakes = m;
+}
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
