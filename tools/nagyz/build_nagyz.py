@@ -55,7 +55,9 @@ tests = []
 for t in (1, 2):
     idir = f"img/tests/nagyz-{t}"; shutil.rmtree(f"{repo}/{idir}", ignore_errors=True); os.makedirs(f"{repo}/{idir}")
     out = []
-    for q in [x for g in parts[t-1] for x in g]:
+    order = [x for g in parts[t-1] for x in g]
+    if t == 1: order[:4] = [order[2], order[3], order[0], order[1]]  # мұғалімнің өтініші: 1–2 сұрақ 3–4-пен орын ауыстырды
+    for q in order:
         k = len(out) + 1
         files = []
         for j, part in enumerate(q["img"]):
@@ -74,6 +76,9 @@ for t in (1, 2):
             text = re.sub(r"^\d+\s*ші суреттегі", "Жоғарыдағы суреттегі", q["q"]).replace("Осы жоғарыдағы сұрақтағы", "Суреттегі")
             text = re.sub(r"\s*\(\d+\s*(дұрыс\s*)?жауап\)", "", text).strip()
             e.update(q=text or "Суретке қараңыз", options=q["opts"], correct=corr)
+        if t == 1 and k == 4:  # жүрек суреті мұғалім жіберген жаңа суретпен ауыстырылды
+            for f in files: os.remove(f"{repo}/{f}")
+            shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)), "heart.png"), f"{repo}/{idir}/q4.png"); files = [f"{idir}/q4.png"]
         if files: e["img"] = files
         out.append(e)
     tests.append({"id": f"nagyz-{t}", "title": f"Тест-{t}", "sub": "Ботаника және зоология бойынша келген сұрақтар", "questions": out})
