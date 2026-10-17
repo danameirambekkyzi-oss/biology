@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const [,, mode, out, fpsArg = 30, dumpArg = '', seedArg = '11'] = process.argv;
-const fps = +fpsArg, DUR = 40, SEED = +seedArg;
+const fps = +fpsArg, DUR = +(process.env.DUR || 40), SEED = +seedArg, PAGE = process.env.PAGE || 'walk.html';
 const now = Date.now(), day = 864e5;
 const dk = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const activity = {}; [2, 3, 1, 4, 2, 3, 5].forEach((v, i) => { activity[dk(new Date(now - (6 - i) * day))] = v; });
@@ -16,14 +16,14 @@ const user = { id: '77011234567', name: 'Айгерім Нұрланқызы', p
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
   await ctx.route(/js\/config\.js/, async r => { const res = await r.fetch(); r.fulfill({ response: res, body: (await res.text()) + '\n;window.CONFIG.firebase.enabled=false;' }); });
-  await ctx.addInitScript(([u, seed]) => {
+  await ctx.addInitScript(([u, seed, PQ]) => {
     let s = seed >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
     if (location.host === 'localhost:8765') { localStorage.setItem('bioubt_db_v1', JSON.stringify({ users: { [u.id]: u } })); localStorage.setItem('bioubt_session', u.id); }
     if (location.host === '127.0.0.1:8765') { localStorage.removeItem('bioubt_session'); }
-    window.__sync = t => { for (const a of document.getAnimations()) { if (a.__t0 == null) a.__t0 = t; a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000); } };
-  }, [user, SEED]);
+    window.PQ_RIGHT = PQ; window.__sync = t => { for (const a of document.getAnimations()) { if (a.__t0 == null) a.__t0 = t; a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000); } };
+  }, [user, SEED, +(process.env.PQ || 0)]);
   const p = await ctx.newPage();
-  await p.goto('http://localhost:8765/promo/walk.html');
+  await p.goto('http://localhost:8765/promo/' + PAGE);
   await p.evaluate(() => window.ready);
   const land = () => p.frames().find(f => f.url().startsWith('http://127.0.0.1'));
   const frameAt = async t => {

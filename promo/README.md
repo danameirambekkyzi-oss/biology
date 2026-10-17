@@ -33,3 +33,19 @@ python3 music_walk.py                          # music_walk.wav
 ffmpeg -i walk_noaudio.mp4 -i music_walk.wav -af loudnorm=I=-20:TP=-2 -c:v copy -c:a aac -b:a 192k BioUBT_walkthrough_40s.mp4
 ```
 Уақыт сызығы, жазулар және курсор қадамдары — `walk.html` ішіндегі `CAPS`, `K`, `SCROLL`.
+
+---
+
+# 45 секундтық walkthrough + қазақша дауыс
+
+- `BioUBT_walkthrough_45s_voice.mp4` — дайын видео (дауыс + бәсеңдетілген музыка).
+- `BioUBT_45s_voice.wav` — тек дауыс, `BioUBT_45s_music.wav` — тек музыка.
+- Дауыс: ISSAI KazakhTTS2 / Piper `kk_KZ-issai-high` (CC-BY-4.0), 3-спикер (F1 Raya). Басқа әйел дауыстарының үлгілері — `voice_samples/`.
+
+```bash
+# модель: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-kk_KZ-issai-high.tar.bz2
+pip install sherpa-onnx soundfile
+python3 vo45.py 3                                   # vo_3.wav (спикер нөмірі: 2, 3, 4, 5)
+python3 music_walk45.py                             # music_walk45.wav
+PAGE=walk45.html DUR=45 node walk_render.js video walk45_noaudio.mp4 30
+```
