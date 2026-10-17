@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#7C3AED">
+  <meta http-equiv="Cache-Control" content="no-cache">
   <title>BioҰБТ — Биологиядан ҰБТ-ға дайындық</title>
   <meta name="description" content="Биологиядан ҰБТ-ға дайындық: тараулық тесттер, толық ҰБТ сынамасы, қатемен жұмыс, рейтинг.">
   <link rel="icon" type="image/png" sizes="96x96" href="img/brand/icon-96.png">
@@ -12,35 +13,50 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=202610171916">
+  <link rel="stylesheet" href="css/style.css?v=202610171920">
 </head>
 <body>
   <div id="app"></div>
   <div id="modal-root"></div>
   <div id="toast-root" aria-live="polite"></div>
 
-  <script src="js/config.js?v=202610171916"></script>
-  <script src="js/questions.js?v=202610171916"></script>
-  <script src="js/tests/nagyz.js?v=202610171916"></script>
-  <script src="js/tests/naurz.js?v=202610171916"></script>
-  <script src="js/tests/uto.js?v=202610171916"></script>
-  <script src="js/plants.js?v=202610171916"></script>
-  <script src="js/notes.js?v=202610171916"></script>
-  <script src="js/content.js?v=202610171916"></script>
-  <script src="js/realubt.js?v=202610171916"></script>
-  <script src="js/app.js?v=202610171916"></script>
+  <script src="js/config.js?v=202610171920"></script>
+  <script src="js/questions.js?v=202610171920"></script>
+  <script src="js/tests/nagyz.js?v=202610171920"></script>
+  <script src="js/tests/naurz.js?v=202610171920"></script>
+  <script src="js/tests/uto.js?v=202610171920"></script>
+  <script src="js/plants.js?v=202610171920"></script>
+  <script src="js/notes.js?v=202610171920"></script>
+  <script src="js/content.js?v=202610171920"></script>
+  <script src="js/realubt.js?v=202610171920"></script>
+  <script src="js/app.js?v=202610171920"></script>
   <script>
-  /* Жаңа нұсқа шықса, браузер ескі index.html-ді кэштен алмасын: тексеріп, бетті бір рет жаңартады */
+  /* Жаңа нұсқа шықса, ескі index.html-ді кэштен алмасын: тексеріп, бетті жаңартады.
+     Телефон экранына («Домой») қосылған сайт фонда тұрып қалады, сондықтан қайта ашылғанда және 5 минут сайын тексереді. */
   (function () {
     try {
       var cur = (document.querySelector('script[src*="js/app.js?v="]') || {}).src || "";
       cur = (cur.match(/v=(\d+)/) || [])[1];
       if (!cur || !window.fetch || location.protocol === "file:") return;
-      fetch(location.pathname + location.search, { cache: "reload" }).then(function (r) { return r.text(); }).then(function (t) {
-        var v = (t.match(/js\/app\.js\?v=(\d+)/) || [])[1];
-        var k = "bioubt_reload_" + v;
-        try { if (v && v !== cur && !sessionStorage.getItem(k)) { sessionStorage.setItem(k, "1"); location.reload(); } } catch (e) {}
-      }).catch(function () {});
+      var busy = false;
+      function check() {
+        if (busy || document.visibilityState === "hidden") return;
+        busy = true;
+        fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (t) {
+          busy = false;
+          var v = (t.match(/js\/app\.js\?v=(\d+)/) || [])[1];
+          if (!v || v === cur || /^#\/test/.test(location.hash)) return; // тест кезінде бөлмейміз
+          var k = "bioubt_reload_" + v;
+          try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch (e) {}
+          // кэштегі ескі бетті айналып өту үшін жаңа адреспен ашамыз (#/... сақталады)
+          location.replace(location.pathname + "?u=" + v + location.hash);
+        }).catch(function () { busy = false; });
+      }
+      check();
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") check(); });
+      window.addEventListener("pageshow", function (e) { if (e.persisted) check(); });
+      window.addEventListener("focus", check);
+      setInterval(check, 5 * 60 * 1000);
     } catch (e) {}
   })();
   </script>
