@@ -718,6 +718,7 @@
             <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Премиум алу</button></div>`}
+          <button class="nav-item sb-logout" data-act="logout"><span class="ni">${ic("logout")}</span>Шығу</button>
         </aside>
         <div class="backdrop" id="backdrop" data-act="close-menu"></div>
         <div class="main-col">
@@ -847,15 +848,7 @@
         <button class="qa-card qa-3" data-act="start-express"><span class="qa-ico">${ic("bolt", 26)}</span><h3>Күнделікті ${EXPRESS_SIZE} сұрақтық экспресс-тест</h3>
           <p>Барлық тараулардан жылдам жаттығу</p><span class="go">Бастау ${ic("arrow", 18)}</span></button>
       </div>
-
-      <h2 class="sec-title">Тараулық тест</h2>
-      <div class="grid g-3">${MODULES.map((m, i) => chapterCard(u, m, i)).join("")}</div>
-
-      <div class="grid g-2" style="margin-top:26px">
-        <div class="card"><h3>Айдың үздік 5 оқушысы</h3>${prizeHtml()}${lbWidget(u)}
-          <a class="btn btn-ghost btn-block" style="margin-top:12px" href="#/app/leaderboard">Толық рейтингті көру</a></div>
-        <div class="card"><h3>Жетістік белгілері <span class="muted" style="font-weight:600">${u.badges.filter(b => window.BADGES.some(x => x.id === b)).length}/${window.BADGES.length}</span></h3>${badgesHtml(u)}</div>
-      </div>`;
+`;
   }
 
   const chNum = i => String(i + 1).padStart(2, "0");
@@ -1739,7 +1732,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610171831")
+    import("./cloud.js?v=202610171856")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
