@@ -103,6 +103,31 @@ def fix(t):
     for a, b in FIX: t = t.replace(a, b)
     return re.sub(r"(?m)^(\d)\.(?=\S)", r"\1. ", t)
 
+# Жауапты тармақтарға бөлу: әр жол, әр сөйлем және етістікпен аяқталған үтірлі бөлік — жеке тармақ
+VERB = re.compile(r"(?:ады|еді|йды|йді|ды|ді)$")
+def split_commas(sent):
+    parts, cur, depth = [], "", 0
+    for seg in re.split(r"(,\s+)", sent):
+        if re.fullmatch(r",\s+", seg):
+            last = re.sub(r"[.;:!?»]+$", "", cur.split()[-1]) if cur.split() else ""
+            if depth == 0 and VERB.search(last): parts.append(cur); cur = ""
+            else: cur += ", "
+            continue
+        cur += seg; depth += seg.count("(") - seg.count(")")
+    if cur: parts.append(cur)
+    return parts
+def items(a):
+    a = re.sub(r",(?=[^\s\d])", ", ", a)
+    out = []
+    for line in a.split("\n"):
+        line = re.sub(r"^\s*\d+\s*[.)]\s*(?=\D)", "", line).strip()
+        if not line: continue
+        for sent in re.split(r"(?<=[а-яәғқңөұүһіё)]{2}[.!?])\s+|(?<=[а-яәғқңөұүһіё]{3}\.)(?=[А-ЯӘҒҚҢӨҰҮҺІ])", line):
+            for x in split_commas(sent):
+                x = re.sub(r"\s+", " ", x).strip().rstrip(".;")
+                if x: out.append(x)
+    return out
+
 rows = json.load(open(sys.argv[1], encoding="utf-8"))
 imgdir, repo = sys.argv[2], sys.argv[3]
 os.makedirs(os.path.join(repo, "img/realubt"), exist_ok=True)
@@ -112,7 +137,7 @@ for i, r in enumerate(rows):
     q = re.sub(r"\s{2,}", " · ", q)
     a = "\n".join(l.rstrip() for l in r["a"].strip().split("\n"))
     a = re.sub(r"\n{3,}", "\n\n", a)
-    it = {"q": fix(q), "a": fix(a)}
+    it = {"q": fix(q), "a": "\n".join(items(fix(a)))}
     if r["imgs"]:
         it["img"] = []
         for f in r["imgs"]:

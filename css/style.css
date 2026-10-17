@@ -700,3 +700,6 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .nt-back { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--purple); margin-bottom: 10px; text-decoration: none; }
 .nt-back .ic { transform: rotate(180deg); }
 @media (max-width: 640px) { .nt-grid { grid-template-columns: 1fr; } .nt-acts .btn { flex: 1; justify-content: center; } }
+.qa-list { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.qa-list li { line-height: 1.45; }
+.qa-list li::marker { color: var(--green-600); }

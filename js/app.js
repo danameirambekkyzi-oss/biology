@@ -1007,7 +1007,8 @@
     const pool = only || shuffle(rqDay(day).filter(x => x.k)).slice(0, RQ_QUIZ);
     state.rq = { day, qs: pool, i: 0, ans: [], ok: [], checked: false, fix: !!only };
   }
-  const rqAnswerHtml = a => esc(a).replace(/\n/g, "<br>");
+  // Жауап: бірнеше тармақ болса — тізім (әр сөйлем жеке жолда, алдында нүкте)
+  const rqAnswerHtml = a => { const l = String(a).split("\n").filter(Boolean); return l.length > 1 ? `<ul class="qa-list">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : esc(l[0] || ""); };
 
   function pageReal(u, arg) {
     const title = `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>`;
@@ -1738,7 +1739,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610171820")
+    import("./cloud.js?v=202610171831")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
