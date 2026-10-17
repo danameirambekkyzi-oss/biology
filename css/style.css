@@ -191,7 +191,8 @@ input[type=range] { width: 100%; accent-color: var(--pink); height: 28px; }
 .sidebar { position: sticky; top: 0; height: 100vh; background: var(--surface); border-right: 1px solid var(--border); padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; z-index: 50; }
 .sidebar .logo { padding: 4px 8px 0; }
 .sb-author { padding: 2px 8px 18px 52px; font-size: 12.5px; line-height: 1.35; color: var(--muted); font-weight: 600; }
-.sb-author span { display: block; color: var(--purple); }
+.sb-author a { display: block; color: var(--purple); text-decoration: none; }
+.sb-author a:hover { text-decoration: underline; }
 .rq-paid { color: var(--purple); }
 .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; color: var(--text); font-weight: 600; font-size: 14px; line-height: 1.3; transition: background .15s; }
 .nav-item:hover { background: var(--surface-2); }

@@ -713,7 +713,7 @@
       <div class="shell">
         <aside class="sidebar" id="sidebar">
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
-          <div class="sb-author">Дана Мейрамбекқызы <span>@dmeirambekkyzy</span></div>
+          <div class="sb-author">Дана Мейрамбекқызы <a href="https://www.instagram.com/dmeirambekkyzy" target="_blank" rel="noopener">@dmeirambekkyzy</a></div>
           ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
             <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
@@ -1738,7 +1738,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610171817")
+    import("./cloud.js?v=202610171820")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
