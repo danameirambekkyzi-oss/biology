@@ -713,8 +713,9 @@
       <div class="shell">
         <aside class="sidebar" id="sidebar">
           <a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
+          <div class="sb-author">Дана Мейрамбекқызы <span>@dmeirambekkyzy</span></div>
           ${(CLOUD && u.role === "teacher" ? [{ id: "teacher", ico: "chart", t: "Мұғалім кабинеті" }] : []).concat(NAV).map(n => `<a class="nav-item ${isActive(n.id) ? "active" : ""}" href="#/app/${n.id}">
-            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}${(n.id === "plants" || n.id === "real") && !hasPremium(u) ? `<span class="ni-lock">${ic("lock", 14)}</span>` : ""}</a>`).join("")}
+            <span class="ni">${ic(n.ico)}</span>${n.t}${n.id === "mistakes" && mc ? `<span class="count">${mc}</span>` : ""}</a>`).join("")}
           ${hasPremium(u) ? "" : `<div class="sidebar-promo"><b>Премиум</b>Барлық толық ҰБТ сынамалары ашылады. ${fmtPrice(PLANS[0] ? PLANS[0].price : 0)}-дан бастап.<br>
             <button class="btn btn-cta btn-block" style="margin-top:10px;padding:10px" data-act="upgrade">Премиум алу</button></div>`}
         </aside>
@@ -908,7 +909,6 @@
     const done = f => f.tests.filter(t => passed(t.id)).length;
     const teacher = u.role === "teacher";
     const isOpen = (f, k) => teacher || k === 0 || passed(f.tests[k - 1].id);
-    const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
     const best = id => { const h = u.history.filter(x => x.testId === id); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; }; // тесттің өз балы
     return `<h1 class="page-title">ҰБТ сынамасы және Нағыз ҰБТ базасы</h1><p class="page-sub">Нақты ҰБТ форматындағы нұсқалар мен нағыз ҰБТ сұрақтары. Уақытты таңдап, тестті баста.</p>
       <div class="card" style="margin-bottom:16px"><div class="row-between" style="margin:0">
@@ -933,8 +933,13 @@
             <span class="fc-ico">${ic("layers", 26)}</span>
             <div><h3 style="margin:0 0 4px">${esc(f.title)}</h3><small class="muted">${f.tests.length ? `${f.tests.length} тест · ${done(f)} тапсырылды` : "Жақында қосылады"}</small></div>
             <div class="bar" style="width:100%"><i style="width:${f.tests.length ? done(f) / f.tests.length * 100 : 0}%"></i></div>
-          </a>`).join("")}</div>` : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}
-      <div class="grid g-2" style="margin-top:16px">
+          </a>`).join("")}</div>` : `<div class="card empty"><p>Сынама тесттері жақында қосылады.</p></div>`}`;
+  }
+
+  // Соңғы сынамалар және балл жүйесі («Қатемен жұмыс» бетінде)
+  function recentMocksHtml(u) {
+    const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
+    return `<div class="grid g-2" style="margin-top:16px">
         <div class="card"><h3>Соңғы сынамалар</h3>
           ${mocks.length ? mocks.map(h => {
             const wrong = (h.wrong || []).filter(id => QBY[id]);
@@ -952,7 +957,7 @@
     const ids = Object.keys(u.mistakes).filter(id => QBY[id]);
     if (!ids.length) return `<h1 class="page-title">Қатемен жұмыс</h1>
       <div class="card empty"><div class="e-ico">${ic("check", 40)}</div><h3>Қате сұрақтар жоқ</h3><p>Тест тапсыр — қате жауап берген сұрақтарыңнан осында тест құрылады.</p>
-      <button class="btn btn-primary" data-act="start-express">Экспресс-тест тапсыру</button></div>`;
+      <button class="btn btn-primary" data-act="start-express">Экспресс-тест тапсыру</button></div>${recentMocksHtml(u)}`;
     const byMod = MODULES.map(m => ({ m, list: ids.filter(id => QBY[id].module === m.id) })).filter(x => x.list.length);
     return `<h1 class="page-title">Қатемен жұмыс</h1><p class="page-sub">Осы уақытқа дейін тапсырған тесттеріңде қате жауап берген <b>${ids.length}</b> сұрақтан тест құрылады. Дұрыс жауап берсең, сұрақ тізімнен шығады. Түзетілгені: <b>${u.fixed}</b></p>
       <button class="btn btn-cta btn-lg" data-act="start-mistakes" style="margin-bottom:16px">Тестті бастау · ${ids.length} сұрақ</button>
@@ -960,7 +965,7 @@
         <div class="card"><div class="row-between" style="margin:0 0 10px"><h3 style="margin:0">${x.m.title} <span class="muted">· ${x.list.length}</span></h3>
           <button class="btn btn-ghost btn-sm" data-act="start-mistakes" data-id="${x.m.id}">Тест</button></div>
           ${x.list.map(id => `<p class="mistake-q">${QBY[id].q}</p>`).join("")}</div>`).join("")}
-      </div>`;
+      </div>${recentMocksHtml(u)}`;
   }
 
   /* ---- ҰБТ-да жиі кездесетін сұрақтар: күніне 20 сұрақ + жазбаша тест ---- */
@@ -1007,23 +1012,22 @@
   function pageReal(u, arg) {
     const title = `<h1 class="page-title">ҰБТ-да жиі кездесетін сұрақтар тізімі</h1>`;
     if (!RQ.length) return title + `<div class="card empty"><div class="e-ico">${ic("book", 40)}</div><h3>Сұрақтар жақында қосылады</h3><p>Бұл бөлімде нақты ҰБТ-да келген сұрақтар мен олардың жауаптары болады.</p></div>`;
-    if (!hasPremium(u)) return title + `<div class="card rq-banner">${ic("flame", 26)}<div><b>Әр күн сайын саған жаттауға арналған ${RQ_PER} сұрақ ашылады.</b>
-      <span>Жаттап, қатемен жұмыс жасау маңызды.</span></div></div>
-      <div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
-        <h2>Бұл бөлім — премиум</h2>
-        <p class="muted">ҰБТ-да жиі кездесетін ${RQ.length} сұрақ-жауап, күн сайын ашылатын ${RQ_PER} сұрақ және «Жаттап аяқтадым» жазбаша тесті премиум оқушыларға ашық.</p>
-        <div class="grid g-2 pl-blur" aria-hidden="true">${RQ.slice(0, 2).map(x => `<div class="card qa-item"><p class="qa-q">${esc(x.q)}</p><div class="qa-a"><b>Жауабы:</b> ${rqAnswerHtml(x.a)}</div></div>`).join("")}</div>
-        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
-    const open = rqOpenDays(u), done = u.realDone || {};
+    const open = rqOpenDays(u), done = u.realDone || {}, prem = hasPremium(u);
+    const paid = d => d > 1 && !prem; // тегін нұсқада тек 1-күн ашық
     let day = +arg || 0;
-    if (!day || day > RQ_DAYS) { day = 1; for (let d = 1; d <= open; d++) { day = d; if (!done["d" + d]) break; } }
+    if (!day || day > RQ_DAYS) { day = 1; for (let d = 1; d <= open && !paid(d); d++) { day = d; if (!done["d" + d]) break; } }
     const banner = `<div class="card rq-banner">${ic("flame", 26)}<div><b>Әр күн сайын саған жаттауға арналған ${RQ_PER} сұрақ ашылады.</b>
       <span>Жаттап, қатемен жұмыс жасау маңызды.</span></div></div>`;
     const chips = `<div class="chips rq-days">${Array.from({ length: RQ_DAYS }, (_, j) => j + 1).map(d => {
       const r = done["d" + d], lock = d > open;
       return lock ? `<span class="chip rq-lock" title="${d - open} күннен кейін ашылады">${ic("lock", 14)} ${d}-күн</span>`
+        : paid(d) ? `<a class="chip rq-paid ${d === day ? "active" : ""}" href="#/app/real/${d}">${ic("star", 14)} ${d}-күн</a>`
         : `<a class="chip ${d === day ? "active" : ""}" href="#/app/real/${d}">${r ? ic("check", 14) + " " : ""}${d}-күн${r ? ` · ${r.s}/${r.n}` : ""}</a>`; }).join("")}</div>`;
     const head = title + `<p class="page-sub">Барлығы ${RQ.length} сұрақ · ${RQ_DAYS} күн · ашылғаны: ${open}-күнге дейін</p>` + banner + chips;
+    if (paid(day)) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>${day}-күн — премиум</h2>
+        <p class="muted">Тегін нұсқада 1-күннің ${RQ_PER} сұрағы ашық. Қалған ${RQ.length - RQ_PER} сұрақ, күн сайын жаңа ${RQ_PER} сұрақ және «Жаттап аяқтадым» тесті премиум нұсқада ашылады.</p>
+        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
     if (day > open) return head + `<div class="card empty"><div class="e-ico">${ic("lock", 40)}</div><h3>${day}-күн әлі ашылмаған</h3><p>Бұл сұрақтар ${day - open} күннен кейін ашылады. Әзірге ашылған күндерді жатта.</p></div>`;
 
     const R = state.rq && state.rq.day === day ? state.rq : null;
@@ -1148,7 +1152,7 @@
     return `<div class="card pl-locked">
           <div class="pl-lock-ico">${ic("lock", 30)}</div>
           <h2>Бұл бөлім — премиум</h2>
-          <p class="muted">${NOTE_FILES.map(n => n.title).join(", ")} — кестелер, жаттау режимі және «Өзіңді тексер» тесті премиум оқушыларға ашық.</p>
+          <p class="muted">Тегін нұсқада «${NOTE_FILES[0].title}» ашық. ${NOTE_FILES.slice(1).map(n => n.title).join(", ")} — кестелер, жаттау режимі және «Өзіңді тексер» тесті премиум нұсқада ашылады.</p>
           <div class="pl-list pl-blur" aria-hidden="true">${sample.map(r => `<div class="pl-row"><div class="pl-f">${esc(r.f)}</div><div class="pl-p">${plantsHtml(r.p)}</div></div>`).join("")}</div>
           <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button>
         </div>`;
@@ -1159,10 +1163,9 @@
       const total = NOTE_FILES.reduce((a, n) => a + n.rows.length, 0);
       const head = `<div class="pl-hero"><div class="pl-hero-ico">${ic("book", 34)}</div>
         <div><h1>${NOTES_TITLE}</h1><p>${NOTE_FILES.length} файл · ${total} ақпарат. Әр файлда кесте, жаттау режимі және «Өзіңді тексер» тесті бар — ҰБТ-ға дейін міндетті түрде жаттап ал!</p></div></div>`;
-      if (!hasPremium(u)) return head + notesLocked(NOTE_FILES[0].rows.slice(0, 4));
-      return head + `<div class="nt-grid">${NOTE_FILES.map(n => `
+      return head + `<div class="nt-grid">${NOTE_FILES.map((n, k) => `
         <div class="card nt-card"><a class="nt-main" href="#/app/plants/${n.id}"><div class="nt-ico">${ic(n.icon, 26)}</div>
-          <div><h3>${esc(n.title)}</h3><p class="muted">${esc(n.desc)}</p><span class="tag">${n.groups.length} тақырып · ${n.rows.length} ${n.unit || "ақпарат"}</span></div></a>
+          <div><h3>${esc(n.title)}</h3><p class="muted">${esc(n.desc)}</p><span class="tag">${n.groups.length} тақырып · ${n.rows.length} ${n.unit || "ақпарат"}</span>${k === 0 && !hasPremium(u) ? ` <span class="tag t-single">Тегін</span>` : k > 0 && !hasPremium(u) ? ` <span class="tag t-multi">${ic("star", 14)} Премиум</span>` : ""}</div></a>
           <div class="nt-acts"><a class="btn btn-ghost btn-sm" href="#/app/plants/${n.id}">${ic("book", 16)} Кесте</a>
             <a class="btn btn-ghost btn-sm" href="#/app/plants/${n.id}/learn">${ic("eye", 16)} Жаттау</a>
             <a class="btn btn-primary btn-sm" href="#/app/plants/${n.id}/quiz">${ic("target", 16)} Өзіңді тексер</a></div></div>`).join("")}</div>`;
@@ -1180,7 +1183,7 @@
         <a class="pl-mode ${mode === "learn" ? "active" : ""}" href="${base}/learn">${ic("eye", 18)} Жаттау</a>
         <a class="pl-mode ${mode === "quiz" ? "active" : ""}" href="${base}/quiz">${ic("target", 18)} Өзіңді тексер</a>
       </div>`;
-    if (!hasPremium(u)) return head.replace(/<div class="pl-modes">[\s\S]*$/, "") + notesLocked(N.rows.slice(0, 4));
+    if (N !== NOTE_FILES[0] && !hasPremium(u)) return head.replace(/<div class="pl-modes">[\s\S]*$/, "") + notesLocked(N.rows.slice(0, 4));
     if (mode === "quiz") {
       if (!state.pq || !state.pq.qs || state.pq.file !== N.id) buildPlantQuiz(N.id);
       const P = state.pq, total = P.qs.length, max = P.qs.reduce((a, q) => a + maxPoints(q), 0);
@@ -1735,7 +1738,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610160824")
+    import("./cloud.js?v=202610171817")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
