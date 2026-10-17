@@ -1,0 +1,294 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/font.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#120D2E;font-family:"Montserrat",sans-serif}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:linear-gradient(180deg,#1A1240 0%,#120D2E 55%,#0E0A24 100%)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity}
+.blob{position:absolute;left:0;top:0;border-radius:50%;filter:blur(150px)}
+
+.laptop{width:1000px}
+.laptop .scr{position:relative;background:#0a0a10;border-radius:30px 30px 6px 6px;padding:20px 20px 26px;box-shadow:0 0 0 2px #2a2838 inset,0 40px 90px rgba(0,0,0,.5)}
+.laptop .view{position:relative;width:960px;height:600px;overflow:hidden;border-radius:6px;background:#F6F4FF}
+.laptop .base{height:30px;margin:0 -60px;background:linear-gradient(#e7e5ee,#a9a6b5 60%,#7d7a89);border-radius:0 0 26px 26px;position:relative;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.laptop .base::before{content:"";position:absolute;left:50%;top:0;width:160px;height:12px;margin-left:-80px;background:linear-gradient(#bdbac8,#d9d7e2);border-radius:0 0 12px 12px}
+.laptop iframe{width:1440px;height:900px;border:0;transform:scale(.66667);transform-origin:0 0;display:block;pointer-events:none}
+
+.phone{background:#0b0b12;border-radius:66px;padding:16px;box-shadow:0 0 0 3px #3b3850 inset,0 0 0 1px #000,0 40px 90px rgba(0,0,0,.5),0 0 120px rgba(124,58,237,.25)}
+.phone .view{position:relative;width:819px;height:1401px;overflow:hidden;border-radius:52px;background:#F6F4FF}
+.phone iframe{width:390px;height:667px;border:0;transform:scale(2.1);transform-origin:0 0;display:block}
+.glare{position:absolute;inset:0;border-radius:52px;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);background-size:300% 100%;opacity:0}
+
+.cap{width:1000px;text-align:center}
+.cap .k{display:inline-block;font:700 26px Montserrat;color:#E9D5FF;padding:8px 20px;border-radius:24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);margin-bottom:18px}
+.cap h2{font-size:46px;line-height:1.12;font-weight:800;color:#fff;letter-spacing:-.5px}
+.cap p{font-size:30px;font-weight:600;color:#C4B5FD;margin-top:12px}
+.title{font-weight:900;color:#fff;letter-spacing:-2px;white-space:nowrap;text-align:center}
+.grad{background:linear-gradient(100deg,#A78BFA,#EC4899 60%,#F9A8D4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-weight:700;color:#E9D5FF;font-size:50px;white-space:nowrap;text-align:center}
+.cta{font-size:46px;font-weight:800;color:#fff;padding:30px 58px;border-radius:60px;background:linear-gradient(135deg,#EC4899,#F472B6);box-shadow:0 18px 50px rgba(236,72,153,.45);white-space:nowrap;overflow:hidden}
+.cta i{position:absolute;top:-20px;bottom:-20px;width:120px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg)}
+
+#cursor{position:absolute;left:0;top:0;width:0;height:0;z-index:30}
+#cursor svg{position:absolute;left:-6px;top:-4px;width:52px;height:52px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+#ring{position:absolute;left:0;top:0;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:4px solid rgba(236,72,153,.9);background:rgba(236,72,153,.14);box-shadow:0 0 24px rgba(236,72,153,.45)}
+#flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#fff,rgba(255,255,255,.85) 40%,rgba(233,213,255,.6));opacity:0;z-index:55;pointer-events:none}
+#fade{position:absolute;inset:0;background:#000;opacity:0;z-index:60;pointer-events:none}
+</style></head>
+<body><div id="stage">
+  <div class="blob" id="b1" style="width:900px;height:900px;background:#7C3AED;opacity:.45"></div>
+  <div class="blob" id="b2" style="width:800px;height:800px;background:#EC4899;opacity:.25"></div>
+
+  <div id="t1" class="abs title" style="font-size:170px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="t1s" class="abs sub">Биологиядан ҰБТ-ға дайындық</div>
+  <div id="t5" class="abs title" style="font-size:150px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="t5s" class="abs sub" style="font-size:54px;color:#fff">Биологияны бірге меңгерейік!</div>
+  <div id="t5c" class="abs cta">Дайындықты бүгін баста!<i id="shine"></i></div>
+  <div id="t5u" class="abs sub" style="font-size:30px;font-weight:600;color:#C4B5FD">danameirambekkyzi-oss.github.io/biology</div>
+
+  <div id="lap" class="abs laptop"><div class="scr"><div class="view"><iframe id="landf" src="http://127.0.0.1:8765/#/"></iframe></div></div><div class="base"></div></div>
+
+  <div id="cap" class="abs cap"><div class="k" id="capk"></div><h2 id="capt"></h2><p id="caps"></p></div>
+  <div id="ph" class="abs phone"><div class="view"><iframe id="appf" src="about:blank"></iframe><div class="glare" id="glare"></div></div></div>
+
+  <div id="cursor"><div id="ring"></div><svg viewBox="0 0 24 24"><path d="M4 2.5l6.5 18 2.4-7.3 7.4-2.6z" fill="#fff" stroke="#1b1530" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+  <div id="flash"></div>
+  <div id="fade"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const ss = p => p * p * (3 - 2 * p);
+const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eo = p => 1 - Math.pow(1 - p, 3);
+function put(el, { x = 540, y = 960, s = 1, op = 1, ry = 0, rx = 0 }) {
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) perspective(2200px) rotateY(${ry}deg) rotateX(${rx}deg) scale(${s})`;
+  el.style.opacity = op; el.style.visibility = op <= .001 ? "hidden" : "visible";
+}
+const DUR = 73;
+const appf = $("appf");
+let W = null, D = null;
+
+// ---------- helpers inside the live site ----------
+const q = (sel, text) => {
+  const els = [...D.querySelectorAll(sel)];
+  return text ? els.find(e => e.textContent.replace(/\s+/g, " ").includes(text)) : els[0];
+};
+const navItem = text => q(".sidebar .nav-item", text);
+const allQ = () => (W.QUESTIONS || []).concat(...(W.TEST_FOLDERS || []).map(f => [].concat(...f.tests.map(t => t.questions))));
+function curQ() { const txt = q(".q-text").innerHTML.trim(); return allQ().find(x => String(x.q).trim() === txt); }
+const optEl = i => D.querySelector(`.opt[data-i="${i}"]`);
+const rightOpt = () => { const x = curQ(); return optEl(x ? x.correct[0] : 0); };
+const wrongOpt = () => { const x = curQ(); const c = x ? x.correct : [0]; return optEl([0, 1, 2, 3].find(i => !c.includes(i))); };
+function rqAnswer() { const t = q(".rq-q").textContent.trim(); const x = (W.REAL_UBT || []).find(r => (r.kq || r.q).trim() === t); return x && x.k ? x.k[0] : ""; }
+const PQ_RIGHT = window.PQ_RIGHT != null ? window.PQ_RIGHT : 0;   // correct option of the plant-quiz question (found in a dry run)
+
+// ---------- captions [t, step, title, sub] ----------
+const CAPS = [
+  [5.4, "2-қадам · ҰБТ сынамасы", "ҰБТ сынамасы және Нағыз ҰБТ базасы", "Уақытты таңда: 30 / 40 / 60 минут"],
+  [9.7, "2-қадам · ҰБТ сынамасы", "Тест-1: сұрақтарға жауап бер", "Сосын «Аяқтау» батырмасын бас"],
+  [14.7, "2-қадам · ҰБТ сынамасы", "Толық талдау", "Әр сұрақтың дұрыс жауабы мен балы"],
+  [20.5, "2-қадам · Қатемен жұмыс", "Қатемен жұмыс", "Барлық қате сұрақтарың бір жерде"],
+  [30.8, "2-қадам · Қатемен жұмыс", "Қате сұрақтардан тест", "Дұрыс жауап бірден көрсетіледі"],
+  [34.5, "3-қадам · Оқу материалдары", "ҰБТ-да жиі кездесетін сұрақтар", "ҰБТ-да келген сұрақтар мен жауаптары"],
+  [40.6, "3-қадам · Оқу материалдары", "Күн сайын 20 сұрақ ашылады", "Жаттап болған соң — «Жаттап аяқтадым»"],
+  [45.0, "3-қадам · Оқу материалдары", "Өз жауабыңды жазып, тексер", "Жауабың бірден тексеріледі"],
+  [50.2, "3-қадам · Оқу материалдары", "Негізгі жаттау керек ақпараттар", "8 файл · ҰБТ-ға қажет негізгі ақпарат"],
+  [54.1, "3-қадам · Оқу материалдары", "Кесте", "Ботаникадағы өсімдіктер тізімі"],
+  [56.5, "3-қадам · Оқу материалдары", "Жаттау режимі", "Карточканы басып, жауабын аш"],
+  [59.0, "3-қадам · Оқу материалдары", "Өзіңді тексер", "Таңда да, «Тексеру» бас"],
+  [62.3, "4-қадам · Интерактивті тест", "Күнделікті экспресс-тест", "Жауап бірден тексеріледі"]
+];
+
+// ---------- cursor keyframes (t = arrival; click = real click on arrival) ----------
+const K = [
+  { t: 5.6, to: () => ({ x: 250, y: 430 }) },
+  { t: 6.3, to: () => q(".burger"), click: true },
+  { t: 7.1, to: () => navItem("Басты бет") },
+  { t: 7.9, to: () => navItem("ҰБТ сынамасы"), click: true },
+  { t: 8.8, to: () => q(".chip", "40 минут"), ring: true },
+  { t: 9.9, to: () => q(".card", "2026 жылғы") || q("a", "2026 жылғы"), click: true, dx: .3 },
+  { t: 10.8, to: () => q("[data-act='start-test']"), click: true },
+  { t: 11.7, to: () => rightOpt(), click: true, dx: .3 },
+  { t: 12.3, to: () => q("[data-act='next']"), click: true },
+  { t: 13.1, to: () => wrongOpt(), click: true, dx: .3 },
+  { t: 13.9, to: () => q("[data-act='finish']"), click: true },
+  { t: 14.6, to: () => D.getElementById("m-ok"), click: true },
+  { t: 15.4, to: () => ({ x: 340, y: 520 }) },
+  { t: 20.6, to: () => q(".burger"), click: true },
+  { t: 21.5, to: () => navItem("Қатемен жұмыс"), click: true },
+  { t: 24.6, to: () => q(".page-sub"), ring: true, dx: .45 },
+  { t: 26.0, to: () => ({ x: 340, y: 520 }) },
+  { t: 30.9, to: () => q("[data-act='start-mistakes']"), click: true },
+  { t: 32.3, to: () => rightOpt(), click: true, dx: .3 },
+  { t: 33.1, to: () => q("[data-act='check']"), click: true },
+  { t: 33.9, to: () => ({ x: 340, y: 560 }) },
+  { t: 34.6, to: () => q(".burger"), click: true },
+  { t: 35.4, to: () => navItem("жиі кездесетін"), click: true },
+  { t: 36.4, to: () => ({ x: 340, y: 520 }) },
+  { t: 41.7, to: () => q(".chip", "2-күн"), ring: true },
+  { t: 43.0, to: () => ({ x: 340, y: 520 }) },
+  { t: 45.0, to: () => q("[data-act='rq-start']"), click: true },
+  { t: 45.7, to: () => q("#rq-inp"), dx: .85 },
+  { t: 47.6, to: () => q("[data-act='rq-check']"), click: true },
+  { t: 48.4, to: () => ({ x: 340, y: 560 }) },
+  { t: 50.2, to: () => q(".burger"), click: true },
+  { t: 51.0, to: () => navItem("Негізгі жаттау"), click: true },
+  { t: 51.8, to: () => ({ x: 330, y: 520 }) },
+  { t: 54.0, to: () => q(".nt-main"), click: true, dx: .3 },
+  { t: 55.6, to: () => q(".pl-row"), ring: true, dx: .2 },
+  { t: 56.5, to: () => q(".pl-mode", "Жаттау"), click: true },
+  { t: 58.0, to: () => [...D.querySelectorAll(".pl-row")].find(r => r.getBoundingClientRect().top > 330), click: true, dx: .3, lock: true },
+  { t: 59.0, to: () => q(".pl-mode", "Өзіңді тексер"), click: true },
+  { t: 60.4, to: () => D.querySelector(`.pl-opt[data-i="${PQ_RIGHT}"]`), click: true, dx: .3 },
+  { t: 61.1, to: () => q("[data-act='pq-check']"), click: true },
+  { t: 61.7, to: () => ({ x: 340, y: 560 }) },
+  { t: 62.3, to: () => q(".burger"), click: true },
+  { t: 62.9, to: () => navItem("Басты бет"), click: true },
+  { t: 64.0, to: () => q("[data-act='start-express']"), click: true },
+  { t: 65.0, to: () => rightOpt(), click: true, dx: .3 },
+  { t: 65.6, to: () => q("[data-act='check']"), click: true },
+  { t: 66.3, to: () => ({ x: 340, y: 600 }) }
+];
+// typing into the real input (answer of the «Жаттап аяқтадым» question)
+const TYPE = { t0: 45.9, t1: 47.2 };
+
+// ---------- scroll: [t0, t1, y | fn]; held afterwards ----------
+const topOf = (sel, off) => () => { const e = q(sel); return e ? Math.max(0, e.getBoundingClientRect().top + W.scrollY - off) : 0; };
+const SCROLL = [
+  [7.9, 7.9, 0], [10.8, 10.8, 0],
+  [11.0, 11.4, topOf(".q-text", 150)],
+  [14.6, 14.6, 0], [15.6, 16.6, topOf(".test-wrap h2", 70)], [17.6, 18.8, topOf(".review-item:nth-of-type(1)", 60)], [19.0, 19.9, topOf(".review-item:nth-of-type(2)", 60)],
+  [20.6, 20.6, 0], [21.5, 21.5, 0], [25.6, 27.2, 420], [29.4, 30.2, 0],
+  [30.9, 30.9, 0], [31.1, 31.5, topOf(".q-text", 150)],
+  [35.4, 35.4, 0], [37.0, 38.6, topOf(".qa-item", 70)], [38.9, 40.2, topOf(".qa-item:nth-of-type(3)", 70)], [40.5, 41.1, 0],
+  [43.4, 44.4, topOf(".rq-finish", 330)],
+  [45.0, 45.0, 0], [45.2, 45.5, topOf(".rq-q", 150)],
+  [51.0, 51.0, 0], [52.2, 53.0, 230], [53.1, 53.5, topOf(".nt-main", 220)],
+  [54.0, 54.0, 0], [54.3, 54.9, topOf(".pl-modes", 70)],
+  [56.5, 56.5, 0], [56.7, 57.2, topOf(".pl-modes", 70)],
+  [59.0, 59.0, 0], [59.2, 59.7, topOf(".pl-quiz", 60)], [61.1, 61.1, topOf(".pl-quiz", 60)], [61.25, 61.6, topOf(".pl-next", 520)],
+  [62.9, 62.9, 0], [63.1, 63.6, topOf("[data-act='start-express']", 360)],
+  [64.0, 64.0, 0], [64.2, 64.5, topOf(".q-text", 150)]
+];
+const resolved = {};
+function scrollAt(t) {
+  let y = 0;
+  SCROLL.forEach((s, i) => {
+    if (t < s[0]) return;
+    let target = s[2];
+    if (typeof target === "function") { if (resolved[i] == null) resolved[i] = target(); target = resolved[i]; }
+    y = s[1] > s[0] ? lerp(y, target, eio(seg(t, s[0], s[1]))) : target;
+  });
+  return y;
+}
+
+// section changes: soft light flash + 3D swing of the phone
+const SWINGS = [20.4, 34.3, 50.0, 62.3];
+const FLASHES = [4.85, 20.4, 34.3, 50.0, 62.3, 66.8];
+
+let ki = 0, prevPos = null, pressAt = -9, typed = null;
+function frameRect() { const r = appf.getBoundingClientRect(); return { x: r.left, y: r.top, k: r.width / 390 }; }
+function posOf(k) {
+  let v = k._el || null; if (!v) { try { v = k.to(); } catch (e) { v = null; } if (v && v.getBoundingClientRect && k.lock) k._el = v; }
+  if (!v) return prevPos || { x: 200, y: 400 };
+  if (v.getBoundingClientRect) { const r = v.getBoundingClientRect(); return { x: r.left + r.width * (k.dx != null ? k.dx : .5), y: r.top + r.height * .5 }; }
+  return v;
+}
+
+function step(t) {
+  let acted = false;
+  $("b1").style.transform = `translate(${-150 + Math.sin(t * .2) * 120}px,${200 + Math.cos(t * .15) * 150}px)`;
+  $("b2").style.transform = `translate(${450 + Math.cos(t * .17) * 140}px,${1200 + Math.sin(t * .13) * 160}px)`;
+
+  // ---------- intro (0–6) and final (40–45): laptop with the homepage ----------
+  const in5 = ss(seg(t, 66.7, 67.5));
+  const out1 = ss(seg(t, 4.3, 5.0));
+  const lapOp = t < 6 ? clamp(seg(t, 0, .8)) * (1 - out1) : in5;
+  const z1 = lerp(.94, 1.06, ss(seg(t, .3, 4.5)));             // zoom #1
+  const z5 = lerp(1, 1.04, ss(seg(t, 66.9, 72.0)));            // zoom #2
+  if (t < 6) put($("lap"), { y: 1180 - (z1 - .94) * 600, s: z1, op: lapOp, ry: -out1 * 35 });
+  else put($("lap"), { y: 1240, s: .92 * z5, op: lapOp, ry: (1 - in5) * 30 });
+  const a1 = ss(seg(t, .5, 1.4)), a1s = ss(seg(t, 1.2, 2.1)), o1 = 1 - seg(t, 4.1, 4.8);
+  put($("t1"), { y: 420 + (1 - a1) * 30, op: a1 * o1, rx: (1 - a1) * 50 });
+  put($("t1s"), { y: 560 + (1 - a1s) * 24, op: a1s * o1 });
+  const a5 = ss(seg(t, 67.1, 67.9)), a5s = ss(seg(t, 67.8, 68.6)), a5c = ss(seg(t, 69.2, 70.0)), a5u = ss(seg(t, 69.8, 70.5));
+  put($("t5"), { y: 330 + (1 - a5) * 30, op: a5, rx: (1 - a5) * 50 });
+  put($("t5s"), { y: 480 + (1 - a5s) * 24, op: a5s });
+  put($("t5c"), { y: 1690 + (1 - a5c) * 24, op: a5c, s: lerp(.85, 1, a5c) });
+  $("shine").style.left = lerp(-200, 1000, seg(t, 70.4, 71.1)) + "px";
+  put($("t5u"), { y: 1800, op: a5u });
+
+  // ---------- phone with the live site (6–40) ----------
+  const pin = ss(seg(t, 4.7, 5.4)), pout = ss(seg(t, 66.5, 67.2));
+  let ry = (1 - pin) * 35 - pout * 35;
+  SWINGS.forEach(s => { const p = seg(t, s - .35, s + .45); ry += Math.sin(p * Math.PI) * 16; });
+  put($("ph"), { y: 1120 + (1 - pin) * 40, op: pin * (1 - pout), ry });
+  // glare sweep across the screen on section changes
+  const g = Math.max(0, ...SWINGS.concat([5.1]).map(s => 1 - Math.abs(t - s - .1) / .45));
+  $("glare").style.opacity = g * .7;
+  $("glare").style.backgroundPosition = `${lerp(100, 0, seg(t % 100, 0, 1))}% 0`;
+  SWINGS.concat([5.1]).forEach(s => { if (Math.abs(t - s - .1) < .45) $("glare").style.backgroundPosition = `${lerp(110, -10, seg(t, s - .35, s + .55))}% 0`; });
+
+  let ci = -1; CAPS.forEach((c, i) => { if (t >= c[0]) ci = i; });
+  if (ci >= 0 && t < 66.7) {
+    const c = CAPS[ci]; $("capk").textContent = c[1]; $("capt").textContent = c[2]; $("caps").textContent = c[3];
+    const nxt = CAPS[ci + 1] ? CAPS[ci + 1][0] : 66.5;
+    const op = ss(seg(t, c[0], c[0] + .35)) * (1 - ss(seg(t, nxt - .25, nxt)));
+    put($("cap"), { y: 205 + (1 - ss(seg(t, c[0], c[0] + .35))) * 16, op: op * pin * (1 - pout), rx: (1 - ss(seg(t, c[0], c[0] + .35))) * 40 });
+  } else put($("cap"), { op: 0 });
+
+  if (D) {
+    if (!D.getElementById("vstyle")) { const st = D.createElement("style"); st.id = "vstyle"; st.textContent = "html{scroll-behavior:auto!important}#toast-root{display:none!important}"; D.head.appendChild(st); }
+    while (ki < K.length && t >= K[ki].t) {
+      const k = K[ki]; prevPos = posOf(k);
+      if (k.click) { let el = k._el || null; if (!el) try { el = k.to(); } catch (e) { console.log('miss', k.t); } if (el) { el.click(); acted = true; } pressAt = k.t; }
+      ki++;
+    }
+    // typing
+    if (t >= TYPE.t0 && t < TYPE.t1 + .1) {
+      const inp = D.getElementById("rq-inp");
+      if (inp && !inp.disabled) {
+        if (typed == null) typed = rqAnswer();
+        const n = Math.round(typed.length * seg(t, TYPE.t0, TYPE.t1));
+        inp.value = typed.slice(0, n); inp.dispatchEvent(new W.Event("input", { bubbles: true }));
+      }
+    }
+    if (!acted) W.scrollTo({ top: scrollAt(t), behavior: "instant" });
+    const cur = $("cursor"), ring = $("ring");
+    let pos = prevPos || posOf(K[0]);
+    const nk = K[ki];
+    if (nk && prevPos) {
+      const startMove = Math.max(K[ki - 1].t + .15, nk.t - .55);
+      const p = eio(seg(t, startMove, nk.t - .03));
+      const np = posOf(nk);
+      pos = { x: lerp(prevPos.x, np.x, p), y: lerp(prevPos.y, np.y, p) };
+    }
+    const fr = frameRect();
+    cur.style.transform = `translate(${fr.x + pos.x * fr.k}px,${fr.y + pos.y * fr.k}px)`;
+    cur.style.opacity = (t >= 5.4 && t < 66.6) ? ss(seg(t, 5.4, 5.7)) * (1 - ss(seg(t, 66.2, 66.6))) : 0;
+    const last = K[ki - 1], pd = t - pressAt;
+    let rs = 1, rop = 0;
+    if (pd >= -.25 && pd < .45) { rop = pd < 0 ? seg(pd, -.25, -.05) : 1 - seg(pd, .1, .45); rs = pd < 0 ? 1 : lerp(.8, 1.25, eo(seg(pd, 0, .4))); }
+    if (last && last.ring && nk) { const h = t - last.t; const o = ss(seg(h, 0, .2)) * (1 - ss(seg(t, nk.t - .6, nk.t - .4))); if (o > rop) { rop = o; rs = 1 + Math.sin(h * 5) * .05; } }
+    if (nk && nk.ring) { const o = ss(seg(t, nk.t - .2, nk.t)); if (o > rop) { rop = o; rs = 1; } }
+    ring.style.opacity = rop; ring.style.transform = `scale(${rs})`;
+    syncAnims(D, t);
+  }
+  $("flash").style.opacity = Math.max(0, ...FLASHES.map(f => (1 - Math.abs(t - f) / .22) * .55));
+  $("fade").style.opacity = ss(seg(t, 72.0, 73.0));
+  return acted;
+}
+function syncAnims(doc, t) {
+  for (const a of doc.getAnimations()) { if (a.__t0 == null) a.__t0 = t; a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000); }
+}
+window.step = step; window.DUR = DUR;
+window.ready = new Promise(res => {
+  appf.addEventListener("load", () => { W = appf.contentWindow; D = appf.contentDocument;
+    setTimeout(() => Promise.all([document.fonts.ready, D.fonts.ready]).then(res), 1200); }, { once: true });
+  appf.src = "http://localhost:8765/#/app/dashboard";
+});
+</script></body></html>
