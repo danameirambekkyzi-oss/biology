@@ -1,0 +1,295 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/font.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#0B0820;font-family:"Montserrat",sans-serif}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:#0B0820}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
+.blob{position:absolute;left:0;top:0;border-radius:50%;filter:blur(140px)}
+#grid{position:absolute;inset:-200px;background-image:linear-gradient(rgba(167,139,250,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,.07) 1px,transparent 1px);background-size:90px 90px;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 20%,transparent 70%)}
+.dot{position:absolute;width:6px;height:6px;border-radius:50%;background:#C4B5FD;box-shadow:0 0 12px #A78BFA}
+
+/* devices */
+.laptop{width:940px}
+.laptop .scr{position:relative;background:#0a0a10;border-radius:30px 30px 6px 6px;padding:20px 20px 26px;box-shadow:0 0 0 2px #2a2838 inset,0 40px 90px rgba(0,0,0,.55),0 0 120px rgba(124,58,237,.25)}
+.laptop .scr::before{content:"";position:absolute;top:8px;left:50%;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#222}
+.laptop .view{position:relative;width:100%;aspect-ratio:1440/900;overflow:hidden;border-radius:6px;background:#F6F4FF}
+.laptop .base{height:30px;margin:0 -60px;background:linear-gradient(#e7e5ee,#a9a6b5 60%,#7d7a89);border-radius:0 0 26px 26px;position:relative;box-shadow:0 30px 60px rgba(0,0,0,.5)}
+.laptop .base::before{content:"";position:absolute;left:50%;top:0;width:160px;height:12px;margin-left:-80px;background:linear-gradient(#bdbac8,#d9d7e2);border-radius:0 0 12px 12px}
+.phone{background:#0b0b12;border-radius:74px;padding:18px;box-shadow:0 0 0 3px #3b3850 inset,0 0 0 1px #000,0 50px 100px rgba(0,0,0,.6),0 0 140px rgba(236,72,153,.22)}
+.phone .view{position:relative;width:100%;aspect-ratio:400/711;overflow:hidden;border-radius:58px;background:#F6F4FF}
+.phone .island{position:absolute;top:34px;left:50%;width:150px;height:40px;margin-left:-75px;border-radius:22px;background:#000;z-index:5}
+.view img.scroll{position:absolute;left:0;top:0;width:100%;display:block}
+.win{width:1040px;border-radius:26px;overflow:hidden;background:#fff;box-shadow:0 40px 100px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.08),0 0 120px rgba(124,58,237,.3)}
+.win .bar{height:52px;background:#EDEBF5;display:flex;align-items:center;padding:0 22px;gap:10px}
+.win .bar i{width:14px;height:14px;border-radius:50%;display:block}
+.win .url{flex:1;margin:0 30px 0 26px;height:32px;border-radius:16px;background:#fff;font:600 17px Montserrat;color:#5b5675;display:flex;align-items:center;justify-content:center;gap:8px}
+.win .view{position:relative;width:100%;aspect-ratio:1440/900;overflow:hidden;background:#F6F4FF}
+.view img.full{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* text */
+.title{font-weight:900;color:#fff;letter-spacing:-2px;white-space:nowrap;text-align:center}
+.grad{background:linear-gradient(100deg,#A78BFA,#EC4899 60%,#F9A8D4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ch{display:inline-block;will-change:transform,opacity,filter}
+.sub{font-weight:700;color:#E9D5FF;font-size:52px;white-space:nowrap;text-align:center}
+.chip{display:flex;align-items:center;gap:16px;padding:12px 30px 12px 14px;border-radius:40px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px)}
+.chip img{width:58px;height:58px;border-radius:16px;background:#fff;padding:4px}
+.chip b{font-size:40px;font-weight:800;color:#fff}
+.label{width:960px;text-align:center}
+.label .num{display:inline-block;font:800 30px Montserrat;color:#fff;padding:8px 22px;border-radius:30px;background:linear-gradient(135deg,#7C3AED,#EC4899);margin-bottom:22px;box-shadow:0 10px 30px rgba(236,72,153,.4)}
+.label h2{font-size:64px;line-height:1.08;font-weight:900;color:#fff;letter-spacing:-1px}
+.label p{font-size:34px;font-weight:600;color:#C4B5FD;margin-top:16px}
+.hl{position:absolute;border-radius:10px;border:2.5px solid #EC4899;background:rgba(236,72,153,.12);box-shadow:0 0 18px rgba(236,72,153,.8),0 0 4px #fff inset}
+.cursor{position:absolute;width:44px;height:44px;z-index:20}
+.ripple{position:absolute;border-radius:50%;border:5px solid #EC4899;background:rgba(236,72,153,.18);z-index:19}
+.prog{display:flex;gap:10px}
+.prog i{display:block;width:110px;height:8px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden}
+.prog i b{display:block;height:100%;width:0;background:linear-gradient(90deg,#A78BFA,#EC4899)}
+.cta{font-size:50px;font-weight:800;color:#fff;padding:36px 64px;border-radius:60px;background:linear-gradient(135deg,#EC4899,#F472B6);box-shadow:0 20px 60px rgba(236,72,153,.55);overflow:hidden;white-space:nowrap}
+.cta .shine{position:absolute;top:-20px;bottom:-20px;width:120px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50}
+#vign{position:absolute;inset:0;pointer-events:none;z-index:49;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.45))}
+</style></head>
+<body><div id="stage">
+  <div id="bg" class="abs" style="width:1080px;height:1920px">
+    <div class="blob" id="b1" style="width:900px;height:900px;background:#7C3AED;opacity:.8"></div>
+    <div class="blob" id="b2" style="width:800px;height:800px;background:#EC4899;opacity:.55"></div>
+    <div class="blob" id="b3" style="width:700px;height:700px;background:#3B82F6;opacity:.45"></div>
+    <div id="grid"></div>
+    <div id="dots"></div>
+  </div>
+
+  <!-- Scene 1 -->
+  <div id="s1title" class="abs title" style="font-size:190px"></div>
+  <div id="s1sub" class="abs sub">Биологиядан ҰБТ-ға дайындық</div>
+  <div id="lap1" class="abs laptop"><div class="scr"><div class="view"><img class="scroll" src="shots/d_home_full.png"></div></div><div class="base"></div></div>
+
+  <!-- shared top chip -->
+  <div id="chip" class="abs chip"><img src="../img/brand/logo.png"><b>BioҰБТ</b></div>
+
+  <!-- Scene 2 -->
+  <div id="s2cap" class="abs title" style="font-size:104px;line-height:1.05"><div><span class="ch">Барлығы</span> <span class="ch">бір</span></div><div><span class="ch grad">платформада!</span></div></div>
+  <div id="ph2" class="abs phone" style="width:560px"><div class="island"></div><div class="view"><img class="scroll" src="shots/m_app_dashboard_full.png"><div class="ripple" id="rp2"></div></div></div>
+  <div id="win2" class="abs win"><div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><div class="url">🔒 danameirambekkyzi-oss.github.io/biology</div></div>
+    <div class="view"><img class="full" src="shots/d_app_dashboard.png"><div class="hl" id="hl2"></div><svg class="cursor" id="cur2" viewBox="0 0 24 24"><path d="M3 2l7 19 2.6-7.6L20 11z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div></div>
+
+  <!-- Scene 3 -->
+  <div id="prog" class="abs prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+  <div id="clips"></div>
+  <div id="lab" class="abs label"><div class="num" id="labn"></div><h2 id="labt"></h2><p id="labs"></p></div>
+
+  <!-- Scene 4 -->
+  <div id="desk" class="abs" style="width:1080px;height:1920px">
+    <div id="floor" class="abs" style="left:-200px;top:1380px;width:1480px;height:700px;background:radial-gradient(ellipse at 50% 0%,rgba(167,139,250,.35),rgba(124,58,237,.08) 45%,transparent 70%);"></div>
+    <div id="lap4" class="abs laptop" style="width:900px"><div class="scr"><div class="view"><img class="full" src="shots/d_app_dashboard.png"><i id="logoMark" style="position:absolute;left:6.6%;top:4.3%;width:2px;height:2px"></i></div></div><div class="base"></div></div>
+    <div id="ph4" class="abs phone" style="width:330px;border-radius:48px;padding:12px"><div class="island" style="top:22px;width:90px;height:26px;margin-left:-45px"></div><div class="view" style="border-radius:38px"><img class="full" src="shots/m_app_dashboard.png"></div></div>
+  </div>
+
+  <!-- Final -->
+  <img id="flogo" class="abs" src="../img/brand/logo.png" style="width:230px;height:230px;border-radius:56px;background:#fff;padding:18px;object-fit:contain;box-shadow:0 30px 80px rgba(124,58,237,.6)">
+  <div id="ftitle" class="abs title" style="font-size:200px"></div>
+  <div id="ftag" class="abs title" style="font-size:66px;line-height:1.2;letter-spacing:-.5px"><div>Біліміңді шыңда.</div><div class="grad">Мақсатыңа жет!</div></div>
+  <div id="fcta" class="abs cta">Дайындықты бүгін баста!<div class="shine" id="shine"></div></div>
+  <div id="furl" class="abs sub" style="font-size:32px;font-weight:600;color:#C4B5FD">danameirambekkyzi-oss.github.io/biology</div>
+
+  <div id="vign"></div>
+  <div id="flash"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eo = p => 1 - Math.pow(1 - p, 3);
+const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eback = p => { const c = 1.6; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const eexpo = p => p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+function put(el, o) {
+  const { x = 540, y = 960, s = 1, r = 0, rx = 0, ry = 0, op = 1, blur = 0, persp = 0 } = o;
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)${persp ? ` perspective(${persp}px)` : ""} rotateX(${rx}deg) rotateY(${ry}deg) rotate(${r}deg) scale(${s})`;
+  el.style.opacity = op; el.style.filter = blur > .05 ? `blur(${blur}px)` : "none";
+  el.style.visibility = op <= 0.001 ? "hidden" : "visible";
+}
+function letters(el, text, gradFrom) {
+  el.innerHTML = [...text].map((c, i) => `<span class="ch${i >= gradFrom ? " grad" : ""}">${c}</span>`).join("");
+  return [...el.children];
+}
+const t1 = letters($("s1title"), "BIOҰБТ", 3), tf = letters($("ftitle"), "BIOҰБТ", 3);
+function stagger(chs, t, start, step, dur) {
+  chs.forEach((c, i) => { const p = seg(t, start + i * step, start + i * step + dur), e = eback(p);
+    c.style.transform = `translateY(${(1 - e) * 90}px) scale(${lerp(.6, 1, e)})`; c.style.opacity = clamp(p * 2); c.style.filter = p < 1 ? `blur(${(1 - p) * 14}px)` : "none"; });
+}
+// particles (seeded)
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const dots = Array.from({ length: 46 }, () => ({ x: rnd() * 1080, y: rnd() * 1920, v: 20 + rnd() * 60, s: .4 + rnd() * 1.2, ph: rnd() * 6.28 }));
+$("dots").innerHTML = dots.map(() => '<i class="dot"></i>').join("");
+const dotEls = [...$("dots").children];
+
+// Scene 3 clips
+const CLIPS = [
+  { kind: "phone", img: "shots/m_test_q1.png", img2: "shots/m_test_q1_sel.png", t: "ҰБТ сынамасы", s: "Таймер · уақытты өзің таңда: 30 / 40 / 60 мин" },
+  { kind: "win", img: "shots/d_app_mock.png", t: "Нағыз ҰБТ базасы", s: "2026 жылғы Нағыз ҰБТ · Наурыз ҰБТ · ҰТО", fx: .62, fy: .3 },
+  { kind: "win", img: "shots/d_app_chapters.png", t: "Тараулық тест", s: "9 тарау: Ботаникадан Эволюцияға дейін", fx: .6, fy: .4 },
+  { kind: "win", img: "shots/d_app_real.png", t: "ҰБТ-да жиі кездесетін сұрақтар", s: "Күн сайын 20 сұрақ ашылады", fx: .6, fy: .35 },
+  { kind: "win", img: "shots/d_app_plants.png", t: "Негізгі жаттау керек ақпараттар", s: "Кесте · Жаттау · Өзіңді тексер", fx: .6, fy: .35 },
+  { kind: "win", img: "shots/d_app_leaderboard.png", t: "Рейтинг", s: "Айдың үздік оқушысына сыйлық", fx: .62, fy: .28 }
+];
+$("clips").innerHTML = CLIPS.map((c, i) => c.kind === "phone"
+  ? `<div class="abs phone" id="cl${i}" style="width:560px"><div class="island"></div><div class="view"><img class="full" src="${c.img}"><img class="full" id="cl${i}b" src="${c.img2}" style="opacity:0"><div class="ripple" id="rp3"></div></div></div>`
+  : `<div class="abs win" id="cl${i}"><div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><div class="url">🔒 danameirambekkyzi-oss.github.io/biology</div></div><div class="view"><img class="full" id="cl${i}i" src="${c.img}"></div></div>`).join("");
+
+// sidebar nav item y-centres in d_app_dashboard (fraction of image height)
+const NAV = [216, 286, 367, 448, 529, 624, 705, 774].map(v => v / 1350);
+let focus = null;
+
+function ripple(el, t, at, x, y) {
+  const p = seg(t, at, at + .5); el.style.display = p > 0 && p < 1 ? "block" : "none";
+  const r = lerp(10, 90, eo(p)); Object.assign(el.style, { left: x - r + "px", top: y - r + "px", width: 2 * r + "px", height: 2 * r + "px", opacity: 1 - p });
+}
+
+function render(t) {
+  // ---------- background ----------
+  const bl = (id, x, y) => $(id).style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)`;
+  bl("b1", 300 + Math.sin(t * .5) * 160, 500 + Math.cos(t * .4) * 200);
+  bl("b2", 820 + Math.cos(t * .45) * 160, 1450 + Math.sin(t * .35) * 220);
+  bl("b3", 600 + Math.sin(t * .3 + 2) * 260, 980 + Math.cos(t * .5) * 300);
+  $("grid").style.transform = `translateY(${(t * 30) % 90}px)`;
+  dotEls.forEach((d, i) => { const o = dots[i]; const y = ((o.y - t * o.v) % 1920 + 1920) % 1920;
+    d.style.transform = `translate(${o.x + Math.sin(t + o.ph) * 20}px,${y}px) scale(${o.s})`; d.style.opacity = .25 + .35 * Math.sin(t * 2 + o.ph) ** 2; });
+
+  // ---------- Scene 1 (0–3) ----------
+  {
+    const pin = eo(seg(t, 0, 2.5)), pout = seg(t, 2.55, 3.0), eout = Math.pow(pout, 2.2);
+    put($("lap1"), { y: lerp(1420, 1130, pin) + lerp(0, -170, eout), s: lerp(.6, 1, pin) * lerp(1, 3.2, eout), rx: lerp(32, 3, pin), persp: 1800,
+      op: seg(t, 0, .35) * (1 - seg(t, 2.85, 3.0)), blur: eout * 8 });
+    $("lap1").querySelector("img").style.transform = `translateY(${-eio(seg(t, 1.3, 2.6)) * 250}px)`;
+    stagger(t1, t, .3, .07, .5);
+    const tout = seg(t, 2.55, 2.85);
+    put($("s1title"), { y: 420 - eo(tout) * 120, op: 1 - tout, blur: tout * 10 });
+    const ps = eo(seg(t, .95, 1.45));
+    put($("s1sub"), { y: 575 + (1 - ps) * 40 - eo(tout) * 120, op: ps * (1 - tout), blur: (1 - ps) * 8 + tout * 10 });
+  }
+
+  // ---------- chip + scene 2 caption ----------
+  {
+    const pi = eo(seg(t, 3.0, 3.4)), po = seg(t, 13.75, 14.0);
+    put($("chip"), { y: 130 - (1 - pi) * 60, op: pi * (1 - po) });
+    const words = [...$("s2cap").querySelectorAll(".ch")];
+    words.forEach((w, i) => { const p = seg(t, 3.15 + i * .12, 3.6 + i * .12), e = eback(p);
+      w.style.transform = `translateY(${(1 - e) * 70}px) scale(${lerp(.5, 1, e)})`; w.style.opacity = clamp(p * 2); });
+    const co = seg(t, 7.7, 7.95);
+    put($("s2cap"), { y: 375, op: (t > 3.1 ? 1 : 0) * (1 - co), s: 1 + co * .2, blur: co * 10 });
+  }
+
+  // ---------- Scene 2A: phone scroll (3.0–5.6) ----------
+  {
+    const pi = eback(seg(t, 3.0, 3.55)), po = seg(t, 5.25, 5.6), eout = po * po;
+    put($("ph2"), { y: lerp(2300, 1210, pi), x: 540 - eout * 1000, ry: lerp(-18, 0, seg(t, 3, 3.55)) + eout * 25, persp: 2400,
+      op: (t >= 3.0 && t < 5.6) ? 1 : 0, blur: eout * 18 });
+    const sc = eio(seg(t, 3.6, 4.55)) * 860 + eio(seg(t, 4.95, 5.45)) * 1500;
+    $("ph2").querySelector("img").style.transform = `translateY(${-sc}px)`;
+    ripple($("rp2"), t, 4.62, 262, 1095 - 860);
+  }
+
+  // ---------- Scene 2B: desktop + sidebar (5.45–8.0) ----------
+  {
+    const pi = eo(seg(t, 5.45, 5.85));
+    const z = eio(seg(t, 5.95, 6.45)), k = lerp(1, 2.15, z);
+    // focus point: sidebar (x≈95, y≈52+235 within window of 1040×702) relative to window centre
+    const fx = -421, fy = -65;
+    const zo = seg(t, 7.7, 8.0);
+    put($("win2"), { x: lerp(1700, 540, pi) - fx * k * z, y: 1180 - fy * k * z, s: k * (1 + zo * .6),
+      op: (t >= 5.45 && t < 8.0 ? 1 : 0) * (1 - zo), blur: (1 - pi) * 14 + zo * 14, ry: (1 - pi) * -20, persp: 2400 });
+    const vw = 1040, vh = 650;
+    const hp = seg(t, 6.35, 7.65) * 7, i0 = Math.floor(hp), fr = eio(hp - i0);
+    const yc = lerp(NAV[Math.min(i0, 7)], NAV[Math.min(i0 + 1, 7)], fr) * vh;
+    const hl = $("hl2"); const ho = seg(t, 6.3, 6.45);
+    Object.assign(hl.style, { left: 9 + "px", width: 180 + "px", top: yc - 15 + "px", height: 30 + "px", opacity: ho });
+    const cur = $("cur2");
+    Object.assign(cur.style, { left: lerp(330, 150, eo(seg(t, 5.9, 6.4))) + "px", top: lerp(560, yc - 4, eo(seg(t, 5.9, 6.4))) + "px", width: "20px", height: "20px", opacity: seg(t, 5.85, 6.1) });
+  }
+
+  // ---------- Scene 3 (8.0–14.0) ----------
+  {
+    const bars = [...$("prog").children];
+    const on = t >= 8 && t < 14;
+    put($("prog"), { y: 222, op: on ? 1 : 0 });
+    bars.forEach((b, i) => b.firstChild.style.width = clamp(t - 8 - i) * 100 + "%");
+    CLIPS.forEach((c, i) => {
+      const a = 8 + i, el = $("cl" + i), lt = t - a;
+      if (lt < -0.01 || lt > 1.0) { el.style.visibility = "hidden"; el.style.opacity = 0; return; }
+      const dir = i % 2 ? -1 : 1;
+      const pi = eexpo(seg(lt, 0, .28)), po = Math.pow(seg(lt, .84, 1.0), 2);
+      const kb = 1 + eio(seg(lt, .1, 1)) * .08;
+      const yb = c.kind === "phone" ? 930 : 900;
+      put(el, { x: 540 + (1 - pi) * 900 * dir - po * 900 * dir, y: yb, s: lerp(.85, 1, pi) * kb * (c.kind === "win" ? 1.22 : 1), ry: (1 - pi) * 22 * dir - po * 22 * dir, persp: 2400,
+        r: (1 - pi) * 3 * dir, op: 1, blur: (1 - pi) * 20 + po * 20 });
+      if (c.kind === "phone") {
+        $("cl" + i + "b").style.opacity = lt > .5 ? 1 : 0;
+        ripple($("rp3"), t, a + .48, 282, 482);
+      } else {
+        const z = 1 + eio(seg(lt, .15, 1)) * .35, img = $("cl" + i + "i");
+        img.style.transformOrigin = `${c.fx * 100}% ${c.fy * 100}%`; img.style.transform = `scale(${z})`;
+      }
+    });
+    // label
+    const i = clamp(Math.floor(t - 8), 0, 5), lt = t - 8 - i;
+    if (on) { $("labn").textContent = String(i + 1).padStart(2, "0") + " / 06"; $("labt").textContent = CLIPS[i].t; $("labs").textContent = CLIPS[i].s; }
+    const pl = eo(seg(lt, .12, .42)), plo = seg(lt, .86, 1.0);
+    put($("lab"), { y: 1640 + (1 - pl) * 50, op: on ? pl * (1 - plo) : 0, blur: (1 - pl) * 8 });
+  }
+
+  // ---------- Scene 4 desk (14.0–16.3) ----------
+  renderDesk(t);
+
+  // ---------- Final (16.1–19.5) ----------
+  {
+    const on = t >= 16.05;
+    const pl = eback(seg(t, 16.1, 16.6));
+    put($("flogo"), { y: 560, s: lerp(.2, 1, pl), r: (1 - pl) * -25, op: on ? clamp(seg(t, 16.1, 16.3)) : 0 });
+    put($("ftitle"), { y: 820, op: on ? 1 : 0, s: 1 + Math.max(0, t - 17) * .012 });
+    stagger(tf, t, 16.3, .07, .5);
+    const ptg = eo(seg(t, 16.95, 17.45));
+    put($("ftag"), { y: 1015 + (1 - ptg) * 50, op: ptg, blur: (1 - ptg) * 10 });
+    const pc = eback(seg(t, 17.5, 18.0));
+    const pulse = 1 + Math.max(0, Math.sin((t - 18.1) * 5)) * .025 * (t > 18.1 ? 1 : 0);
+    put($("fcta"), { y: 1265, s: lerp(.6, 1, pc) * pulse, op: clamp(seg(t, 17.5, 17.7)) });
+    $("shine").style.left = lerp(-200, 1000, seg(t, 18.15, 18.75)) + "px";
+    const pu = eo(seg(t, 18.0, 18.4));
+    put($("furl"), { y: 1420 + (1 - pu) * 20, op: pu });
+  }
+
+  // flashes
+  const fl = Math.max(
+    1 - Math.abs(t - 2.97) / .12,
+    (1 - Math.abs(t - 16.08) / .2) * 1.0,
+    (1 - Math.abs(t - 8.0) / .08) * .35
+  );
+  $("flash").style.opacity = clamp(fl);
+}
+
+function renderDesk(t) {
+  const on = t >= 13.95 && t < 16.15;
+  const pl = eback(seg(t, 14.0, 14.7)), pp = eback(seg(t, 14.25, 14.95));
+  put($("lap4"), { x: 495, y: 1080 + (1 - pl) * 700, rx: lerp(25, 5, seg(t, 14, 14.7)), persp: 2000, op: clamp(seg(t, 14, 14.2)) });
+  put($("ph4"), { x: 860 + (1 - pp) * 500, y: 1250, r: (1 - pp) * 12 + 4, op: clamp(seg(t, 14.25, 14.4)) });
+  put($("floor"), { x: 540, y: 1730, op: 1 });
+  $("floor").style.left = $("floor").style.top = "0";
+  const z = Math.pow(seg(t, 15.05, 16.1), 2.4);
+  const desk = $("desk");
+  if (!focus && t >= 15.05) {
+    desk.style.transform = "none";
+    const r = $("logoMark").getBoundingClientRect(); focus = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  const k = lerp(1, 9, z);
+  if (focus) { desk.style.transformOrigin = `${focus.x}px ${focus.y}px`;
+    desk.style.transform = `translate(${(540 - focus.x) * z}px,${(960 - focus.y) * z}px) scale(${k})`; }
+  else desk.style.transform = "none";
+  desk.style.opacity = on ? 1 : 0; desk.style.visibility = on ? "visible" : "hidden";
+  desk.style.filter = z > .3 ? `blur(${(z - .3) * 6}px)` : "none";
+}
+window.render = render;
+window.ready = Promise.all([document.fonts.ready, ...[...document.images].map(i => i.decode().catch(() => 0))]);
+render(0);
+</script></body></html>
