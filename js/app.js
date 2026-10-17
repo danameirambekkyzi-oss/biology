@@ -367,7 +367,7 @@
           <p class="lead">${esc(CFG.hero.lead)}</p>
           <div class="hero-cta">
             <a class="btn btn-cta btn-lg" href="${u ? "#/app" : "#/register"}">${u ? "Кабинетке өту" : "Тіркеліп, дайындықты бастау"} ${ic("arrow", 18)}</a>
-            <button class="btn btn-ghost btn-lg" data-act="scroll-to" data-id="calc">Балл калькуляторы</button>
+            <button class="btn btn-ghost btn-lg" data-act="scroll-to" data-id="results">Оқушылар нәтижесі</button>
           </div>
           <div class="hero-stats">
             ${(CFG.hero.stats || []).map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("")}
@@ -393,8 +393,6 @@
         </div>
       </div></section>
 
-      ${calcHtml()}
-
       ${results.length ? `
       <section class="section" id="results" style="padding-top:0"><div class="container">
         <div class="section-head"><h2>Оқушыларымның ҰБТ нәтижелері</h2><p class="muted">Нақты ҰБТ сертификаттарындағы баллдар</p></div>
@@ -411,8 +409,6 @@
       ${contactsHtml() ? `<section class="section" style="padding-top:0"><div class="container"><div class="card" style="text-align:center">
         <h3>${AUTHOR.name ? esc(AUTHOR.name) : "Байланыс"}</h3><p class="muted">Сұрағың бар ма? Жаз!</p>${contactsHtml()}</div></div></section>` : ""}
       <footer class="footer">© ${new Date().getFullYear()} ${esc(SITE)} · Биологиядан ҰБТ-ға дайындық${AUTHOR.name ? " · " + esc(AUTHOR.name) : ""}</footer>`;
-    $$(".calc input").forEach(i => i.addEventListener("input", updateCalc));
-    updateCalc();
   }
 
   /* ---- ҰБТ балл калькуляторы ---- */
@@ -1732,7 +1728,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610171856")
+    import("./cloud.js?v=202610171916")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
