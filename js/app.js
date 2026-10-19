@@ -1119,7 +1119,9 @@
       const cand = shuffle(ROWS.filter(x => x.g === g && !used.has(x.id) && short(x) && x.f.length <= 90));
       if (cand.length < 4) continue;
       const pick = [];
-      for (const x of cand) { if (pick.length < 4 && pick.every(y => !pqClash(x, y))) pick.push(x); }
+      // matchApart: мағынасы жақын қасиеттер (мыс. кариотипі мен себебі) бір сәйкестендіруде бірге келмейді
+      const apart = (x, y) => (N.matchApart || []).some(set => set.includes(x.f) && set.includes(y.f));
+      for (const x of cand) { if (pick.length < 4 && pick.every(y => !pqClash(x, y) && !apart(x, y))) pick.push(x); }
       if (pick.length < 4) continue;
       const [a, b] = pick; const opts = shuffle(pick);
       take(a); take(b);
@@ -1728,7 +1730,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610172138")
+    import("./cloud.js?v=202610191524")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
