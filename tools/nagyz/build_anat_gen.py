@@ -41,7 +41,7 @@ for k in range(count):
         else:
             kind, q, opts, ans = it[:4]; corr = [L.index(a) for a in ans]
             assert all(c < len(opts) for c in corr), q
-            if kind == "s": assert len(opts) in (2, 3, 4) and len(corr) == 1, q
+            if kind == "s": assert 2 <= len(opts) <= 6 and len(corr) == 1, q
             else: e["type"] = "multi"; assert len(opts) >= 5, q
             e.update(q=q[:1].upper() + q[1:], options=opts, correct=corr)
             extra = it[4] if len(it) > 4 else {}
