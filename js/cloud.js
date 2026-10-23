@@ -189,6 +189,8 @@ window.Cloud = {
     const snap = await F.getDocs(F.collection(fs, "users"));
     return snap.docs.map(d => Object.assign({}, d.data(), { id: d.id })).filter(u => u.role !== "teacher");
   },
+  // Мұғалім кабинетінен: оқушының email-іне құпия сөзді жаңарту сілтемесін жіберу
+  async sendReset(email) { try { await A.sendPasswordResetEmail(auth, email); } catch (e) { throw fail(msg(e)); } },
   async resetDevice(uid) { await F.updateDoc(userRef(uid), { deviceId: "", device: "", deviceAt: null }); },
   async setBlocked(uid, blocked) { await F.updateDoc(userRef(uid), { blocked }); },
   async setPremium(uid, until) { await F.updateDoc(userRef(uid), { premiumUntil: until || 0, premiumSetAt: Date.now() }); }

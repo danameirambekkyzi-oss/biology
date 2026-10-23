@@ -1279,11 +1279,12 @@
             <td>${x.deviceId ? `${esc(x.device || "Бекітілген")}<br><small class="muted">${x.deviceAt ? fmtDate(x.deviceAt) : ""}</small>` : `<span class="muted">Бос</span>`}</td>
             <td class="t-actions">
               ${x.deviceId ? `<button class="btn btn-ghost btn-sm" data-act="t-device" data-id="${x.id}">Құрылғыны босату</button>` : ""}
+              ${x.email ? `<button class="btn btn-ghost btn-sm" data-act="t-pass" data-email="${esc(x.email)}" data-name="${esc(x.name || "")}">Құпия сөзді жаңарту</button>` : ""}
               <button class="btn btn-sm ${x.blocked ? "btn-green" : "btn-outline"}" data-act="t-block" data-id="${x.id}" data-b="${x.blocked ? 0 : 1}">${x.blocked ? "Ашу" : "Бұғаттау"}</button>
             </td></tr>`).join("") || `<tr><td colspan="10" class="muted" style="text-align:center;padding:20px">Оқушы табылмады</td></tr>`}
         </tbody></table></div>
       </div>
-      <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
+      <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Құпия сөзді жаңарту» — оқушының email-іне жаңа құпия сөз қоятын сілтеме кетеді (спам қалтасын да қарау керек). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
   }
   function loadStudents() {
     return window.Cloud.students().then(l => { state.students = l; }).catch(e => { toast(window.Cloud.errorText(e)); state.students = []; });
@@ -1629,6 +1630,8 @@
     },
     "t-device": el => confirmModal("Құрылғыны босату", "Оқушы келесі жолы кірген құрылғыға аккаунт қайта бекітіледі. Жалғастырасыз ба?", "Босату", () =>
       window.Cloud.resetDevice(el.dataset.id).then(() => { toast("Құрылғы босатылды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)))),
+    "t-pass": el => confirmModal("Құпия сөзді жаңарту", `${el.dataset.name || "Оқушы"} email-іне (${el.dataset.email}) жаңа құпия сөз қоятын сілтеме жіберіледі. Оқушы сілтемені ашып, жаңа құпия сөзді өзі жазады. Жалғастырасыз ба?`, "Жіберу", () =>
+      window.Cloud.sendReset(el.dataset.email).then(() => toast("Сілтеме жіберілді: " + el.dataset.email)).catch(e => toast(window.Cloud.errorText(e)))),
     "t-block": el => {
       const b = el.dataset.b === "1";
       const run = () => window.Cloud.setBlocked(el.dataset.id, b).then(() => { toast(b ? "Оқушы бұғатталды" : "Бұғат алынды"); state.students = null; render(); }).catch(e => toast(window.Cloud.errorText(e)));
@@ -1730,7 +1733,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610210835")
+    import("./cloud.js?v=202610230824")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
