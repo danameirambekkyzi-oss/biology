@@ -1976,7 +1976,7 @@
      "items": [
       {
        "text": "V<sub>2</sub>",
-       "answer": 1
+       "answer": 3
       },
       {
        "text": "V<sub>1</sub>",
@@ -1984,7 +1984,7 @@
       }
      ],
      "correct": [
-      1,
+      3,
       0
      ]
     },
