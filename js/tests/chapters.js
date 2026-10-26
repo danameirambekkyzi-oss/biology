@@ -6619,7 +6619,7 @@ window.CHAPTER_TESTS = [
        2
       ],
       "img": [
-       "img/chapters/zoo-2/q19.png"
+       "img/chapters/zoo-2/zoo2_q19.png"
       ]
      },
      {

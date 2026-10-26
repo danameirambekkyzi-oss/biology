@@ -19,6 +19,8 @@ MATCH1 = [
 # Тест-2 түзетулері: 90 — суреттер элементтер; 102 — бос жол (алынып тасталады);
 # 103+104 — бір сәйкестендіру, файлда жауабы белгіленбеген
 FIX2 = {90: {"items": ["1-сурет", "2-сурет"], "correct": [3, 0]}}
+# мұғалім ауыстырған суреттер: (тест, файл) → tools/chapters ішіндегі сурет
+IMG_FIX = {("zoo-2", "q19.png"): "zoo2_q19.png"}  # қоянның жүйке жүйесі
 DROP2 = {102, 104}
 JOIN2 = {103: (["Бір ғана қанайналым шеңбері бар", "Жүрегі төрт қуысты"], [0, 1], 104)}
 def tx(s): return " ".join(s.split())
@@ -26,6 +28,9 @@ def imgs(e, q, idir, img_src):
     files = []
     from PIL import Image
     for f in q.get("img") or []:
+        tid = idir.rsplit("/", 1)[1]
+        if (tid, f) in IMG_FIX:
+            n = IMG_FIX[tid, f]; shutil.copy(f"{repo}/tools/chapters/{n}", f"{repo}/{idir}/{n}"); files.append(f"{idir}/{n}"); continue
         shutil.copy(os.path.join(img_src, f), f"{repo}/{idir}/{f}"); files.append(f"{idir}/{f}")
         im = Image.open(f"{repo}/{idir}/{f}"); im.thumbnail((1400, 1400)); im.save(f"{repo}/{idir}/{f}", optimize=True)
     if files: e["img"] = files
