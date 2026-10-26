@@ -6339,9 +6339,23 @@ window.CHAPTER_TESTS = [
       ],
       "correct": [
        2
+      ]
+     },
+     {
+      "id": "zoo-2-q1b",
+      "module": "zoology",
+      "q": "Жүйке жүйесін белгіле",
+      "options": [
+       "Түйінді",
+       "Түтікше тәрізді",
+       "Сатылы",
+       "Бағанды жүйке жүйесі"
+      ],
+      "correct": [
+       1
       ],
       "img": [
-       "img/chapters/zoo-2/q1.png"
+       "img/chapters/zoo-2/nerve.png"
       ]
      },
      {
@@ -6619,7 +6633,7 @@ window.CHAPTER_TESTS = [
        2
       ],
       "img": [
-       "img/chapters/zoo-2/zoo2_q19.png"
+       "img/chapters/zoo-2/q19.png"
       ]
      },
      {
