@@ -1,6 +1,6 @@
 # a.docx: сұрақ — n1.0 (ilvl 0) тізім элементі; нұсқалар — келесі абзацтар (тізім элементтері немесе «А.» әріптері)
 # Дұрыс жауап: Heading стилі немесе қалың (bold) жазу
-import sys, re, json, docx
+import sys, re, json, os, docx
 from docx.oxml.ns import qn
 d = docx.Document(sys.argv[1])
 paras = []
@@ -19,13 +19,20 @@ for el in d.element.body.iterchildren():
         nid = ni.get(qn('w:val')) if ni is not None else None
         lvl = il.get(qn('w:val')) if il is not None else '0'
     text = ''.join(chars)
-    if not text.strip(): continue
+    blips = [b.get(qn('r:embed')) for b in el.iter('{http://schemas.openxmlformats.org/drawingml/2006/main}blip')]
+    imgs = [d.part.related_parts[b] for b in blips if b in d.part.related_parts]
+    if not text.strip():
+        if imgs and paras: paras[-1].setdefault("img", []).extend(imgs)
+        continue
     m = ''.join(('1' if b else '0') * len(t) for t, b in zip(chars, mask))
-    paras.append({"t": text, "m": m, "nid": nid, "lvl": lvl, "head": head})
+    paras.append({"t": text, "m": m, "nid": nid, "lvl": lvl, "head": head, "img": imgs})
 # сұрақтарға бөлу
 qs, cur = [], None
+QN = set(os.environ.get("QNIDS", "1").split(",")); STOP = os.environ.get("STOPNID")
 for p in paras:
-    if p["nid"] == "1" and p["lvl"] == "0":
+    if STOP and p["nid"] == STOP: break  # бұдан әрі (сәйкестендіру бөлімі) — қолмен енгізіледі
+    if (p["nid"] in QN and p["lvl"] == "0") or (p["nid"] is None and re.match(r'^\s*\d+\s*\.\s*\D', p["t"])):
+        if p["nid"] is None: p = dict(p, t=re.sub(r'^\s*\d+\s*\.\s*', '', p["t"]), m=p["m"][len(p["t"]) - len(re.sub(r'^\s*\d+\s*\.\s*', '', p["t"])):])
         cur = {"paras": [p]}; qs.append(cur)
     elif cur is not None:
         cur["paras"].append(p)
@@ -68,6 +75,12 @@ for qi, q in enumerate(qs, 1):
         sig = [f for c, f in zip(bt, bm) if not c.isspace()]
         corr = sum(1 for f in sig if f == '1') > len(sig) / 2 if sig else False
         if body: clean.append({"t": body, "c": corr})
-    out.append({"n": qi, "q": re.sub(r'\s+', ' ', qtext).strip(), "opts": clean})
+    files = []
+    if len(sys.argv) > 3:
+        os.makedirs(sys.argv[3], exist_ok=True)
+        for j, part in enumerate([im for p in q["paras"] for im in p.get("img", [])]):
+            fn = f"q{qi}{'' if j == 0 else '_' + str(j)}{os.path.splitext(part.partname)[1]}"
+            open(os.path.join(sys.argv[3], fn), "wb").write(part.blob); files.append(fn)
+    out.append({"n": qi, "q": re.sub(r'\s+', ' ', qtext).strip(), "opts": clean, "img": files})
 json.dump(out, open(sys.argv[2], "w"), ensure_ascii=False, indent=1)
 print(len(out))
