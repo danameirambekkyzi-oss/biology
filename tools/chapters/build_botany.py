@@ -4,7 +4,10 @@ import json, sys, os, shutil
 a, b, imgdir, repo = sys.argv[1:5]
 NOTE = "Егер ботаника тарауынан әлсіз болсаң, бұл жерде сенің біліміңді күшейтуге өте көптеген тесттер бар. Жаттығып, балыңды арттыр!"
 # Түзетулер (файлдағы техникалық ақаулар)
-FIX2 = {101: {"items": ["1-сурет", "2-сурет"]}}
+FIX2 = {101: {"items": ["1-сурет", "2-сурет"]},
+        107: {"opts": ["екі тұқымды ұрықтанған ұрық қабыршағы", "аталық бүрдегі тозаңның пісіп жетілуі", "тозаңы", "екі тұқымды ұрық қабыршағы"]}}
+# мұғалім скриншотпен түзеткен сұрақтар: (нұсқалар, дұрыс индекстер)
+FIX1 = {133: (["Қаңқа", "Қабық қабаты орналасқан", "Електәрізді түтікшелер бар", "Жасымықшасы бар", "Өзкізетін түтіктер бар", "Сүрек қабаты бар"], [0, 2, 4])}
 TEXT_FIX = {"С у жинайтын": "Су жинайтын", " (4 дұрыс жауап)": ""}
 def tx(s):
     for k, v in TEXT_FIX.items(): s = s.replace(k, v)
@@ -17,6 +20,9 @@ def build(src, tid, img_src=None):
     for q in json.load(open(src)):
         e = {"id": f"{tid}-q{q['n']}", "module": "botany"}
         fix = (FIX2 if tid == "bot-2" else {}).get(q["n"], {})
+        if tid == "bot-1" and q["n"] in FIX1:
+            o, c = FIX1[q["n"]]; q["opts"] = [{"t": t, "c": i in c} for i, t in enumerate(o)]
+        if "opts" in fix: q["opts"] = [dict(o, t=t) for o, t in zip(q["opts"], fix["opts"])]
         if q.get("items"):
             items = [{"text": tx(fix["items"][i] if "items" in fix else it["text"]), "answer": it["answer"]} for i, it in enumerate(q["items"])]
             assert len(items) == 2 and len(q["opts"]) == 4, q["n"]
@@ -31,6 +37,8 @@ def build(src, tid, img_src=None):
             files = []
             for f in q["img"]:
                 shutil.copy(os.path.join(img_src, f), f"{repo}/{idir}/{f}"); files.append(f"{idir}/{f}")
+                from PIL import Image
+                im = Image.open(f"{repo}/{idir}/{f}"); im.thumbnail((1400, 1400)); im.save(f"{repo}/{idir}/{f}", optimize=True)
             e["img"] = files
         out.append(e)
     return out
