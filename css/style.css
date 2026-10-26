@@ -706,3 +706,6 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .sb-logout { margin-top: auto; width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; color: var(--red); }
 .sb-logout .ni { color: var(--red); }
 .sidebar-promo + .sb-logout { margin-top: 10px; }
+.ch-note { display: flex; gap: 12px; align-items: center; margin: 16px 0; font-weight: 700; font-size: 16px; line-height: 1.45; background: linear-gradient(135deg, var(--purple-50), color-mix(in srgb, var(--green) 10%, var(--surface))); border-color: color-mix(in srgb, var(--purple) 25%, transparent); }
+.ch-note > .ic { color: var(--purple); flex-shrink: 0; }
+.ch-tests { margin-bottom: 16px; }

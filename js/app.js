@@ -5,7 +5,10 @@
   // Сұрақтар: жалпы қор + сынама папкаларындағы тесттер (js/tests/*.js)
   const FOLDERS = window.TEST_FOLDERS || [];
   const TESTS = [].concat(...FOLDERS.map(f => f.tests.map(t => Object.assign({ folder: f }, t))));
-  const Q = window.QUESTIONS.concat(...TESTS.map(t => t.questions));
+  // «Тараулық тест» бөлімінің аталған тесттері (мыс. «Ботаника тарауы бойынша тест-1»)
+  const CHAPTERS = window.CHAPTER_TESTS || [];
+  const CH_TESTS = [].concat(...CHAPTERS.map(c => c.tests.map(t => Object.assign({ chapter: c }, t))));
+  const Q = window.QUESTIONS.concat(...TESTS.map(t => t.questions), ...CH_TESTS.map(t => t.questions));
   const MODULES = window.MODULES;
   const QBY = Object.fromEntries(Q.map(q => [q.id, q]));
   const CFG = window.CONFIG, SITE = CFG.siteName, AUTHOR = CFG.author || {};
@@ -867,6 +870,13 @@
     const i = MODULES.findIndex(x => x.id === id);
     if (i < 0) return pageChapters(u);
     const m = MODULES[i], p = moduleProgress(u, id), pct = p.total ? Math.round(p.solved / p.total * 100) : 0;
+    const ch = CHAPTERS.find(c => c.module === id);
+    const best = tid => { const h = u.history.filter(x => x.testId === tid); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; };
+    const tests = ch ? `${ch.note ? `<div class="card ch-note">${ic("bulb", 24)}<span>${esc(ch.note)}</span></div>` : ""}
+      <div class="grid g-3 ch-tests">${ch.tests.map(t => { const b = best(t.id); return `
+        <div class="card test-card"><div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
+          <small class="muted">${t.questions.length} тапсырма · бір жауапты, көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
+          <button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button></div>`; }).join("")}</div>` : "";
     return `<a href="#/app/chapters" class="back-link">← Барлық тараулар</a>
       <div class="card chapter-head">
         <span class="m-num m-num-lg">${chNum(i)}</span>
@@ -874,10 +884,11 @@
           ${p.total ? `<div class="bar"><i style="width:${pct}%"></i></div><small class="muted">${pct}% аяқталды · ${p.total} сұрақ · ${p.mistakes} қате</small>` :
             `<small class="muted">Бұл тарауға сұрақтар жақында қосылады.</small>`}</div>
         ${p.total ? `<div class="chapter-actions">
-          <button class="btn btn-cta btn-lg" data-act="start-topic" data-id="${m.id}">Тестті бастау</button>
+          ${ch ? "" : `<button class="btn btn-cta btn-lg" data-act="start-topic" data-id="${m.id}">Тестті бастау</button>`}
           ${p.mistakes ? `<button class="btn btn-ghost btn-lg" data-act="start-mistakes" data-id="${m.id}">Қатемен жұмыс</button>` : ""}
         </div>` : ""}
       </div>
+      ${tests}
       <div class="card">${rulesHtml()}</div>`;
   }
 
@@ -1391,6 +1402,10 @@
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.folder.title} · ${t.title} — премиум тест. Әр папкадағы Тест-1 тегін.`);
       return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
     }
+    if (mode === "ch") {
+      const t = CH_TESTS.find(x => x.id === id); if (!t) return;
+      return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
+    }
     if (mode === "mock") {
       if (!hasPremium(u)) return upgradeModal();
       return startTest(buildMock(u));
@@ -1662,6 +1677,7 @@
     "calc-step": el => { const inp = document.getElementById(el.dataset.for); inp.value = +inp.value + +el.dataset.d; updateCalc(); },
     "start-express": () => startMode("express"),
     "start-topic": el => startMode("topic", el.dataset.id),
+    "start-ch": el => startMode("ch", el.dataset.id),
     "start-mistakes": el => startMode("mistakes", el.dataset.id),
     "start-hist": el => startMode("hist", el.dataset.d),
     pick: el => {
@@ -1733,7 +1749,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610231347")
+    import("./cloud.js?v=202610262128")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
