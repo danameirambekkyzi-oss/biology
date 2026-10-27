@@ -709,3 +709,6 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .ch-note { display: flex; gap: 12px; align-items: center; margin: 16px 0; font-weight: 700; font-size: 16px; line-height: 1.45; background: linear-gradient(135deg, var(--purple-50), color-mix(in srgb, var(--green) 10%, var(--surface))); border-color: color-mix(in srgb, var(--purple) 25%, transparent); }
 .ch-note > .ic { color: var(--purple); flex-shrink: 0; }
 .ch-tests { margin-bottom: 16px; }
+.ch-tests .tc-top { font-size: 15px; line-height: 1.4; align-items: flex-start; }
+.ch-tests .tc-top b { font-weight: 650; }
+.ch-tests .test-card .btn { margin-top: auto; }
