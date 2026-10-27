@@ -32,6 +32,18 @@ service cloud.firestore {
       allow delete: if isTeacher();
     }
 
+    // Тесттегі қате туралы хабарлама: оқушы тек өз атынан, бір сұраққа бір рет жазады; оқитын, өшіретін — мұғалім
+    match /reports/{id} {
+      allow get: if isTeacher() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow list, delete: if isTeacher();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+                    && id.matches(request.auth.uid + '_.*')
+                    && request.resource.data.keys().hasOnly(['uid', 'name', 'phone', 'qid', 'test', 'num', 'q', 'opts', 'answer', 'kind', 'text', 'at'])
+                    && request.resource.data.get('text', '').size() <= 1000
+                    && request.resource.data.get('q', '').size() <= 3000
+                    && request.resource.data.get('opts', '').size() <= 3000;
+    }
+
     // Айлық рейтинг
     match /leaderboard/{uid} {
       allow read: if signedIn();

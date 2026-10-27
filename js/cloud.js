@@ -2,7 +2,7 @@
  * Firebase арқылы жұмыс істейтін бұлттық режим (js/config.js → firebase толтырылғанда қосылады).
  *   - Firebase Authentication: email + құпия сөз (оқушы телефонмен де кіре алады)
  *   - Cloud Firestore: users/{uid} — профиль мен прогресс, phones/{нөмір} — нөмір → email,
- *                      leaderboard/{uid} — айлық рейтинг
+ *                      leaderboard/{uid} — айлық рейтинг, reports/{uid_сұрақ} — оқушы тесттен тапқан қате туралы хабарлама
  *   - «Бір аккаунт — бір құрылғы»: аккаунт алғаш кірген құрылғыға бекітіледі, оны тек мұғалім босатады.
  * Қауіпсіздік ережелері: firestore.rules
  */
@@ -184,7 +184,24 @@ window.Cloud = {
     return u;
   },
 
+  // ---- Тесттегі қате туралы хабарлама (оқушы бір сұраққа бір рет жібереді) ----
+  async report(r) {
+    const uid = auth.currentUser && auth.currentUser.uid;
+    if (!uid) throw fail("Алдымен аккаунтқа кіріңіз.");
+    const ref = F.doc(fs, "reports", (uid + "_" + r.qid).replace(/[\/]/g, "-").slice(0, 300));
+    try {
+      if ((await F.getDoc(ref)).exists()) throw fail("Бұл сұрақ бойынша хабарламаңыз бұрын жіберілген. Мұғалім жақында қарайды.");
+    } catch (e) { if (e.userMessage) throw e; /* оқу рұқсаты жоқ — жазып көреміз */ }
+    try { await F.setDoc(ref, Object.assign({}, r, { uid, at: Date.now() })); }
+    catch (e) { throw e.code === "permission-denied" ? fail("Хабарлама жіберілмеді. Кейінірек қайталап көріңіз.") : fail(msg(e)); }
+  },
+
   // ---- Мұғалім ----
+  async reports() {
+    const snap = await F.getDocs(F.collection(fs, "reports"));
+    return snap.docs.map(d => Object.assign({}, d.data(), { id: d.id })).sort((a, b) => b.at - a.at);
+  },
+  async deleteReport(id) { await F.deleteDoc(F.doc(fs, "reports", id)); },
   async students() {
     const snap = await F.getDocs(F.collection(fs, "users"));
     return snap.docs.map(d => Object.assign({}, d.data(), { id: d.id })).filter(u => u.role !== "teacher");

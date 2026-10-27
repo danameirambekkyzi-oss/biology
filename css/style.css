@@ -712,3 +712,19 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .ch-tests .tc-top { font-size: 15px; line-height: 1.4; align-items: flex-start; }
 .ch-tests .tc-top b { font-weight: 650; }
 .ch-tests .test-card .btn { margin-top: auto; }
+
+/* ---------- «Мұғалімге жіберу» — тесттегі қате туралы хабарлама ---------- */
+.report-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 6px 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; }
+.report-btn:hover { color: var(--red); background: color-mix(in srgb, var(--red) 8%, transparent); }
+.rp-q { padding: 10px 12px; border-radius: 10px; background: var(--purple-50); font-size: 14px; line-height: 1.45; margin-bottom: 12px; }
+.rp-kinds { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.rp-kinds .chip { padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.rp-box { margin-bottom: 16px; }
+.rp-item { border-top: 1px solid var(--border); padding: 10px 0; }
+.rp-item summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.rp-item summary small, .rp-item summary .rp-test { flex-basis: 100%; }
+.rp-test { font-size: 14px; }
+.rp-body { padding: 10px 0 4px; font-size: 14px; line-height: 1.5; }
+.rp-body p { margin: 0 0 8px; }
+.rp-text { font-weight: 600; color: var(--red); }
+.rp-opts { white-space: pre-wrap; font: inherit; margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--purple-50); }

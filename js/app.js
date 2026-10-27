@@ -113,6 +113,7 @@
     eyeoff: '<path d="M17.9 17.9A10 10 0 0 1 12 19c-6.4 0-10-7-10-7a18 18 0 0 1 5-5.9M9.9 4.2A9 9 0 0 1 12 4c6.4 0 10 7 10 7a18 18 0 0 1-2.2 3.2M2 2l20 20"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/>',
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/>',
     send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+    flag: '<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>',
     camera: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
@@ -1265,7 +1266,17 @@
       .sort((a, b) => b._m - a._m);
     const active = list.filter(x => (x.lastSeen || 0) > weekAgo).length;
     const leader = rows.find(x => x._m > 0);
+    const reps = state.reports || [];
     return `<h1 class="page-title">Мұғалім кабинеті</h1><p class="page-sub">Барлық оқушылар, олардың баллдары мен құрылғылары.</p>
+      <div class="card rp-box">
+        <div class="row-between" style="margin:0 0 10px"><h3 style="margin:0">${ic("flag", 18)} Тесттегі қателер туралы хабарламалар ${reps.length ? `<span class="tag t-multi">${reps.length}</span>` : ""}</h3></div>
+        ${reps.length ? reps.map(r => `<details class="rp-item"><summary><b>${r.num}-сұрақ</b> <span class="tag">${esc(r.kind || "")}</span>
+            <span class="rp-test">${esc(r.test)}</span><small class="muted">${esc(r.name || "")}${r.phone ? " · " + esc(r.phone) : ""} · ${fmtDate(r.at)}</small></summary>
+          <div class="rp-body">${r.text ? `<p class="rp-text">«${esc(r.text)}»</p>` : ""}
+            <p><b>Сұрақ:</b> ${esc(r.q)}</p>${r.opts ? `<pre class="rp-opts">${esc(r.opts)}</pre>` : ""}<p><b>Сайттағы дұрыс жауап:</b> ${esc(r.answer || "")}</p>
+            <button class="btn btn-green btn-sm" data-act="t-rp-done" data-id="${esc(r.id)}">${ic("check", 16)} Шешілді (өшіру)</button></div></details>`).join("")
+          : `<p class="muted" style="margin:0">Әзірге хабарлама жоқ. Оқушы тесттегі сұрақтың астындағы «Мұғалімге жіберу» батырмасын басса, хабарлама осында түседі.</p>`}
+      </div>
       <div class="grid g-3" style="margin-bottom:16px">
         <div class="card stat-card"><span class="muted">Барлық оқушы</span><b>${list.length}</b></div>
         <div class="card stat-card"><span class="muted">Соңғы 7 күнде белсенді</span><b>${active}</b></div>
@@ -1298,6 +1309,7 @@
       <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Құпия сөзді жаңарту» — оқушының email-іне жаңа құпия сөз қоятын сілтеме кетеді (спам қалтасын да қарау керек). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
   }
   function loadStudents() {
+    window.Cloud.reports().then(l => { state.reports = l; render(); }).catch(() => { state.reports = []; });
     return window.Cloud.students().then(l => { state.students = l; }).catch(e => { toast(window.Cloud.errorText(e)); state.students = []; });
   }
   function bindTeacher() {
@@ -1454,6 +1466,33 @@
   }
   const correctText = q => q.type === "match" ? q.items.map((it, k) => `${k + 1}–${LETTERS[it.answer]}`).join(", ") : q.correct.map(i => LETTERS[i]).join(", ");
 
+  // «Мұғалімге жіберу»: оқушы сұрақтан қате тапса, хабарлама мұғалім кабинетіне түседі
+  const plain = h => { const d = document.createElement("div"); d.innerHTML = h || ""; return d.textContent.replace(/\s+/g, " ").trim(); };
+  const reportBtn = (u, t, i, src) => CLOUD && u && u.role !== "teacher" && t.mode !== "demo"
+    ? `<button class="report-btn" data-act="report" data-src="${src}" data-i="${i}">${ic("flag", 15)} Сұрақта қате бар ма? Мұғалімге жіберу</button>` : "";
+  const REPORT_KINDS = ["Дұрыс жауабы қате", "Сұрақ не нұсқа қате жазылған", "Сурет жоқ немесе қате", "Басқа"];
+  function reportModal(t, i) {
+    const q = t.questions[i], u = currentUser();
+    let kind = REPORT_KINDS[0];
+    openModal(`<h3>Мұғалімге жіберу</h3>
+      <p class="muted" style="margin-top:0">${esc(t.title)} · ${i + 1}-сұрақ</p>
+      <div class="rp-q">${esc(plain(q.q || q.contextTitle || "").slice(0, 300))}</div>
+      <div class="rp-kinds">${REPORT_KINDS.map((k, j) => `<button class="chip ${j ? "" : "active"}" data-k="${esc(k)}">${esc(k)}</button>`).join("")}</div>
+      <div class="field"><textarea class="input" id="rp-text" rows="3" maxlength="1000" placeholder="Қандай қате екенін қысқаша жазыңыз (міндетті емес)"></textarea></div>
+      <div class="btn-row"><button class="btn btn-ghost" data-close>Бас тарту</button><button class="btn btn-primary" id="rp-send">${ic("send", 16)} Жіберу</button></div>`, (m, close) => {
+      $$("[data-k]", m).forEach(b => b.onclick = () => { kind = b.dataset.k; $$("[data-k]", m).forEach(x => x.classList.toggle("active", x === b)); });
+      $("#rp-send", m).onclick = e => {
+        e.target.disabled = true;
+        const opts = q.type === "match" ? q.items.map((it, k) => `${k + 1}. ${plain(it.text)}`).concat(q.options.map((o, j) => `${LETTERS[j]}. ${plain(o)}`))
+          : (q.options || []).map((o, j) => `${LETTERS[j]}. ${plain(o)}`);
+        window.Cloud.report({ name: u.name || "", phone: u.phone || "", qid: String(q.id || t.title + "-" + (i + 1)), test: t.title, num: i + 1,
+          q: plain(q.q).slice(0, 3000), opts: opts.join("\n").slice(0, 3000), answer: correctText(q), kind, text: $("#rp-text", m).value.trim().slice(0, 1000) })
+          .then(() => { close(); toast("Рақмет! Хабарлама мұғалімге жіберілді"); })
+          .catch(ex => { close(); toast(window.Cloud.errorText(ex)); });
+      };
+    });
+  }
+
   function renderTest() {
     const t = state.test, q = t.questions[t.cur], sel = t.answers[t.cur], multi = isMulti(q), checked = t.checked[t.cur];
     const answered = t.answers.filter((a, i) => hasAnswer(t.questions[i], a)).length;
@@ -1492,6 +1531,7 @@
           ${t.instant && !checked ? `<button class="btn btn-primary" data-act="check" ${hasAnswer(q, sel) ? "" : "disabled"}>Тексеру</button>` :
             isLast ? `<button class="btn btn-cta" data-act="finish">Тестті аяқтау</button>` : `<button class="btn btn-primary" data-act="next">Келесі →</button>`}
         </div>
+        ${reportBtn(u, t, t.cur, "test")}
       </div>
       <div class="q-grid">${t.questions.map((qq, i) => {
         let c = hasAnswer(qq, t.answers[i]) ? "done" : "";
@@ -1561,7 +1601,7 @@
           <div class="q-text">${q.q}</div>
           ${imgsHtml(q.img)}
           ${q.type === "match" ? matchHtml(q, sel, true, false) : `<div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>`}
-          ${q.explain ? `<div class="explain"><b>Түсініктеме:</b> ${q.explain}</div>` : ""}</div>`; }).join("")}
+          ${q.explain ? `<div class="explain"><b>Түсініктеме:</b> ${q.explain}</div>` : ""}${reportBtn(u, t, i, "res")}</div>`; }).join("")}
       <div class="card" style="margin-top:8px">${rulesHtml()}</div>
     </div>`;
     if (u) app.innerHTML = shell(u, "result", inner);
@@ -1635,6 +1675,8 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
+    report: el => { const t = el.dataset.src === "res" ? state.result && state.result.test : state.test; if (t) reportModal(t, +el.dataset.i); },
+    "t-rp-done": el => window.Cloud.deleteReport(el.dataset.id).then(() => { state.reports = (state.reports || []).filter(r => r.id !== el.dataset.id); toast("Хабарлама өшірілді"); render(); }).catch(e => toast(window.Cloud.errorText(e))),
     "t-premium": el => {
       const x = (state.students || []).find(s => s.id === el.dataset.id); if (!x) return;
       const pl = PLANS.find(p => p.id === el.dataset.plan);
@@ -1749,7 +1791,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610271912")
+    import("./cloud.js?v=202610271928")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
