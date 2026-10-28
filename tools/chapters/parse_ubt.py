@@ -17,8 +17,8 @@ for el in d.element.body.iterchildren():
         if seg.group().strip(): lines.append((seg.group(), m[seg.start():seg.end()], lst))
 title = re.sub(r'\s*;\s*', '; ', re.sub(r'\s+', ' ', lines[0][0])).strip(' ;')
 QS = re.compile(r'^\s*(\d+)\s*\.\s*')
-MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBСCДDЕEФFa-f])\s*[.)]\s*')
-LET = {c: i for i, s in enumerate(["АAa", "ВBb", "СCc", "ДDd", "ЕEe", "ФFf"]) for c in s}
+MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBБСCДDЕEФFa-f])\s*[.)]\s*')
+LET = {c: i for i, s in enumerate(["АAa", "ВBбБb", "СCc", "ДDd", "ЕEe", "ФFf"]) for c in s}
 def marks(t, k):  # тек кезекті әріптер (А, В, С...) — «А. Флеминг» сияқты бас әріптер нұсқа емес
     out = []
     for x in MARK.finditer(t):
