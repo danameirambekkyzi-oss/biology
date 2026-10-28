@@ -711,6 +711,7 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .ch-tests { margin-bottom: 16px; }
 .ch-tests .tc-top { font-size: 15px; line-height: 1.4; align-items: flex-start; }
 .ch-tests .tc-top b { font-weight: 650; }
+.ch-tests .tc-top .tag { white-space: nowrap; flex-shrink: 0; }
 .ch-tests .test-card .btn { margin-top: auto; }
 
 /* ---------- «Мұғалімге жіберу» — тесттегі қате туралы хабарлама ---------- */

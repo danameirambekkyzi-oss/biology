@@ -874,10 +874,11 @@
     const ch = CHAPTERS.find(c => c.module === id);
     const best = tid => { const h = u.history.filter(x => x.testId === tid); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; };
     const tests = ch ? `${ch.note ? `<div class="card ch-note">${ic("bulb", 24)}<span>${esc(ch.note)}</span></div>` : ""}
-      <div class="grid g-3 ch-tests">${ch.tests.map(t => { const b = best(t.id); return `
-        <div class="card test-card"><div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
+      <div class="grid g-3 ch-tests">${ch.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u); return `
+        <div class="card test-card ${paid ? "paid" : ""}"><div class="tc-top"><b>${esc(t.title)}</b>${k === 0 && PREMIUM ? `<span class="tag t-single">Тегін</span>` : paid ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
           <small class="muted">${t.questions.length} тапсырма · бір жауапты, ${t.questions.some(q => q.type === "context") ? "контекстік, " : ""}көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
-          <button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button></div>`; }).join("")}</div>` : "";
+          ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
+            `<button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>`}</div>`; }).join("")}</div>` : "";
     return `<a href="#/app/chapters" class="back-link">← Барлық тараулар</a>
       <div class="card chapter-head">
         <span class="m-num m-num-lg">${chNum(i)}</span>
@@ -1416,6 +1417,7 @@
     }
     if (mode === "ch") {
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
+      if (t.chapter.tests.findIndex(x => x.id === t.id) > 0 && !hasPremium(u)) return upgradeModal(`${t.title} — премиум тест. Әр тараудағы бірінші тест тегін.`);
       return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
     }
     if (mode === "mock") {
@@ -1618,7 +1620,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1791,7 +1793,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281234")
+    import("./cloud.js?v=202610281240")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
