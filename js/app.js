@@ -1413,9 +1413,13 @@
     "сұрақ жауап дұрыс таңдаңыз белгіле белгілеңіз сәйкестендір сәйкестендіріңіз көрсетілген суретте суреттегі " +
     "керек қажет болмауы болмайды теріс өтеді түзеді түзіледі бөлінеді бөледі адамның адамда жүйесі сыртқы ішкі жүреді жүзеге " +
     "кіреді шығады алады береді айналады қамтамасыз ететін етеді жасайды көрсетеді анықтайды анықталады қалыптасады орналасқан " +
-    "орналасады жоғары төмен үлкен кіші ұзын қысқа жаңа бірінші екінші үшінші кейбір барлығы біреуі осылай сонымен").split(" ").map(w => rqNorm(w)));
+    "орналасады жоғары төмен үлкен кіші ұзын қысқа жаңа бірінші екінші үшінші кейбір барлығы біреуі осылай сонымен " +
+    "сіңіреді сіңіріледі сіңіріліп сіңіріп сіңіре сіңіру бөлігі бөлімі бөлімде бөлігінде бөліктері " +
+    "қалай қалайсың қашан қайда қайсы қайсысы неше нешеу неліктен ненің кімнің сәлем сәлеметсіз рақмет").split(" ").map(w => rqNorm(w)));
+  // Түбір: алғашқы 5 әріп; к/г, п/б алмасуы (жүрек — жүрегі) бір түбір болып саналады
+  const ftRoot = w => w.slice(0, 5).replace(/г/g, "к").replace(/б/g, "п");
   const ftStems = s => rqNorm(String(s || "").replace(/<[^>]+>/g, " ")).split(" ")
-    .filter(w => w.length >= 5 && !/^\d+$/.test(w) && !FT_STOP.has(w)).map(w => w.slice(0, 6));
+    .filter(w => w.length >= 5 && !/^\d+$/.test(w) && !FT_STOP.has(w)).map(ftRoot);
   const FT_MIN_COV = 0.25;
   let FT_INDEX = null;
   function ftIndex() {  // бір рет: әр сұрақтың сөз түбірлері және олардың сирек/жиілігі (IDF)
@@ -1440,17 +1444,22 @@
     // Сұрақ тестке тек оның негізгі сөздерінің едәуір бөлігі файлда кездессе ғана кіреді (cov — сұрақтың файлмен қамтылуы),
     // әрі сұрақтың өз мәтінінде (нұсқаларда ғана емес) файлдың басты ұғымдарының бірі болуы керек. Ретті: қамтылуы + файлдың басты ұғымдары.
     const scored = docs.map(d => {
-      let tot = 0, got = 0, hits = 0, qh = 0, kw = 0;
-      d.st.forEach(s => { if (df[s] > max) return; tot += idf[s]; if (tf[s]) { got += idf[s]; hits++; if (d.qst.has(s) && TOP.has(s)) qh++; kw += W[s] || 0; } });
-      return { q: d.q, cov: tot ? got / tot : 0, hits, qh, kw };
-    }).filter(x => x.hits >= 2 && x.qh >= 1 && x.cov >= FT_MIN_COV);
+      let tot = 0, got = 0, hits = 0, qh = 0, qa = 0, top = 0, kw = 0;
+      d.st.forEach(s => { if (df[s] > max) return; tot += idf[s]; if (tf[s]) { got += idf[s]; hits++; if (d.qst.has(s)) { qa++; if (TOP.has(s)) qh++; } if (TOP.has(s)) top++; kw += W[s] || 0; } });
+      const img = !!((d.q.img && d.q.img.length) || (d.q.contextImg && d.q.contextImg.length));
+      return { q: d.q, cov: tot ? got / tot : 0, hits, qh, qa, top, kw, img };
+    }).filter(x => (x.hits >= 2 && x.qh >= 1 && x.cov >= FT_MIN_COV)
+      // суретті сұрақтың мәтіні қысқа (нұсқалары жиі 1, 2, 3…): мәтінінде файлдағы сөз және басты ұғым болса жеткілікті
+      || (x.img && x.qh >= 1 && x.cov >= FT_MIN_COV * 0.8));
     const kmax = Math.max(1, ...scored.map(x => x.kw));
     scored.forEach(x => { x.sc = x.cov * 0.6 + x.kw / kmax * 0.4; });
-    const pickd = scored.sort((a, b) => b.sc - a.sc).slice(0, size).map(x => x.q);
+    const seen = new Set();  // бір сұрақ бірнеше тестте қайталанса — бір рет (суретті сұрақ — мәтіні бойынша)
+    const pickd = scored.sort((a, b) => b.sc - a.sc).filter(x => { const k = rqNorm(plain(x.q.q)) + "|" + (x.img ? "сурет" : (x.q.options || []).map(o => rqNorm(plain(o))).sort().join("|"));
+      return !seen.has(k) && seen.add(k); }).slice(0, size).map(x => x.q);
     const ord = q => q.type === "match" ? 2 : q.type === "context" ? 1 : isMulti(q) ? 3 : 0;
     pickd.sort((a, b) => ord(a) - ord(b) || String(a.context || "").localeCompare(String(b.context || "")));
     // кілт сөздерді оқушыға файлдағы түрінде көрсетеміз
-    const orig = {}; String(text).toLowerCase().split(/[^\p{L}\p{N}-]+/u).forEach(w => { const s = rqNorm(w).slice(0, 6); if (W[s] && !orig[s]) orig[s] = w; });
+    const orig = {}; String(text).toLowerCase().split(/[^\p{L}\p{N}-]+/u).forEach(w => { const s = ftRoot(rqNorm(w)); if (W[s] && !orig[s]) orig[s] = w; });
     return { questions: pickd, keys: keys.slice(0, 15).map(k => orig[k.s] || k.s) };
   }
   const ftLoaded = {};
@@ -1531,7 +1540,7 @@
   }
   function sqSearch(text) {
     const { docs, idf } = ftIndex();
-    const qs = [...new Set(rqNorm(text).split(" ").filter(w => w.length >= 4 && !FT_STOP.has(w)).map(w => w.slice(0, 6)))].filter(s => idf[s] != null);
+    const qs = [...new Set(rqNorm(text).split(" ").filter(w => w.length >= 4 && !FT_STOP.has(w)).map(ftRoot))].filter(s => idf[s] != null);
     const total = qs.reduce((a, s) => a + idf[s], 0), whole = rqNorm(plain(text));
     if (!qs.length) return [];
     return docs.map(d => {
@@ -1991,7 +2000,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281951")
+    import("./cloud.js?v=202610281959")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
