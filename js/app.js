@@ -700,9 +700,10 @@
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
     { id: "real",        ico: "book",      t: "ҰБТ-да жиі кездесетін сұрақтар тізімі" },
     { id: "plants",      ico: "bulb",      t: "Негізгі жаттау керек ақпараттар" },
+    { id: "filetest",    ico: "clipboard", t: "Файлдан тест жасау" },
+    { id: "search",      ico: "search",    t: "Сұрақ іздеу" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
-    { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" },
-    { id: "filetest",    ico: "search",    t: "Файлдан тест жасау" }
+    { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
   ];
 
   function shell(u, active, inner) {
@@ -740,7 +741,7 @@
           </header>
           <main class="content">${inner}</main>
         </div>
-      </div>${chatHtml(u, active)}`;
+      </div>`;
   }
 
   function verifySession() {
@@ -757,7 +758,7 @@
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
   function renderApp(u, page, arg) {
-    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings, filetest: pageFiletest };
+    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings, filetest: pageFiletest, search: pageSearch };
     if (CLOUD && u.role === "teacher") pages.teacher = pageTeacher;
     const fn = pages[page] || (CLOUD && u.role === "teacher" ? pageTeacher : pageDashboard);
     app.innerHTML = shell(u, page, fn(u, arg));
@@ -765,6 +766,7 @@
     if (page === "plants") bindPlants();
     if (page === "real") bindReal();
     if (page === "filetest") bindFiletest();
+    if (page === "search") chatFocus();
     if (CLOUD) verifySession();
     if (CLOUD && (page === "dashboard" || page === "leaderboard") && (!state.lb || Date.now() - state.lb.at > 60000) && !state.lbLoading) {
       state.lbLoading = true;
@@ -1517,7 +1519,7 @@
   }
 
   /* ---- «Сұрақ іздеу» чаты: оқушы сұрақты жазады → қай тестте, нешінші сұрақ, жауабы қандай ---- */
-  // Премиум мүмкіндік. Тест тапсыру кезінде көрсетілмейді.
+  // Премиум мүмкіндік, мәзірдегі жеке бөлім.
   let SQ_LOC = null;
   function sqLocations() {  // сұрақ id → [{орны, нөмірі}]
     if (SQ_LOC) return SQ_LOC;
@@ -1561,22 +1563,20 @@
         <div class="sq-ans">Дұрыс жауабы:<br>${sqAnswer(q)}</div></div>`;
     }).join("");
   }
-  function chatHtml(u, active) {
-    if (active === "test") return "";
-    const c = state.chat || (state.chat = { open: false, msgs: [], draft: "" });
-    if (!c.open) return `<button class="chat-fab" data-act="chat-toggle" aria-label="Сұрақ іздеу">${ic("chat", 24)}<span>Сұрақ іздеу</span></button>`;
-    return `<div class="chat-box" role="dialog" aria-label="Сұрақ іздеу">
-      <div class="chat-head">${ic("search", 18)}<b>Сұрақ іздеу</b><button class="chat-x" data-act="chat-toggle" aria-label="Жабу">✕</button></div>
-      ${!hasPremium(u) ? `<div class="chat-body chat-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
-        <h3>Сұрақ іздеу — премиум</h3><p class="muted">Кез келген сұрақты жазсаң, оның қай тестте, нешінші сұрақ екенін және дұрыс жауабын бірден табады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
-        <button class="btn btn-cta" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div></div>` : `
+  function pageSearch(u) {
+    const head = `<h1 class="page-title">Сұрақ іздеу</h1><p class="page-sub">Іздеген сұрағыңды жаз — сайттағы ${Q.length} сұрақтың ішінен тауып, қай тестте, нешінші сұрақ екенін және дұрыс жауабын көрсетеміз.</p>`;
+    if (!hasPremium(u)) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>Сұрақ іздеу — премиум</h2><p class="muted">Кез келген сұрақты жазсаң, оның қай тестте, нешінші сұрақ екенін және дұрыс жауабын бірден табады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
+        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
+    const c = state.chat || (state.chat = { msgs: [], draft: "" });
+    return head + `<div class="card chat-box">
       <div class="chat-body" id="chat-body">
         <div class="msg bot">Сәлем! Іздеген сұрағыңды жаз — қай тестте, нешінші сұрақ екенін және жауабын айтамын.</div>
         ${c.msgs.map(m => `<div class="msg ${m.me ? "me" : "bot"}">${m.me ? esc(m.text) : m.html}</div>`).join("")}
       </div>
       <form class="chat-form" data-chat-form><input class="input" id="chat-input" maxlength="500" autocomplete="off" placeholder="Сұрақты жаз…" value="${esc(c.draft)}">
         <button class="btn btn-primary" type="submit" aria-label="Жіберу">${ic("send", 18)}</button></form>
-    </div>`}`;
+    </div>`;
   }
   function chatSend() {
     const c = state.chat, inp = $("#chat-input"), text = (inp ? inp.value : "").trim(), u = currentUser();
@@ -1869,7 +1869,6 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
-    "chat-toggle": () => { state.chat.open = !state.chat.open; render(); if (state.chat.open) chatFocus(); },
     "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
     "ft-make": () => ftMake(),
     "ft-start": () => { const r = state.ft && state.ft.res; if (r && r.questions.length) startTest({ mode: "file", title: "Файлдан жасалған тест", questions: r.questions.slice(), instant: false }); },
@@ -1992,7 +1991,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281948")
+    import("./cloud.js?v=202610281951")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
