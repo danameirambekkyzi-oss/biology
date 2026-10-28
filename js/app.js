@@ -1403,7 +1403,7 @@
 
   /* ---- Файлдан тест жасау (премиум): оқушы файл салады → сайттағы барлық тесттерден сол тақырыпқа сай сұрақтар жиналады ---- */
   // Мәтін оқушының құрылғысында оқылады, ешқайда жіберілмейді. PDF және Word кітапханалары тек қажет кезде жүктеледі (js/vendor).
-  const FT_SIZES = [20, 30, 0];  // 0 — табылғанның бәрі
+  const FT_SIZES = [20, 40, 60, 0];  // 0 — табылғанның бәрі
   const FT_STOP = new Set(("және немесе болады болып табылады арқылы қандай кезінде бойынша сондай мысалы бірақ сияқты ретінде дейін кейін арасында " +
     "барлық көптеген маңызды негізгі түрлі әртүрлі жатады келеді береді мүмкін қатысады байланысты белгілі жүзеге асырады олардың оның " +
     "осындай солай қатар тағы басқа бірге түрде кезде жағдайда нәтижесінде себебі өйткені алайда дегеніміз деген деп аталады аталатын " +
@@ -1469,14 +1469,14 @@
         <h2>Файлдан тест — премиум</h2>
         <p class="muted">PDF, Word немесе мәтін файлын салсаң, оның тақырыбы бойынша барлық тесттерден сұрақтар жиналып, жеке тест жасалады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
         <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
-    const f = state.ft || (state.ft = { size: 30 }), r = f.res;
+    const f = state.ft || (state.ft = { size: 20 }), r = f.res;
     return head + `<div class="card ft-card">
         <label class="ft-drop" id="ft-drop">${ic("clipboard", 30)}<b>Файлды осында сал немесе таңда</b><small class="muted">PDF, Word (.docx), .txt · бірнеше файл салуға болады</small>
           <input type="file" id="ft-file" accept=".pdf,.docx,.txt,application/pdf,text/plain" multiple hidden></label>
         ${f.names && f.names.length ? `<div class="ft-files">${f.names.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
         <details class="ft-paste" ${f.pasteOpen ? "open" : ""}><summary>немесе мәтінді көшіріп қой</summary>
           <textarea class="input" id="ft-text" rows="5" placeholder="Мысалы: Митохондрия — жасушаның энергетикалық станциясы…">${esc(f.pasted || "")}</textarea></details>
-        <div class="ft-row"><span class="muted">Тесттегі сұрақ саны:</span><div class="chips">${FT_SIZES.map(n => `<button class="chip ${f.size === n ? "active" : ""}" data-act="ft-size" data-n="${n}">${n || "Барлығы (максимум)"}</button>`).join("")}</div></div>
+        <div class="ft-row"><span class="muted">Тесттегі сұрақ саны:</span><div class="chips">${FT_SIZES.map(n => `<button class="chip ${f.size === n ? "active" : ""}" data-act="ft-size" data-n="${n}">${n || "Барлығы"}</button>`).join("")}</div></div>
         <button class="btn btn-cta btn-lg btn-block" data-act="ft-make" ${f.busy ? "disabled" : ""}>${f.busy ? "Файл оқылып жатыр…" : ic("search", 18) + " Тест жасау"}</button>
         ${f.err ? `<p class="ft-err">${esc(f.err)}</p>` : ""}
       </div>
