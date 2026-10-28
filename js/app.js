@@ -1484,12 +1484,13 @@
   }
   function pageFiletest(u) {
     const head = `<h1 class="page-title">Файлдан тест жасау</h1><p class="page-sub">Конспектіңді, оқулықтың тақырыбын немесе кез келген мәтінді сал — сайттағы ${Q.length} сұрақтың ішінен сол тақырыпқа сай сұрақтарды жинап, саған жеке тест жасаймыз.</p>`;
-    if (!hasPremium(u)) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
-        <h2>Файлдан тест — премиум</h2>
-        <p class="muted">PDF, Word немесе мәтін файлын салсаң, оның тақырыбы бойынша барлық тесттерден сұрақтар жиналып, жеке тест жасалады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
+    if (!hasPremium(u) && u.trialFt) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>Сізде бұл мүмкіндік жоқ</h2>
+        <p class="muted">Тегін нұсқада файлдан тест бір рет жасалады — сен оны пайдаланып қойдың. PDF, Word немесе мәтін файлынан шексіз тест жасау премиум нұсқада ашылады.</p>
         <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
     const f = state.ft || (state.ft = { size: 20 }), r = f.res;
-    return head + `<div class="card ft-card">
+    return head + `${!hasPremium(u) ? `<div class="card trial-note">${ic("gift", 22)}<span>Тегін нұсқада файлдан тестті <b>бір рет</b> жасап көруге болады. Әрі қарай — премиум.</span></div>` : ""}
+      <div class="card ft-card">
         <label class="ft-drop" id="ft-drop">${ic("clipboard", 30)}<b>Файлды осында сал немесе таңда</b><small class="muted">PDF, Word (.docx), .txt · бірнеше файл салуға болады</small>
           <input type="file" id="ft-file" accept=".pdf,.docx,.txt,application/pdf,text/plain" multiple hidden></label>
         ${f.names && f.names.length ? `<div class="ft-files">${f.names.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
@@ -1561,8 +1562,7 @@
     if (q.type === "match") return q.items.map((it, k) => `${k + 1}. ${esc(plain(it.text))} — <b>${LETTERS[it.answer]}. ${esc(plain(q.options[it.answer]))}</b>`).join("<br>");
     return q.correct.map(i => `<b>${LETTERS[i]}. ${esc(plain(q.options[i]))}</b>`).join("<br>");
   }
-  function sqReply(text) {
-    const found = sqSearch(text);
+  function sqReply(found) {
     if (!found.length) return `Мұндай сұрақ табылмады 🙁 Сұрақтың мәтінін толығырақ жазып көр (кемінде 3–4 сөз).`;
     return (found.length > 1 ? `Ұқсас ${found.length} сұрақ таптым:` : `Таптым!`) + found.map(({ q }) => {
       const locs = [].concat(...sqSame(q).map(x => sqLocations()[x.id] || []));
@@ -1575,11 +1575,13 @@
   }
   function pageSearch(u) {
     const head = `<h1 class="page-title">Сұрақ іздеу</h1><p class="page-sub">Іздеген сұрағыңды жаз — сайттағы ${Q.length} сұрақтың ішінен тауып, қай тестте, нешінші сұрақ екенін және дұрыс жауабын көрсетеміз.</p>`;
-    if (!hasPremium(u)) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
-        <h2>Сұрақ іздеу — премиум</h2><p class="muted">Кез келген сұрақты жазсаң, оның қай тестте, нешінші сұрақ екенін және дұрыс жауабын бірден табады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
-        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
     const c = state.chat || (state.chat = { msgs: [], draft: "" });
-    return head + `<div class="card chat-box">
+    const locked = `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>Сізде бұл мүмкіндік жоқ</h2><p class="muted">Тегін нұсқада сұрақты бір рет іздеуге болады — сен оны пайдаланып қойдың. Кез келген сұрақтың қай тестте тұрғанын және дұрыс жауабын шексіз іздеу премиум нұсқада ашылады.</p>
+        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
+    if (!hasPremium(u) && u.trialSq) return head + (c.msgs.length ? `<div class="card chat-box chat-done"><div class="chat-body">${c.msgs.map(m => `<div class="msg ${m.me ? "me" : "bot"}">${m.me ? esc(m.text) : m.html}</div>`).join("")}</div></div>` : "") + locked;
+    return head + `${!hasPremium(u) ? `<div class="card trial-note">${ic("gift", 22)}<span>Тегін нұсқада сұрақты <b>бір рет</b> іздеп көруге болады. Әрі қарай — премиум.</span></div>` : ""}
+      <div class="card chat-box">
       <div class="chat-body" id="chat-body">
         <div class="msg bot">Сәлем! Іздеген сұрағыңды жаз — қай тестте, нешінші сұрақ екенін және жауабын айтамын.</div>
         ${c.msgs.map(m => `<div class="msg ${m.me ? "me" : "bot"}">${m.me ? esc(m.text) : m.html}</div>`).join("")}
@@ -1590,8 +1592,10 @@
   }
   function chatSend() {
     const c = state.chat, inp = $("#chat-input"), text = (inp ? inp.value : "").trim(), u = currentUser();
-    if (!text || !u || !hasPremium(u)) return;
-    c.msgs.push({ me: true, text }, { html: sqReply(text) }); c.msgs = c.msgs.slice(-30); c.draft = "";
+    if (!text || !u || (!hasPremium(u) && u.trialSq)) return;
+    const found = sqSearch(text);
+    c.msgs.push({ me: true, text }, { html: sqReply(found) }); c.msgs = c.msgs.slice(-30); c.draft = "";
+    if (found.length && !hasPremium(u)) { u.trialSq = Date.now(); saveUser(u); }  // тегін бір рет (табылған іздеу ғана есептеледі)
     render(); chatFocus();
   }
   function chatFocus() { const b = $("#chat-body"), i = $("#chat-input"); if (b) b.scrollTop = b.scrollHeight; if (i && matchMedia("(pointer:fine)").matches) i.focus(); }
@@ -1881,7 +1885,9 @@
     "t-reload": () => { state.students = null; render(); },
     "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
     "ft-make": () => ftMake(),
-    "ft-start": () => { const r = state.ft && state.ft.res; if (r && r.questions.length) startTest({ mode: "file", title: "Файлдан жасалған тест", questions: r.questions.slice(), instant: false }); },
+    "ft-start": () => { const r = state.ft && state.ft.res, u = currentUser(); if (!r || !r.questions.length || !u) return;
+      if (!hasPremium(u)) { if (u.trialFt) return render(); u.trialFt = Date.now(); saveUser(u); }  // тегін бір рет
+      startTest({ mode: "file", title: "Файлдан жасалған тест", questions: r.questions.slice(), instant: false }); },
     report: el => { const t = el.dataset.src === "res" ? state.result && state.result.test : state.test; if (t) reportModal(t, +el.dataset.i); },
     "t-rp-done": el => window.Cloud.deleteReport(el.dataset.id).then(() => { state.reports = (state.reports || []).filter(r => r.id !== el.dataset.id); toast("Хабарлама өшірілді"); render(); }).catch(e => toast(window.Cloud.errorText(e))),
     "t-premium": el => {
@@ -2001,7 +2007,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610282023")
+    import("./cloud.js?v=202610282029")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

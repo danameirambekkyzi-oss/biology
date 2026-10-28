@@ -757,3 +757,6 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .chat-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--surface); }
 .chat-form .input { flex: 1; min-width: 0; }
 .chat-form .btn { padding: 0 14px; }
+.trial-note { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 16px; color: var(--text); background: var(--purple-50); border-color: color-mix(in srgb, var(--purple) 25%, transparent); }
+.trial-note > .ic, .trial-note svg { color: var(--purple); flex-shrink: 0; }
+.chat-box.chat-done { height: auto; max-height: 520px; min-height: 0; margin-bottom: 16px; }
