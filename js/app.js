@@ -740,7 +740,7 @@
           </header>
           <main class="content">${inner}</main>
         </div>
-      </div>`;
+      </div>${chatHtml(u, active)}`;
   }
 
   function verifySession() {
@@ -1423,7 +1423,7 @@
       if (seen.has(key)) continue; seen.add(key);
       const st = new Set(ftStems([q.q, q.contextTitle, q.context].concat(q.options || [], (q.items || []).map(it => it.text)).join(" ")));
       if (!st.size) continue;
-      docs.push({ q, st }); st.forEach(s => { df[s] = (df[s] || 0) + 1; });
+      docs.push({ q, st, qst: new Set(ftStems([q.q, q.contextTitle].join(" "))) }); st.forEach(s => { df[s] = (df[s] || 0) + 1; });
     }
     const idf = {}; for (const s in df) idf[s] = Math.log(docs.length / df[s]);
     return (FT_INDEX = { docs, idf, df, max: docs.length * 0.04 });
@@ -1508,6 +1508,76 @@
     } catch (e) { f.err = e.message || "Файл оқылмады."; }
     f.busy = false; render();
   }
+
+  /* ---- «Сұрақ іздеу» чаты: оқушы сұрақты жазады → қай тестте, нешінші сұрақ, жауабы қандай ---- */
+  // Премиум мүмкіндік. Тест тапсыру кезінде көрсетілмейді.
+  let SQ_LOC = null;
+  function sqLocations() {  // сұрақ id → [{орны, нөмірі}]
+    if (SQ_LOC) return SQ_LOC;
+    SQ_LOC = {};
+    const add = (qs, where) => qs.forEach((q, i) => (SQ_LOC[q.id] = SQ_LOC[q.id] || []).push({ where, num: i + 1 }));
+    FOLDERS.forEach(f => f.tests.forEach(t => add(t.questions, `${f.title} · ${t.title}`)));
+    CHAPTERS.forEach(c => c.tests.forEach(t => add(t.questions, `Тараулық тест · ${modTitle(c.module)} · ${t.title}`)));
+    return SQ_LOC;
+  }
+  function sqSearch(text) {
+    const { docs, idf } = ftIndex();
+    const qs = [...new Set(rqNorm(text).split(" ").filter(w => w.length >= 4 && !FT_STOP.has(w)).map(w => w.slice(0, 6)))].filter(s => idf[s] != null);
+    const total = qs.reduce((a, s) => a + idf[s], 0), whole = rqNorm(plain(text));
+    if (!qs.length) return [];
+    return docs.map(d => {
+      let sc = 0; qs.forEach(s => { if (d.qst.has(s)) sc += idf[s]; else if (d.st.has(s)) sc += idf[s] * 0.6; });
+      const qt = rqNorm(plain(d.q.q));
+      return { q: d.q, sc: sc / total + (whole.length > 12 && (qt.includes(whole) || whole.includes(qt)) ? 1 : 0) };
+    }).filter(x => x.sc >= 0.45).sort((a, b) => b.sc - a.sc).slice(0, 3);
+  }
+  // Бір сұрақ бірнеше тестте қайталанса, бәрінің орнын жинаймыз
+  let SQ_KEYS = null;
+  const sqKey = q => rqNorm(plain(q.q) + "|" + (q.options || []).map(plain).join("|"));
+  function sqSame(q) {
+    if (!SQ_KEYS) { SQ_KEYS = {}; Q.forEach(x => (SQ_KEYS[sqKey(x)] = SQ_KEYS[sqKey(x)] || []).push(x)); }
+    return SQ_KEYS[sqKey(q)] || [q];
+  }
+  function sqAnswer(q) {
+    if (q.type === "match") return q.items.map((it, k) => `${k + 1}. ${esc(plain(it.text))} — <b>${LETTERS[it.answer]}. ${esc(plain(q.options[it.answer]))}</b>`).join("<br>");
+    return q.correct.map(i => `<b>${LETTERS[i]}. ${esc(plain(q.options[i]))}</b>`).join("<br>");
+  }
+  function sqReply(text) {
+    const found = sqSearch(text);
+    if (!found.length) return `Мұндай сұрақ табылмады 🙁 Сұрақтың мәтінін толығырақ жазып көр (кемінде 3–4 сөз).`;
+    return (found.length > 1 ? `Ұқсас ${found.length} сұрақ таптым:` : `Таптым!`) + found.map(({ q }) => {
+      const locs = [].concat(...sqSame(q).map(x => sqLocations()[x.id] || []));
+      return `<div class="sq-card">
+        ${q.contextTitle ? `<small class="muted">Контекст: ${esc(q.contextTitle)}</small>` : ""}
+        <div class="sq-q">${esc(plain(q.q)).slice(0, 400)}</div>
+        <div class="sq-where">${locs.map(l => `📍 ${esc(l.where)} — <b>${l.num}-сұрақ</b>`).join("<br>") || "📍 Сұрақтар базасында"}</div>
+        <div class="sq-ans">Дұрыс жауабы:<br>${sqAnswer(q)}</div></div>`;
+    }).join("");
+  }
+  function chatHtml(u, active) {
+    if (active === "test") return "";
+    const c = state.chat || (state.chat = { open: false, msgs: [], draft: "" });
+    if (!c.open) return `<button class="chat-fab" data-act="chat-toggle" aria-label="Сұрақ іздеу">${ic("chat", 24)}<span>Сұрақ іздеу</span></button>`;
+    return `<div class="chat-box" role="dialog" aria-label="Сұрақ іздеу">
+      <div class="chat-head">${ic("search", 18)}<b>Сұрақ іздеу</b><button class="chat-x" data-act="chat-toggle" aria-label="Жабу">✕</button></div>
+      ${!hasPremium(u) ? `<div class="chat-body chat-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h3>Сұрақ іздеу — премиум</h3><p class="muted">Кез келген сұрақты жазсаң, оның қай тестте, нешінші сұрақ екенін және дұрыс жауабын бірден табады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
+        <button class="btn btn-cta" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div></div>` : `
+      <div class="chat-body" id="chat-body">
+        <div class="msg bot">Сәлем! Іздеген сұрағыңды жаз — қай тестте, нешінші сұрақ екенін және жауабын айтамын.</div>
+        ${c.msgs.map(m => `<div class="msg ${m.me ? "me" : "bot"}">${m.me ? esc(m.text) : m.html}</div>`).join("")}
+      </div>
+      <form class="chat-form" data-chat-form><input class="input" id="chat-input" maxlength="500" autocomplete="off" placeholder="Сұрақты жаз…" value="${esc(c.draft)}">
+        <button class="btn btn-primary" type="submit" aria-label="Жіберу">${ic("send", 18)}</button></form>
+    </div>`}`;
+  }
+  function chatSend() {
+    const c = state.chat, inp = $("#chat-input"), text = (inp ? inp.value : "").trim(), u = currentUser();
+    if (!text || !u || !hasPremium(u)) return;
+    c.msgs.push({ me: true, text }, { html: sqReply(text) }); c.msgs = c.msgs.slice(-30); c.draft = "";
+    render(); chatFocus();
+  }
+  function chatFocus() { const b = $("#chat-body"), i = $("#chat-input"); if (b) b.scrollTop = b.scrollHeight; if (i && matchMedia("(pointer:fine)").matches) i.focus(); }
 
   function startTest(t) {
     if (!t.questions.length) return toast("Сұрақтар жақында қосылады");
@@ -1735,7 +1805,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Файлдан тест жасау: конспектіңді сал — сол тақырып бойынша тест жиналады</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Файлдан тест жасау: конспектіңді сал — сол тақырып бойынша тест жиналады</li><li>Сұрақ іздеу чаты: сұрақты жазсаң, қай тестте тұрғанын және жауабын табады</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1792,6 +1862,7 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
+    "chat-toggle": () => { state.chat.open = !state.chat.open; render(); if (state.chat.open) chatFocus(); },
     "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
     "ft-make": () => ftMake(),
     "ft-start": () => { const r = state.ft && state.ft.res; if (r && r.questions.length) startTest({ mode: "file", title: "Файлдан жасалған тест", questions: r.questions.slice(), instant: false }); },
@@ -1884,6 +1955,9 @@
     if (e.target.closest(".sidebar .nav-item")) actions["close-menu"]();
   });
 
+  document.addEventListener("submit", e => { if (e.target.matches("[data-chat-form]")) { e.preventDefault(); chatSend(); } });
+  document.addEventListener("input", e => { if (e.target.id === "chat-input" && state.chat) state.chat.draft = e.target.value; });
+
   document.addEventListener("keydown", e => {
     if (!state.test || location.hash !== "#/test" || /input|textarea/i.test(e.target.tagName) || modalRoot.innerHTML) return;
     const t = state.test, q = t.questions[t.cur];
@@ -1911,7 +1985,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281937")
+    import("./cloud.js?v=202610281943")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
