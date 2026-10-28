@@ -25,8 +25,28 @@ def marks(t, k):  # тек кезекті әріптер (А, В, С...) — «�
         if x.group(1).islower() and (x.start() or ")" not in x.group()): continue  # a) b) — тек жол басында
         if LET[x.group(1)] == k + len(out): out.append(x.start())
     return out
-qs, cur = [], None
+# 26–30-сұрақтардың алдындағы контекст мәтіні: нөмірсіз жолдар тобы, ішінде ұзын абзац бар.
+# Нөмірсіз жолдарды кейінге қалдырамыз: келесі сұрақ басталғанда — контекст па, әлде алдыңғы мәтіннің жалғасы ма, шешеміз.
+def flush(next_is_question):
+    global ctx, left
+    if not pend: return
+    if next_is_question and any(len(t.strip()) > 150 for t, _ in pend):
+        body = [t.strip() for t, _ in pend]
+        title = body.pop(0) if len(body[0]) < 90 else ""
+        ctx, left = {"title": title, "text": "<br><br>".join(body)}, 5
+    else:
+        for t, m in pend: cont(t, m)
+    pend.clear()
+def cont(t, m):  # әріпсіз жол — алдыңғы мәтіннің жалғасы
+    starts = marks(t, len(cur["opts"]))
+    e = starts[0] if starts else len(t)
+    if cur["opts"]: cur["opts"][-1]["t"] += " " + t[:e].strip()
+    else: cur["q"] += " " + t[:e].strip()
+qs, cur, pend, ctx, left = [], None, [], None, 0
 for t, m, lst in lines[1:]:
+    if cur and not lst and not QS.match(t) and not marks(t, len(cur["opts"])) and not (cur["match"] and not cur["opts"]):
+        pend.append((t, m)); continue
+    flush(bool(QS.match(t)))
     if lst and not QS.match(t) and not MARK.match(t):
         it = re.match(r'^\s*(.+?)\s*[-–—]?\s*([АAВBСCДD])\s*$', t)
         if cur and cur["match"] and len(cur["items"]) < 2 and not cur["opts"] and it:  # тізіммен жазылған элемент
@@ -42,9 +62,11 @@ for t, m, lst in lines[1:]:
     if mm:
         t, m = t[mm.end():], m[mm.end():]
         cur = {"n": len(qs) + 1, "q": "", "opts": [], "items": []}; qs.append(cur)
+        if ctx and left: cur["ctx"] = ctx; left -= 1
         starts = marks(t, 0)
         cur["q"] = t[:starts[0] if starts else len(t)].strip()
         cur["match"] = "сәйкест" in cur["q"].lower()
+        if cur["match"] and "ctx" in cur: del cur["ctx"]; left = 0
         if not starts: continue
         t, m = t[starts[0]:], m[starts[0]:]
     if cur is None: continue
@@ -61,6 +83,7 @@ for t, m, lst in lines[1:]:
         body, bm = seg[k:], sm[k:]
         sig = [f for c, f in zip(body, bm) if not c.isspace()]
         cur["opts"].append({"t": re.sub(r'\s+', ' ', body).strip(' ;'), "c": sig.count("1") > len(sig) / 2})
+flush(False)
 for q in qs: q["q"] = re.sub(r'\s+', ' ', q["q"]).strip(); del q["match"]
 json.dump({"title": title, "questions": qs}, open(sys.argv[2], "w"), ensure_ascii=False, indent=1)
 print(title, len(qs))

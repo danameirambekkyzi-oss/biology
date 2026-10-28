@@ -19,6 +19,9 @@ for k, src in enumerate(srcs, 1):
             assert corr and 4 <= len(q["opts"]) <= 6 and len(corr) <= 3, (tid, q["n"])
             if len(q["opts"]) >= 5 or len(corr) > 1: e["type"] = "multi"
             e.update(q=tx(q["q"]), options=[tx(o["t"]) for o in q["opts"]], correct=corr)
+            if q.get("ctx"):  # контекстік тапсырма
+                assert len(q["opts"]) == 4 and len(corr) == 1, (tid, q["n"])
+                e.update(type="context", contextTitle=q["ctx"]["title"], context=q["ctx"]["text"])
         out.append(e)
     tests.append({"id": tid, "title": data["title"], "questions": out})
 entry = {"module": mod, "note": NOTE, "tests": tests}

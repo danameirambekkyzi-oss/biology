@@ -876,7 +876,7 @@
     const tests = ch ? `${ch.note ? `<div class="card ch-note">${ic("bulb", 24)}<span>${esc(ch.note)}</span></div>` : ""}
       <div class="grid g-3 ch-tests">${ch.tests.map(t => { const b = best(t.id); return `
         <div class="card test-card"><div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
-          <small class="muted">${t.questions.length} тапсырма · бір жауапты, көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
+          <small class="muted">${t.questions.length} тапсырма · бір жауапты, ${t.questions.some(q => q.type === "context") ? "контекстік, " : ""}көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
           <button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button></div>`; }).join("")}</div>` : "";
     return `<a href="#/app/chapters" class="back-link">← Барлық тараулар</a>
       <div class="card chapter-head">
@@ -1791,7 +1791,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281226")
+    import("./cloud.js?v=202610281234")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
