@@ -1416,8 +1416,9 @@
     "орналасады жоғары төмен үлкен кіші ұзын қысқа жаңа бірінші екінші үшінші кейбір барлығы біреуі осылай сонымен " +
     "сіңіреді сіңіріледі сіңіріліп сіңіріп сіңіре сіңіру бөлігі бөлімі бөлімде бөлігінде бөліктері " +
     "қалай қалайсың қашан қайда қайсы қайсысы неше нешеу неліктен ненің кімнің сәлем сәлеметсіз рақмет").split(" ").map(w => rqNorm(w)));
-  // Түбір: алғашқы 5 әріп; к/г, п/б алмасуы (жүрек — жүрегі) бір түбір болып саналады
-  const ftRoot = w => w.slice(0, 5).replace(/г/g, "к").replace(/б/g, "п");
+  // Түбір: алғашқы 5 әріп; к/г, п/б алмасуы (жүрек — жүрегі) бір түбір болып саналады.
+  // -ша/-ше жұрнағы мағынаны өзгертеді (қарын ≠ қарынша, жүрек ≠ жүрекше) — бөлек түбір.
+  const ftRoot = w => (w.slice(0, 5) + (w[5] === "ш" && /[аеы]/.test(w[6] || "") ? "ш" : "")).replace(/г/g, "к").replace(/б/g, "п");
   const ftStems = s => rqNorm(String(s || "").replace(/<[^>]+>/g, " ")).split(" ")
     .filter(w => w.length >= 5 && !/^\d+$/.test(w) && !FT_STOP.has(w)).map(ftRoot);
   const FT_MIN_COV = 0.25;
@@ -2000,7 +2001,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281959")
+    import("./cloud.js?v=202610282003")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
