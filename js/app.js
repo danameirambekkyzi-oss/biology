@@ -1403,7 +1403,7 @@
 
   /* ---- Файлдан тест жасау (премиум): оқушы файл салады → сайттағы барлық тесттерден сол тақырыпқа сай сұрақтар жиналады ---- */
   // Мәтін оқушының құрылғысында оқылады, ешқайда жіберілмейді. PDF және Word кітапханалары тек қажет кезде жүктеледі (js/vendor).
-  const FT_SIZES = [20, 30, 40];
+  const FT_SIZES = [20, 30, 0];  // 0 — табылғанның бәрі
   const FT_STOP = new Set(("және немесе болады болып табылады арқылы қандай кезінде бойынша сондай мысалы бірақ сияқты ретінде дейін кейін арасында " +
     "барлық көптеген маңызды негізгі түрлі әртүрлі жатады келеді береді мүмкін қатысады байланысты белгілі жүзеге асырады олардың оның " +
     "осындай солай қатар тағы басқа бірге түрде кезде жағдайда нәтижесінде себебі өйткені алайда дегеніміз деген деп аталады аталатын " +
@@ -1437,7 +1437,7 @@
     const scored = docs.map(d => { let sc = 0, hits = 0; d.st.forEach(s => { if (W[s]) { sc += W[s]; hits++; } }); return { q: d.q, sc: sc / (1 + 0.1 * Math.sqrt(d.st.size)), hits }; })
       .filter(x => x.hits > 0).sort((a, b) => b.sc - a.sc);
     const top = scored.length ? scored[0].sc : 0;
-    const pickd = scored.filter(x => x.hits >= 2 || x.sc >= top * 0.5).slice(0, size).map(x => x.q);
+    const pickd = scored.filter(x => x.hits >= 2 || x.sc >= top * 0.5).slice(0, size || Infinity).map(x => x.q);
     const ord = q => q.type === "match" ? 2 : q.type === "context" ? 1 : isMulti(q) ? 3 : 0;
     pickd.sort((a, b) => ord(a) - ord(b) || String(a.context || "").localeCompare(String(b.context || "")));
     // кілт сөздерді оқушыға файлдағы түрінде көрсетеміз
@@ -1476,14 +1476,14 @@
         ${f.names && f.names.length ? `<div class="ft-files">${f.names.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
         <details class="ft-paste" ${f.pasteOpen ? "open" : ""}><summary>немесе мәтінді көшіріп қой</summary>
           <textarea class="input" id="ft-text" rows="5" placeholder="Мысалы: Митохондрия — жасушаның энергетикалық станциясы…">${esc(f.pasted || "")}</textarea></details>
-        <div class="ft-row"><span class="muted">Тесттегі сұрақ саны:</span><div class="chips">${FT_SIZES.map(n => `<button class="chip ${f.size === n ? "active" : ""}" data-act="ft-size" data-n="${n}">${n}</button>`).join("")}</div></div>
+        <div class="ft-row"><span class="muted">Тесттегі сұрақ саны:</span><div class="chips">${FT_SIZES.map(n => `<button class="chip ${f.size === n ? "active" : ""}" data-act="ft-size" data-n="${n}">${n || "Барлығы (максимум)"}</button>`).join("")}</div></div>
         <button class="btn btn-cta btn-lg btn-block" data-act="ft-make" ${f.busy ? "disabled" : ""}>${f.busy ? "Файл оқылып жатыр…" : ic("search", 18) + " Тест жасау"}</button>
         ${f.err ? `<p class="ft-err">${esc(f.err)}</p>` : ""}
       </div>
       ${r ? `<div class="card ft-res">
         <h3>${r.questions.length ? `${r.questions.length} сұрақ табылды` : "Сәйкес сұрақ табылмады"}</h3>
         ${r.keys.length ? `<p class="muted" style="margin:0 0 8px">Файлдағы негізгі ұғымдар:</p><div class="chips" style="margin-bottom:14px">${r.keys.map(k => `<span class="chip">${esc(k)}</span>`).join("")}</div>` : ""}
-        ${r.questions.length ? `${r.questions.length < f.size ? `<p class="hint">Бұл тақырып бойынша ${f.size} сұрақ табылмады — табылғанының бәрі тестке кірді.</p>` : ""}
+        ${r.questions.length ? `${f.size && r.questions.length < f.size ? `<p class="hint">Бұл тақырып бойынша ${f.size} сұрақ табылмады — табылғанының бәрі тестке кірді.</p>` : ""}
           <button class="btn btn-primary btn-lg btn-block" data-act="ft-start">Тестті бастау →</button>`
           : `<p class="muted" style="margin:0">Файлда биология тақырыптары аз немесе мәтін оқылмады (суреттен сканерленген PDF мәтінсіз болады). Басқа файл салып көр немесе мәтінді көшіріп қой.</p>`}
       </div>` : ""}`;
@@ -1911,7 +1911,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281933")
+    import("./cloud.js?v=202610281937")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
