@@ -729,3 +729,17 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .rp-body p { margin: 0 0 8px; }
 .rp-text { font-weight: 600; color: var(--red); }
 .rp-opts { white-space: pre-wrap; font: inherit; margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--purple-50); }
+
+/* ---------- Файлдан тест жасау ---------- */
+.ft-card { display: grid; gap: 14px; }
+.ft-drop { display: grid; justify-items: center; gap: 6px; padding: 26px 16px; border: 2px dashed var(--border); border-radius: 16px; text-align: center; cursor: pointer; color: var(--purple); background: var(--purple-50); transition: border-color .15s; }
+.ft-drop b { color: var(--text); }
+.ft-drop:hover, .ft-drop.over { border-color: var(--purple); }
+.ft-files { display: flex; flex-wrap: wrap; gap: 8px; }
+.ft-paste summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 14px; }
+.ft-paste textarea { margin-top: 8px; }
+.ft-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ft-row .chip { cursor: pointer; }
+.ft-err { margin: 0; color: var(--red); font-weight: 600; }
+.ft-res { margin-top: 16px; }
+.ft-res h3 { margin-top: 0; }

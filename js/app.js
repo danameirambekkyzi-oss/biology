@@ -701,7 +701,8 @@
     { id: "real",        ico: "book",      t: "ҰБТ-да жиі кездесетін сұрақтар тізімі" },
     { id: "plants",      ico: "bulb",      t: "Негізгі жаттау керек ақпараттар" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
-    { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" }
+    { id: "settings",    ico: "settings",  t: "Баптаулар / Профиль" },
+    { id: "filetest",    ico: "search",    t: "Файлдан тест жасау" }
   ];
 
   function shell(u, active, inner) {
@@ -756,13 +757,14 @@
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
   function renderApp(u, page, arg) {
-    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings };
+    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings, filetest: pageFiletest };
     if (CLOUD && u.role === "teacher") pages.teacher = pageTeacher;
     const fn = pages[page] || (CLOUD && u.role === "teacher" ? pageTeacher : pageDashboard);
     app.innerHTML = shell(u, page, fn(u, arg));
     if (page === "teacher" || (!pages[page] && u.role === "teacher")) bindTeacher();
     if (page === "plants") bindPlants();
     if (page === "real") bindReal();
+    if (page === "filetest") bindFiletest();
     if (CLOUD) verifySession();
     if (CLOUD && (page === "dashboard" || page === "leaderboard") && (!state.lb || Date.now() - state.lb.at > 60000) && !state.lbLoading) {
       state.lbLoading = true;
@@ -1399,6 +1401,114 @@
     return { mode: "mock", title: "ҰБТ сынамасы", questions: qs, timeLimit: state.mockMin * 60, instant: false };
   }
 
+  /* ---- Файлдан тест жасау (премиум): оқушы файл салады → сайттағы барлық тесттерден сол тақырыпқа сай сұрақтар жиналады ---- */
+  // Мәтін оқушының құрылғысында оқылады, ешқайда жіберілмейді. PDF және Word кітапханалары тек қажет кезде жүктеледі (js/vendor).
+  const FT_SIZES = [20, 30, 40];
+  const FT_STOP = new Set(("және немесе болады болып табылады арқылы қандай кезінде бойынша сондай мысалы бірақ сияқты ретінде дейін кейін арасында " +
+    "барлық көптеген маңызды негізгі түрлі әртүрлі жатады келеді береді мүмкін қатысады байланысты белгілі жүзеге асырады олардың оның " +
+    "осындай солай қатар тағы басқа бірге түрде кезде жағдайда нәтижесінде себебі өйткені алайда дегеніміз деген деп аталады аталатын " +
+    "құрайды тұрады жүреді пайда болатын болған болса бола алады емес жоқ бар өте ең көп аз әр бір екі үш төрт бес шамамен пайыз " +
+    "сұрақ жауап дұрыс таңдаңыз белгіле белгілеңіз сәйкестендір сәйкестендіріңіз көрсетілген суретте суреттегі " +
+    "керек қажет болмауы болмайды теріс өтеді түзеді түзіледі бөлінеді бөледі адамның адамда жүйесі сыртқы ішкі жүреді жүзеге " +
+    "кіреді шығады алады береді айналады қамтамасыз ететін етеді жасайды көрсетеді анықтайды анықталады қалыптасады орналасқан " +
+    "орналасады жоғары төмен үлкен кіші ұзын қысқа жаңа бірінші екінші үшінші кейбір барлығы біреуі осылай сонымен").split(" ").map(w => rqNorm(w)));
+  const ftStems = s => rqNorm(String(s || "").replace(/<[^>]+>/g, " ")).split(" ")
+    .filter(w => w.length >= 5 && !/^\d+$/.test(w) && !FT_STOP.has(w)).map(w => w.slice(0, 6));
+  let FT_INDEX = null;
+  function ftIndex() {  // бір рет: әр сұрақтың сөз түбірлері және олардың сирек/жиілігі (IDF)
+    if (FT_INDEX) return FT_INDEX;
+    const seen = new Set(), docs = [], df = {};
+    for (const q of Q) {
+      const key = rqNorm(plain(q.q) + "|" + (q.options || []).map(plain).join("|") + "|" + (q.items || []).map(it => plain(it.text)).join("|"));
+      if (seen.has(key)) continue; seen.add(key);
+      const st = new Set(ftStems([q.q, q.contextTitle, q.context].concat(q.options || [], (q.items || []).map(it => it.text)).join(" ")));
+      if (!st.size) continue;
+      docs.push({ q, st }); st.forEach(s => { df[s] = (df[s] || 0) + 1; });
+    }
+    const idf = {}; for (const s in df) idf[s] = Math.log(docs.length / df[s]);
+    return (FT_INDEX = { docs, idf, df, max: docs.length * 0.04 });
+  }
+  function ftSearch(text, size) {
+    const { docs, idf, df, max } = ftIndex(), tf = {};
+    for (const s of ftStems(text)) if (idf[s] != null && df[s] <= max) tf[s] = (tf[s] || 0) + 1;
+    // файлдағы ең маңызды түбірлер: жиі кездесетін әрі сұрақтарда сирек түбірлер
+    const keys = Object.keys(tf).map(s => ({ s, w: idf[s] * (1 + Math.log(tf[s])) })).sort((a, b) => b.w - a.w).slice(0, 80);
+    const W = Object.fromEntries(keys.map(k => [k.s, k.w]));
+    const scored = docs.map(d => { let sc = 0, hits = 0; d.st.forEach(s => { if (W[s]) { sc += W[s]; hits++; } }); return { q: d.q, sc: sc / (1 + 0.1 * Math.sqrt(d.st.size)), hits }; })
+      .filter(x => x.hits > 0).sort((a, b) => b.sc - a.sc);
+    const top = scored.length ? scored[0].sc : 0;
+    const pickd = scored.filter(x => x.hits >= 2 || x.sc >= top * 0.5).slice(0, size).map(x => x.q);
+    const ord = q => q.type === "match" ? 2 : q.type === "context" ? 1 : isMulti(q) ? 3 : 0;
+    pickd.sort((a, b) => ord(a) - ord(b) || String(a.context || "").localeCompare(String(b.context || "")));
+    // кілт сөздерді оқушыға файлдағы түрінде көрсетеміз
+    const orig = {}; String(text).toLowerCase().split(/[^\p{L}\p{N}-]+/u).forEach(w => { const s = rqNorm(w).slice(0, 6); if (W[s] && !orig[s]) orig[s] = w; });
+    return { questions: pickd, keys: keys.slice(0, 15).map(k => orig[k.s] || k.s) };
+  }
+  const ftLoaded = {};
+  const ftScript = src => ftLoaded[src] || (ftLoaded[src] = new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => { delete ftLoaded[src]; no(new Error("Кітапхана жүктелмеді. Интернетті тексеріңіз.")); }; document.head.appendChild(s); }));
+  async function ftReadFile(f) {
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    if (ext === "txt" || f.type.startsWith("text/")) return f.text();
+    if (ext === "docx") {
+      await ftScript("js/vendor/mammoth.browser.min.js");
+      return (await window.mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
+    }
+    if (ext === "pdf") {
+      await ftScript("js/vendor/pdf.min.js");
+      const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js";
+      const pdf = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+      let out = "";
+      for (let i = 1; i <= Math.min(pdf.numPages, 200); i++) out += (await (await pdf.getPage(i)).getTextContent()).items.map(it => it.str).join(" ") + "\n";
+      return out;
+    }
+    throw new Error(`«${f.name}» — бұл файл түрі оқылмайды. PDF, Word (.docx) немесе .txt файл салыңыз.`);
+  }
+  function pageFiletest(u) {
+    const head = `<h1 class="page-title">Файлдан тест жасау</h1><p class="page-sub">Конспектіңді, оқулықтың тақырыбын немесе кез келген мәтінді сал — сайттағы ${Q.length} сұрақтың ішінен сол тақырыпқа сай сұрақтарды жинап, саған жеке тест жасаймыз.</p>`;
+    if (!hasPremium(u)) return head + `<div class="card pl-locked"><div class="pl-lock-ico">${ic("lock", 30)}</div>
+        <h2>Файлдан тест — премиум</h2>
+        <p class="muted">PDF, Word немесе мәтін файлын салсаң, оның тақырыбы бойынша барлық тесттерден сұрақтар жиналып, жеке тест жасалады. Бұл мүмкіндік премиум нұсқада ашылады.</p>
+        <button class="btn btn-cta btn-lg" data-act="upgrade">${ic("star", 18)} Премиум алу</button></div>`;
+    const f = state.ft || (state.ft = { size: 30 }), r = f.res;
+    return head + `<div class="card ft-card">
+        <label class="ft-drop" id="ft-drop">${ic("clipboard", 30)}<b>Файлды осында сал немесе таңда</b><small class="muted">PDF, Word (.docx), .txt · бірнеше файл салуға болады</small>
+          <input type="file" id="ft-file" accept=".pdf,.docx,.txt,application/pdf,text/plain" multiple hidden></label>
+        ${f.names && f.names.length ? `<div class="ft-files">${f.names.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
+        <details class="ft-paste" ${f.pasteOpen ? "open" : ""}><summary>немесе мәтінді көшіріп қой</summary>
+          <textarea class="input" id="ft-text" rows="5" placeholder="Мысалы: Митохондрия — жасушаның энергетикалық станциясы…">${esc(f.pasted || "")}</textarea></details>
+        <div class="ft-row"><span class="muted">Тесттегі сұрақ саны:</span><div class="chips">${FT_SIZES.map(n => `<button class="chip ${f.size === n ? "active" : ""}" data-act="ft-size" data-n="${n}">${n}</button>`).join("")}</div></div>
+        <button class="btn btn-cta btn-lg btn-block" data-act="ft-make" ${f.busy ? "disabled" : ""}>${f.busy ? "Файл оқылып жатыр…" : ic("search", 18) + " Тест жасау"}</button>
+        ${f.err ? `<p class="ft-err">${esc(f.err)}</p>` : ""}
+      </div>
+      ${r ? `<div class="card ft-res">
+        <h3>${r.questions.length ? `${r.questions.length} сұрақ табылды` : "Сәйкес сұрақ табылмады"}</h3>
+        ${r.keys.length ? `<p class="muted" style="margin:0 0 8px">Файлдағы негізгі ұғымдар:</p><div class="chips" style="margin-bottom:14px">${r.keys.map(k => `<span class="chip">${esc(k)}</span>`).join("")}</div>` : ""}
+        ${r.questions.length ? `${r.questions.length < f.size ? `<p class="hint">Бұл тақырып бойынша ${f.size} сұрақ табылмады — табылғанының бәрі тестке кірді.</p>` : ""}
+          <button class="btn btn-primary btn-lg btn-block" data-act="ft-start">Тестті бастау →</button>`
+          : `<p class="muted" style="margin:0">Файлда биология тақырыптары аз немесе мәтін оқылмады (суреттен сканерленген PDF мәтінсіз болады). Басқа файл салып көр немесе мәтінді көшіріп қой.</p>`}
+      </div>` : ""}`;
+  }
+  function bindFiletest() {
+    const inp = $("#ft-file"), drop = $("#ft-drop"), ta = $("#ft-text"), f = state.ft; if (!inp || !f) return;
+    const take = files => { f.files = [...files]; f.names = f.files.map(x => x.name); f.res = null; f.err = ""; render(); };
+    inp.onchange = () => take(inp.files);
+    drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+    drop.ondragleave = () => drop.classList.remove("over");
+    drop.ondrop = e => { e.preventDefault(); take(e.dataTransfer.files); };
+    if (ta) { ta.oninput = () => { f.pasted = ta.value; }; ta.parentElement.ontoggle = e => { f.pasteOpen = e.target.open; }; }
+  }
+  async function ftMake() {
+    const f = state.ft; if (!f || f.busy) return;
+    if (!(f.files && f.files.length) && !(f.pasted || "").trim()) { f.err = "Алдымен файл сал немесе мәтінді көшіріп қой."; return render(); }
+    f.busy = true; f.err = ""; f.res = null; render();
+    try {
+      let text = f.pasted || "";
+      for (const x of f.files || []) text += "\n" + await ftReadFile(x);
+      f.res = ftSearch(text.slice(0, 3e6), f.size);
+    } catch (e) { f.err = e.message || "Файл оқылмады."; }
+    f.busy = false; render();
+  }
+
   function startTest(t) {
     if (!t.questions.length) return toast("Сұрақтар жақында қосылады");
     t.answers = t.questions.map(() => []);
@@ -1625,7 +1735,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Файлдан тест жасау: конспектіңді сал — сол тақырып бойынша тест жиналады</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -1682,6 +1792,9 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
+    "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
+    "ft-make": () => ftMake(),
+    "ft-start": () => { const r = state.ft && state.ft.res; if (r && r.questions.length) startTest({ mode: "file", title: "Файлдан жасалған тест", questions: r.questions.slice(), instant: false }); },
     report: el => { const t = el.dataset.src === "res" ? state.result && state.result.test : state.test; if (t) reportModal(t, +el.dataset.i); },
     "t-rp-done": el => window.Cloud.deleteReport(el.dataset.id).then(() => { state.reports = (state.reports || []).filter(r => r.id !== el.dataset.id); toast("Хабарлама өшірілді"); render(); }).catch(e => toast(window.Cloud.errorText(e))),
     "t-premium": el => {
@@ -1798,7 +1911,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202610281246")
+    import("./cloud.js?v=202610281933")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
