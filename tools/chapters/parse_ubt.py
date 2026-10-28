@@ -17,16 +17,22 @@ for el in d.element.body.iterchildren():
         if seg.group().strip(): lines.append((seg.group(), m[seg.start():seg.end()], lst))
 title = re.sub(r'\s*;\s*', '; ', re.sub(r'\s+', ' ', lines[0][0])).strip(' ;')
 QS = re.compile(r'^\s*(\d+)\s*\.\s*')
-MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBСCДDЕEФF])\s*[.)]\s*')
-LET = {c: i for i, s in enumerate(["АA", "ВB", "СC", "ДD", "ЕE", "ФF"]) for c in s}
+MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBСCДDЕEФFa-f])\s*[.)]\s*')
+LET = {c: i for i, s in enumerate(["АAa", "ВBb", "СCc", "ДDd", "ЕEe", "ФFf"]) for c in s}
 def marks(t, k):  # тек кезекті әріптер (А, В, С...) — «А. Флеминг» сияқты бас әріптер нұсқа емес
     out = []
     for x in MARK.finditer(t):
+        if x.group(1).islower() and (x.start() or ")" not in x.group()): continue  # a) b) — тек жол басында
         if LET[x.group(1)] == k + len(out): out.append(x.start())
     return out
 qs, cur = [], None
 for t, m, lst in lines[1:]:
-    if cur and lst and not QS.match(t):
+    if lst and not QS.match(t) and not MARK.match(t):
+        it = re.match(r'^\s*(.+?)\s*[-–—]?\s*([АAВBСCДD])\s*$', t)
+        if cur and cur["match"] and len(cur["items"]) < 2 and not cur["opts"] and it:  # тізіммен жазылған элемент
+            cur["items"].append({"text": it.group(1).strip(), "answer": LET[it.group(2)]}); continue
+        if cur is None or len(cur["opts"]) >= 6:  # нөмірсіз (тізім) сұрақ
+            cur = {"n": len(qs) + 1, "q": t.strip(), "opts": [], "items": [], "match": "сәйкест" in t.lower()}; qs.append(cur); continue
         sig = [f for c, f in zip(t, m) if not c.isspace()]
         cur["opts"].append({"t": re.sub(r'\s+', ' ', t).strip(' ;'), "c": sig.count("1") > len(sig) / 2}); continue
     mm = QS.match(t)
