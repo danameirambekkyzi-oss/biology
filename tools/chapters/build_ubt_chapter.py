@@ -2,9 +2,17 @@
 Қолданылуы: python3 -I build_ubt_chapter.py repo module t1.json t2.json ...   (module: anatomy, genetics, ...)"""
 import json, sys
 repo, mod, srcs = sys.argv[1], sys.argv[2], sys.argv[3:]
-NAME = {"anatomy": ("анатомия", "ana"), "genetics": ("генетика", "gen")}[mod]
+NAME = {"anatomy": ("анатомия", "ana"), "genetics": ("генетика", "gen"), "molecular": ("молекулалық биология", "mol")}[mod]
+# Файлда тақырып жазылмаса — тест атауы (тараудағы реті бойынша)
+TITLE = {("molecular", 1): "Тірі организмдердегі заттардың тасымалдануы"}
+# Мәтіндегі емле қателері
+TEXT_FIX = {"Фагацитоз": "Фагоцитоз", "Эозонофилдер": "Эозинофилдер", "тасылмалдану": "тасымалдану", "бағыттта": "бағытта",
+            "рецепиент": "реципиент", "Транслокоза": "Транслоказа"}
 NOTE = f"Егер {NAME[0]} тарауынан әлсіз болсаң, бұл жерде сенің біліміңді күшейтуге өте көптеген тесттер бар. Жаттығып, балыңды арттыр!"
-def tx(s): return " ".join(s.split())
+def tx(s):
+    s = " ".join(s.split())
+    for a, b in (TEXT_FIX.items() if mod == "molecular" else ()): s = s.replace(a, b)
+    return s
 tests = []
 for k, src in enumerate(srcs, 1):
     tid, data, out = f"{NAME[1]}-{k}", json.load(open(src)), []
@@ -23,7 +31,7 @@ for k, src in enumerate(srcs, 1):
                 assert len(q["opts"]) == 4 and len(corr) == 1, (tid, q["n"])
                 e.update(type="context", contextTitle=q["ctx"]["title"], context=q["ctx"]["text"])
         out.append(e)
-    tests.append({"id": tid, "title": data["title"], "questions": out})
+    tests.append({"id": tid, "title": data["title"] or TITLE[mod, k], "questions": out})
 entry = {"module": mod, "note": NOTE, "tests": tests}
 path = f"{repo}/js/tests/chapters.js"
 head, body = open(path).read().split("window.CHAPTER_TESTS = ", 1)

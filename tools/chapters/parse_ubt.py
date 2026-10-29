@@ -15,7 +15,9 @@ for el in d.element.body.iterchildren():
     lst = el.find('.//' + qn('w:numPr')) is not None  # тізім элементі — әріпсіз нұсқа
     for seg in re.finditer(r'[^\n]+', t):
         if seg.group().strip(): lines.append((seg.group(), m[seg.start():seg.end()], lst))
-title = re.sub(r'\s*;\s*', '; ', re.sub(r'\s+', ' ', lines[0][0])).strip(' ;')
+# Бірінші жол — тақырып; файл бірден «1. сұрақпен» басталса, тақырып жоқ (build кезінде басқа атау беріледі)
+has_title = not re.match(r'^\s*1\s*\.', lines[0][0])
+title = re.sub(r'\s*;\s*', '; ', re.sub(r'\s+', ' ', lines[0][0])).strip(' ;') if has_title else ""
 QS = re.compile(r'^\s*(\d+)\s*\.\s*')
 MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBБСCДDЕEФFa-f])\s*[.)]\s*')
 LET = {c: i for i, s in enumerate(["АAa", "ВBбБb", "СCc", "ДDd", "ЕEe", "ФFf"]) for c in s}
@@ -23,7 +25,8 @@ def marks(t, k):  # тек кезекті әріптер (А, В, С...) — «�
     out = []
     for x in MARK.finditer(t):
         if x.group(1).islower() and (x.start() or ")" not in x.group()): continue  # a) b) — тек жол басында
-        if LET[x.group(1)] == k + len(out): out.append(x.start())
+        n = LET[x.group(1)]
+        if n == k + len(out) or (x.start() == 0 and not out and k and n == k - 1): out.append(x.start())  # жол басында қайталанған әріп (В, В) — бәрібір жаңа нұсқа
     return out
 # 26–30-сұрақтардың алдындағы контекст мәтіні: нөмірсіз жолдар тобы, ішінде ұзын абзац бар.
 # Нөмірсіз жолдарды кейінге қалдырамыз: келесі сұрақ басталғанда — контекст па, әлде алдыңғы мәтіннің жалғасы ма, шешеміз.
@@ -43,7 +46,7 @@ def cont(t, m):  # әріпсіз жол — алдыңғы мәтіннің ж�
     if cur["opts"]: cur["opts"][-1]["t"] += " " + t[:e].strip()
     else: cur["q"] += " " + t[:e].strip()
 qs, cur, pend, ctx, left = [], None, [], None, 0
-for t, m, lst in lines[1:]:
+for t, m, lst in lines[1 if has_title else 0:]:
     if cur and not lst and not QS.match(t) and not marks(t, len(cur["opts"])) and not (cur["match"] and not cur["opts"]):
         pend.append((t, m)); continue
     flush(bool(QS.match(t)))
