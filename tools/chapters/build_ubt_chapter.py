@@ -2,16 +2,19 @@
 Қолданылуы: python3 -I build_ubt_chapter.py repo module t1.json t2.json ...   (module: anatomy, genetics, ...)"""
 import json, sys
 repo, mod, srcs = sys.argv[1], sys.argv[2], sys.argv[3:]
-NAME = {"anatomy": ("анатомия", "ana"), "genetics": ("генетика", "gen"), "molecular": ("молекулалық биология", "mol")}[mod]
+NAME = {"anatomy": ("анатомия", "ana"), "genetics": ("генетика", "gen"), "molecular": ("молекулалық биология", "mol"),
+        "cell": ("жасушалық биология", "cell")}[mod]
 # Файлда тақырып жазылмаса — тест атауы (тараудағы реті бойынша)
-TITLE = {("molecular", 1): "Тірі организмдердегі заттардың тасымалдануы"}
+TITLE = {("molecular", 1): "Тірі организмдердегі заттардың тасымалдануы", ("cell", 5): "Митохондрия және энергия алмасуы"}
+# Файлдағы тақырыптың жазылуын түзету
+TITLE_FIX = {"Өсімдіктердің Құрылысы": "Өсімдіктердің құрылысы"}
 # Мәтіндегі емле қателері
 TEXT_FIX = {"Фагацитоз": "Фагоцитоз", "Эозонофилдер": "Эозинофилдер", "тасылмалдану": "тасымалдану", "бағыттта": "бағытта",
             "рецепиент": "реципиент", "Транслокоза": "Транслоказа"}
 NOTE = f"Егер {NAME[0]} тарауынан әлсіз болсаң, бұл жерде сенің біліміңді күшейтуге өте көптеген тесттер бар. Жаттығып, балыңды арттыр!"
 def tx(s):
     s = " ".join(s.split())
-    for a, b in (TEXT_FIX.items() if mod == "molecular" else ()): s = s.replace(a, b)
+    for a, b in (TEXT_FIX.items() if mod in ("molecular", "cell") else ()): s = s.replace(a, b)
     return s
 tests = []
 for k, src in enumerate(srcs, 1):
@@ -30,8 +33,11 @@ for k, src in enumerate(srcs, 1):
             if q.get("ctx"):  # контекстік тапсырма
                 assert len(q["opts"]) == 4 and len(corr) == 1, (tid, q["n"])
                 e.update(type="context", contextTitle=q["ctx"]["title"], context=q["ctx"]["text"])
+        if q.get("img"): e["img"] = q["img"]
         out.append(e)
-    tests.append({"id": tid, "title": data["title"] or TITLE[mod, k], "questions": out})
+    title = data["title"] or TITLE[mod, k]
+    for a, b in TITLE_FIX.items(): title = title.replace(a, b)
+    tests.append({"id": tid, "title": title, "questions": out})
 entry = {"module": mod, "note": NOTE, "tests": tests}
 path = f"{repo}/js/tests/chapters.js"
 head, body = open(path).read().split("window.CHAPTER_TESTS = ", 1)

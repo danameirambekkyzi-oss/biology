@@ -18,6 +18,10 @@ for el in d.element.body.iterchildren():
 # Бірінші жол — тақырып; файл бірден «1. сұрақпен» басталса, тақырып жоқ (build кезінде басқа атау беріледі)
 has_title = not re.match(r'^\s*1\s*\.', lines[0][0])
 title = re.sub(r'\s*;\s*', '; ', re.sub(r'\s+', ' ', lines[0][0])).strip(' ;') if has_title else ""
+skip = 1 if has_title else 0
+while has_title and skip < len(lines) and not re.match(r'^\s*\d+\s*\.', lines[skip][0]) and lines[skip][1].count("1") > len(lines[skip][1]) / 2:
+    title += " " + lines[skip][0].strip(); skip += 1  # тақырыптың келесі жолға ауысқан жалғасы
+title = re.sub(r'\s+', ' ', title).strip()
 QS = re.compile(r'^\s*(\d+)\s*\.\s*')
 MARK = re.compile(r'(?:(?<=^)|(?<=[\s,]))([АAВBБСCДDЕEФFa-f])\s*[.)]\s*')
 LET = {c: i for i, s in enumerate(["АAa", "ВBбБb", "СCc", "ДDd", "ЕEe", "ФFf"]) for c in s}
@@ -46,7 +50,7 @@ def cont(t, m):  # әріпсіз жол — алдыңғы мәтіннің ж�
     if cur["opts"]: cur["opts"][-1]["t"] += " " + t[:e].strip()
     else: cur["q"] += " " + t[:e].strip()
 qs, cur, pend, ctx, left = [], None, [], None, 0
-for t, m, lst in lines[1 if has_title else 0:]:
+for t, m, lst in lines[skip:]:
     if cur and not lst and not QS.match(t) and not marks(t, len(cur["opts"])) and not (cur["match"] and not cur["opts"]):
         pend.append((t, m)); continue
     flush(bool(QS.match(t)))
@@ -85,7 +89,11 @@ for t, m, lst in lines[1 if has_title else 0:]:
         k = MARK.match(seg).end()
         body, bm = seg[k:], sm[k:]
         sig = [f for c, f in zip(body, bm) if not c.isspace()]
-        cur["opts"].append({"t": re.sub(r'\s+', ' ', body).strip(' ;'), "c": sig.count("1") > len(sig) / 2})
+        if cur["opts"] and cur["opts"][-1].get("empty"):  # «C. Д. Арнон»: бос нұсқадан кейінгі әріп — аты-жөннің бас әрпі
+            o = cur["opts"][-1]; o["t"] = re.sub(r'\s+', ' ', seg).strip(' ;'); o["c"] = sig.count("1") > len(sig) / 2; del o["empty"]; continue
+        o = {"t": re.sub(r'\s+', ' ', body).strip(' ;'), "c": sig.count("1") > len(sig) / 2}
+        if not o["t"]: o["empty"] = True
+        cur["opts"].append(o)
 flush(False)
 for q in qs: q["q"] = re.sub(r'\s+', ' ', q["q"]).strip(); del q["match"]
 json.dump({"title": title, "questions": qs}, open(sys.argv[2], "w"), ensure_ascii=False, indent=1)
