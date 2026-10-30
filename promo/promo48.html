@@ -1,0 +1,269 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/font.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#120B2E;font-family:"Montserrat",sans-serif}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:linear-gradient(180deg,#1C1146 0%,#130C30 55%,#0E0824 100%)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
+.blob{position:absolute;left:0;top:0;border-radius:50%;filter:blur(150px)}
+#grid{position:absolute;inset:-200px;background-image:linear-gradient(rgba(167,139,250,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,.06) 1px,transparent 1px);background-size:90px 90px}
+.title{font-weight:900;color:#fff;text-align:center;white-space:nowrap;letter-spacing:-1.5px;line-height:1}
+.grad{background:linear-gradient(100deg,#C4B5FD,#F472B6 55%,#FBCFE8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-weight:700;color:#E9D5FF;font-size:46px;white-space:nowrap;text-align:center}
+.tile{width:460px;height:300px;border-radius:40px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 30px 70px rgba(0,0,0,.35)}
+.tile b{font-size:110px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:1}
+.tile span{font-size:34px;font-weight:700;color:#E9D5FF;margin-top:14px;text-align:center;line-height:1.15}
+.laptop{width:1000px}
+.laptop .scr{position:relative;background:#0a0a10;border-radius:30px 30px 6px 6px;padding:20px 20px 26px;box-shadow:0 0 0 2px #2a2838 inset,0 40px 90px rgba(0,0,0,.5)}
+.laptop .view{position:relative;width:960px;height:600px;overflow:hidden;border-radius:6px;background:#F6F4FF}
+.laptop .base{height:30px;margin:0 -60px;background:linear-gradient(#e7e5ee,#a9a6b5 60%,#7d7a89);border-radius:0 0 26px 26px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.laptop iframe{width:1440px;height:900px;border:0;transform:scale(.66667);transform-origin:0 0;display:block;pointer-events:none}
+.phone{background:#0b0b12;border-radius:66px;padding:16px;box-shadow:0 0 0 3px #3b3850 inset,0 0 0 1px #000,0 40px 90px rgba(0,0,0,.5),0 0 140px rgba(236,72,153,.28)}
+.phone .view{position:relative;width:819px;height:1401px;overflow:hidden;border-radius:52px;background:#F6F4FF}
+.phone iframe{width:390px;height:667px;border:0;transform:scale(2.1);transform-origin:0 0;display:block}
+.glare{position:absolute;inset:0;border-radius:52px;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);background-size:300% 100%;opacity:0}
+.cap{width:1040px;text-align:center}
+.cap .k{display:inline-flex;align-items:center;gap:14px;font:800 30px Montserrat;color:#fff;padding:8px 22px 8px 8px;border-radius:30px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);margin-bottom:16px}
+.cap .k i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#EC4899)}
+.cap h2{font-size:52px;line-height:1.1;font-weight:900;color:#fff;letter-spacing:-.5px}
+.cap p{font-size:31px;font-weight:600;color:#C4B5FD;margin-top:12px}
+.quote{width:940px;padding:40px 48px;border-radius:40px;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.quote .st{color:#F59E0B;font-size:40px;letter-spacing:6px}
+.quote p{font-size:46px;font-weight:800;color:#1E1440;line-height:1.2;margin-top:10px}
+.quote small{display:block;font-size:28px;font-weight:600;color:#7C6FA8;margin-top:14px}
+.cta{font-size:48px;font-weight:800;color:#fff;padding:32px 62px;border-radius:60px;background:linear-gradient(135deg,#EC4899,#F472B6);box-shadow:0 18px 50px rgba(236,72,153,.5);white-space:nowrap;overflow:hidden}
+.cta i{position:absolute;top:-20px;bottom:-20px;width:120px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg)}
+.logo{width:200px;height:200px;border-radius:50px;background:#fff;padding:16px;object-fit:contain;box-shadow:0 30px 80px rgba(124,58,237,.55)}
+#cursor{position:absolute;left:0;top:0;width:0;height:0;z-index:30}
+#cursor svg{position:absolute;left:-6px;top:-4px;width:52px;height:52px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+#ring{position:absolute;left:0;top:0;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;border:4px solid rgba(236,72,153,.9);background:rgba(236,72,153,.14);box-shadow:0 0 24px rgba(236,72,153,.45)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:55;pointer-events:none}
+#fade{position:absolute;inset:0;background:#000;opacity:0;z-index:60;pointer-events:none}
+</style></head>
+<body><div id="stage">
+  <div class="blob" id="b1" style="width:900px;height:900px;background:#7C3AED;opacity:.5"></div>
+  <div class="blob" id="b2" style="width:800px;height:800px;background:#EC4899;opacity:.3"></div>
+  <div id="grid"></div>
+
+  <!-- hook -->
+  <div id="h1" class="abs title" style="font-size:84px">ҰБТ-да биологиядан</div>
+  <div id="h2" class="abs title grad" style="font-size:300px;letter-spacing:-8px">50/50</div>
+  <div id="h3" class="abs title" style="font-size:96px">керек пе?</div>
+  <img id="lg" class="abs logo" src="../img/brand/logo.png">
+  <div id="h4" class="abs title" style="font-size:170px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="h5" class="abs sub">Барлығы бір платформада</div>
+  <!-- stats -->
+  <div id="sT" class="abs title" style="font-size:64px">Платформада:</div>
+  <div id="s1" class="abs tile"><b data-n="3128">0</b><span>сұрақ</span></div>
+  <div id="s2" class="abs tile"><b data-n="72">0</b><span>тест</span></div>
+  <div id="s3" class="abs tile"><b data-n="6">0</b><span>тараулық бөлім</span></div>
+  <div id="s4" class="abs tile"><b data-n="231">0</b><span>ҰБТ-да жиі<br>келетін сұрақ</span></div>
+  <!-- phone with the live site -->
+  <div id="cap" class="abs cap"><div class="k"><i id="capn"></i><span id="capk"></span></div><h2 id="capt"></h2><p id="caps"></p></div>
+  <div id="ph" class="abs phone"><div class="view"><iframe id="appf" src="about:blank"></iframe><div class="glare" id="glare"></div></div></div>
+  <!-- reviews -->
+  <div id="rT" class="abs title" style="font-size:72px">Оқушылар <span class="grad">не дейді?</span></div>
+  <div id="q1" class="abs quote"><div class="st">★★★★★</div><p>«Нағыз 50/50 қоямын дейтіндерге таптырмас таңдау»</p><small>— оқушы пікірі</small></div>
+  <div id="q2" class="abs quote"><div class="st">★★★★★</div><p>«Керек нәрсенің бәрі бір жерде»</p><small>— оқушы пікірі</small></div>
+  <div id="q3" class="abs quote"><div class="st">★★★★★</div><p>«Күніне 20 сұрақ жаттау — өте күшті»</p><small>— оқушы пікірі</small></div>
+  <!-- CTA -->
+  <div id="lap" class="abs laptop"><div class="scr"><div class="view"><iframe id="landf" src="http://127.0.0.1:8765/#/"></iframe></div></div><div class="base"></div></div>
+  <img id="lg2" class="abs logo" src="../img/brand/logo.png" style="width:170px;height:170px;border-radius:42px">
+  <div id="e1" class="abs title" style="font-size:150px">BIO<span class="grad">ҰБТ</span></div>
+  <div id="e2" class="abs sub" style="font-size:52px;color:#fff">Биологияны бірге меңгерейік!</div>
+  <div id="e3" class="abs cta">Дайындықты бүгін баста!<i id="shine"></i></div>
+  <div id="e4" class="abs sub" style="font-size:32px;font-weight:600;color:#C4B5FD">danameirambekkyzi-oss.github.io/biology</div>
+
+  <div id="cursor"><div id="ring"></div><svg viewBox="0 0 24 24"><path d="M4 2.5l6.5 18 2.4-7.3 7.4-2.6z" fill="#fff" stroke="#1b1530" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+  <div id="flash"></div><div id="fade"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const ss = p => p * p * (3 - 2 * p);
+const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eo = p => 1 - Math.pow(1 - p, 3);
+const eback = p => { const c = 1.7; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+function put(el, { x = 540, y = 960, s = 1, op = 1, ry = 0, rx = 0, r = 0, blur = 0 }) {
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) perspective(2200px) rotateY(${ry}deg) rotateX(${rx}deg) rotate(${r}deg) scale(${s})`;
+  el.style.opacity = op; el.style.visibility = op <= .001 ? "hidden" : "visible"; el.style.filter = blur > .1 ? `blur(${blur}px)` : "none";
+}
+const pop = (t, a, d = .45) => eback(seg(t, a, a + d));
+const DUR = 48.5;
+const appf = $("appf"); let W = null, D = null;
+const q = (sel, text) => { const els = [...D.querySelectorAll(sel)]; return text ? els.find(e => e.textContent.replace(/\s+/g, " ").includes(text)) : els[0]; };
+const navItem = text => q(".sidebar .nav-item", text);
+const allQ = () => [].concat(...(W.TEST_FOLDERS || []).map(f => [].concat(...f.tests.map(t => t.questions))), ...(W.CHAPTER_TESTS || []).map(c => [].concat(...c.tests.map(t => t.questions))));
+function rightOpt() { const e = q(".q-text"); if (!e) return null; const x = allQ().find(z => String(z.q).trim() === e.innerHTML.trim()); return D.querySelector(`.opt[data-i="${x ? x.correct[0] : 0}"]`); }
+const mk = seed => { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+const NOTE = `Жүрек — қан айналым жүйесінің орталық мүшесі. Адам жүрегі төрт бөлімнен тұрады: оң және сол жүрекше, оң және сол қарынша.
+Қарыншалар мен жүрекшелердің арасында жармалы қақпақшалар орналасқан. Сол қарыншадан қолқа, оң қарыншадан өкпе артериясы шығады.
+Жүрек бұлшықеті — миокард. Қанның үлкен және кіші қан айналым шеңберлері бар. Жүректің жиырылуы — систола, босаңсуы — диастола.
+Артерия, вена және капилляр қан тамырлары. Қан қысымы, пульс, жүрек циклі.`;
+const ASK = "Құстардың зәр шығару өнімі";
+
+// captions [t, number, step, title, sub]
+const CAPS = [
+  [8.6, "01", "Тараулық тесттер", "6 тарау · 26 тест", "Ботаника, зоология, анатомия, генетика…"],
+  [13.4, "02", "Нағыз ҰБТ базасы", "46 тест · 1 744 сұрақ", "2026 Нағыз ҰБТ · Наурыз ҰБТ · ҰТО"],
+  [17.1, "03", "Тест + бірден тексеру", "Жауабың сол сәтте тексеріледі", "Күнделікті экспресс-тест"],
+  [20.6, "03", "Тест + бірден тексеру", "Дұрыс жауап — жасыл, балл — бірден", "Күнделікті экспресс-тест"],
+  [23.1, "04", "Жаңа мүмкіндік", "Файлдан тест жасау", "Конспектіңді сал — сайт тест құрайды"],
+  [29.1, "05", "Жаңа мүмкіндік", "Сұрақ іздеу", "Қай тестте, нешінші сұрақ және жауабы"],
+  [34.5, "06", "Қатемен жұмыс", "Қателерің бір жерде", "Қате сұрақтардан жаңа тест құралады"],
+  [36.6, "07", "ҰБТ-да жиі кездесетін сұрақтар", "231 сұрақ · 12 күн", "Күн сайын 20 сұрақ ашылады"]
+];
+// cursor keyframes
+const K = [
+  { t: 9.0, to: () => ({ x: 250, y: 430 }) },
+  { t: 9.4, to: () => q(".burger"), click: true },
+  { t: 10.0, to: () => navItem("Тараулық тест"), click: true },
+  { t: 11.0, to: () => q('a[href="#/app/chapter/anatomy"]'), ring: true, dx: .3 },
+  { t: 11.7, to: () => q('a[href="#/app/chapter/botany"]'), click: true, dx: .3 },
+  { t: 12.9, to: () => q(".ch-tests .test-card"), ring: true, dx: .3 },
+  { t: 13.6, to: () => q(".burger"), click: true },
+  { t: 14.2, to: () => navItem("ҰБТ сынамасы"), click: true },
+  { t: 15.0, to: () => q(".chip", "40 минут"), ring: true },
+  { t: 15.9, to: () => q(".card", "2026 жылғы"), ring: true, dx: .62 },
+  { t: 16.5, to: () => q(".card", "ҰТО"), ring: true, dx: .62 },
+  { t: 17.2, to: () => q(".burger"), click: true },
+  { t: 17.8, to: () => navItem("Басты бет"), click: true },
+  { t: 18.7, to: () => q("[data-act='start-express']"), click: true,
+    pre: () => { W.__rnd = W.Math.random; W.Math.random = mk(7); }, post: () => { W.Math.random = W.__rnd; } },
+  { t: 19.8, to: () => rightOpt(), click: true, dx: .3 },
+  { t: 20.4, to: () => q("[data-act='check']"), click: true },
+  { t: 21.4, to: () => q(".opt.ok") || q(".opt"), ring: true, dx: .3 },
+  { t: 22.4, to: () => q(".pts") || q(".q-meta"), ring: true, dx: .5 },
+  { t: 23.2, to: () => q(".burger"), click: true },
+  { t: 23.8, to: () => navItem("Файлдан тест"), click: true },
+  { t: 24.7, to: () => q("#ft-drop"), click: false, ring: true, upload: true },
+  { t: 25.9, to: () => q("[data-act='ft-make']"), click: true },
+  { t: 27.4, to: () => q(".ft-res .chips .chip") || q(".ft-res"), ring: true, dx: .5 },
+  { t: 28.4, to: () => q("[data-act='ft-start']") || q(".ft-res"), ring: true },
+  { t: 29.2, to: () => q(".burger"), click: true },
+  { t: 29.8, to: () => navItem("Сұрақ іздеу"), click: true },
+  { t: 30.4, to: () => q("#chat-input"), dx: .7 },
+  { t: 32.1, to: () => q(".chat-form button"), click: true },
+  { t: 33.0, to: () => q(".sq-ans") || q(".sq-card"), ring: true, dx: .4 },
+  { t: 34.6, to: () => q(".burger"), click: true },
+  { t: 35.2, to: () => navItem("Қатемен жұмыс"), click: true },
+  { t: 35.9, to: () => q("[data-act='start-mistakes']"), ring: true },
+  { t: 36.6, to: () => q(".burger"), click: true },
+  { t: 37.2, to: () => navItem("жиі кездесетін"), click: true },
+  { t: 37.9, to: () => ({ x: 330, y: 560 }) }
+];
+const TYPE = { t0: 30.6, t1: 31.8, sel: "#chat-input", text: ASK };
+const topOf = (sel, off) => () => { const e = q(sel); return e ? Math.max(0, e.getBoundingClientRect().top + W.scrollY - off) : 0; };
+const SCROLL = [
+  [10.0, 10.0, 0], [10.3, 10.8, topOf(".module-card", 80)], [11.7, 11.7, 0], [12.0, 12.6, topOf(".ch-tests", 90)],
+  [14.2, 14.2, 0], [15.3, 15.8, topOf(".card", 40)],
+  [17.8, 17.8, 0], [18.0, 18.5, topOf("[data-act='start-express']", 360)], [18.7, 18.7, 0], [18.9, 19.3, topOf(".q-text", 150)],
+  [23.8, 23.8, 0], [24.0, 24.4, topOf(".ft-card", 120)], [25.9, 25.9, topOf(".ft-card", 120)], [26.3, 27.0, topOf(".ft-res", 110)],
+  [29.8, 29.8, 0], [30.0, 30.4, topOf(".chat-box", 100)], [32.2, 32.2, topOf(".chat-box", 100)], [32.4, 32.9, topOf(".chat-form", 560)],
+  [35.2, 35.2, 0], [37.2, 37.2, 0], [37.4, 37.9, topOf(".qa-item", 90)]
+];
+const resolved = {};
+function scrollAt(t) { let y = 0; SCROLL.forEach((s, i) => { if (t < s[0]) return; let v = s[2]; if (typeof v === "function") { if (resolved[i] == null) resolved[i] = v(); v = resolved[i]; } y = s[1] > s[0] ? lerp(y, v, eio(seg(t, s[0], s[1]))) : v; }); return y; }
+let ki = 0, prevPos = null, pressAt = -9;
+function posOf(k) {
+  let v = null; try { v = k.to(); } catch (e) {}
+  if (!v) return prevPos || { x: 200, y: 400 };
+  if (v.getBoundingClientRect) { const r = v.getBoundingClientRect(); return { x: r.left + r.width * (k.dx != null ? k.dx : .5), y: r.top + r.height * .5 }; }
+  return v;
+}
+function upload() {   // a real file goes through the site's own file input
+  const inp = D.getElementById("ft-file"); const dt = new W.DataTransfer();
+  dt.items.add(new W.File([NOTE], "Жүрек_конспект.txt", { type: "text/plain" }));
+  inp.files = dt.files; inp.dispatchEvent(new W.Event("change", { bubbles: true }));
+}
+const FLASHES = [1.95, 4.2, 8.25, 38.1, 43.2];
+const SWINGS = [13.4, 17.1, 23.1, 29.1, 34.5];
+
+function step(t) {
+  let acted = false;
+  $("b1").style.transform = `translate(${-200 + Math.sin(t * .3) * 160}px,${150 + Math.cos(t * .25) * 200}px)`;
+  $("b2").style.transform = `translate(${450 + Math.cos(t * .27) * 160}px,${1150 + Math.sin(t * .2) * 200}px)`;
+  $("grid").style.transform = `translateY(${(t * 40) % 90}px)`;
+  // ---------- HOOK 0–4.2 ----------
+  const hk = 1 - seg(t, 1.8, 2.0);
+  put($("h1"), { y: 700, s: lerp(.6, 1, pop(t, .1)), op: clamp(seg(t, .1, .3)) * hk });
+  put($("h2"), { y: 960, s: lerp(2.2, 1, eo(seg(t, .55, .9))) * (1 + Math.max(0, Math.sin((t - .9) * 9)) * .03 * (t > .9 ? 1 : 0)), op: clamp(seg(t, .55, .7)) * hk, blur: (1 - seg(t, .55, .85)) * 20 });
+  put($("h3"), { y: 1210, s: lerp(.5, 1, pop(t, 1.15)), op: clamp(seg(t, 1.15, 1.3)) * hk, r: (1 - pop(t, 1.15)) * -8 });
+  const ho = seg(t, 3.9, 4.2);
+  put($("lg"), { y: 640 - ho * 120, s: lerp(.2, 1, pop(t, 2.0, .5)) * (1 - ho * .4), r: (1 - pop(t, 2.0, .5)) * -30, op: (t > 2 ? 1 : 0) * (1 - ho) });
+  put($("h4"), { y: 920 - ho * 120, s: lerp(.6, 1, pop(t, 2.25)), op: clamp(seg(t, 2.25, 2.4)) * (1 - ho), blur: ho * 12 });
+  put($("h5"), { y: 1080 + (1 - eo(seg(t, 2.7, 3.1))) * 40 - ho * 120, op: eo(seg(t, 2.7, 3.1)) * (1 - ho) });
+  // ---------- STATS 4.2–8.2 ----------
+  const so = seg(t, 7.9, 8.25), son = t >= 4.2 && t < 8.3;
+  put($("sT"), { y: 560 - so * 100, op: son ? eo(seg(t, 4.25, 4.6)) * (1 - so) : 0 });
+  [["s1", 300, 810], ["s2", 780, 810], ["s3", 300, 1150], ["s4", 780, 1150]].forEach(([id, x, y], i) => {
+    const a = 4.35 + i * .18, el = $(id), b = el.querySelector("b"), n = +b.dataset.n;
+    b.textContent = Math.round(n * eo(seg(t, a, a + 1.1))).toLocaleString("ru-RU").replace(/,/g, " ") + (i === 0 && t > a + 1.1 ? "+" : "");
+    put(el, { x: x + so * (i % 2 ? 700 : -700), y, s: lerp(.4, 1, pop(t, a, .5)), op: son ? clamp(seg(t, a, a + .15)) : 0, ry: so * (i % 2 ? 40 : -40) });
+  });
+  // ---------- PHONE 8.3–38.2 ----------
+  const pin = ss(seg(t, 8.25, 8.9)), pout = ss(seg(t, 37.9, 38.4));
+  let ry = (1 - pin) * 50 - pout * 50;
+  SWINGS.forEach(s => { ry += Math.sin(seg(t, s - .3, s + .4) * Math.PI) * 14; });
+  put($("ph"), { y: 1160 + (1 - pin) * 300, s: lerp(.8, 1, pin), op: (t >= 8.2 && t < 38.5) ? pin * (1 - pout) : 0, ry });
+  const g = SWINGS.concat([8.6]).find(s => Math.abs(t - s - .1) < .45);
+  $("glare").style.opacity = g != null ? (1 - Math.abs(t - g - .1) / .45) * .7 : 0;
+  if (g != null) $("glare").style.backgroundPosition = `${lerp(110, -10, seg(t, g - .35, g + .55))}% 0`;
+  let ci = -1; CAPS.forEach((c, i) => { if (t >= c[0]) ci = i; });
+  if (ci >= 0 && t < 38.3) {
+    const c = CAPS[ci]; $("capn").textContent = c[1]; $("capk").textContent = c[2]; $("capt").textContent = c[3]; $("caps").textContent = c[4];
+    const nxt = CAPS[ci + 1] ? CAPS[ci + 1][0] : 38.0, a = ss(seg(t, c[0], c[0] + .3));
+    put($("cap"), { y: 230 + (1 - a) * 20, op: a * (1 - ss(seg(t, nxt - .2, nxt))) * pin * (1 - pout), s: lerp(.9, 1, pop(t, c[0], .35)) });
+  } else put($("cap"), { op: 0 });
+  if (D) {
+    if (!D.getElementById("vstyle")) { const st = D.createElement("style"); st.id = "vstyle"; st.textContent = "html{scroll-behavior:auto!important}#toast-root{display:none!important}"; D.head.appendChild(st); }
+    while (ki < K.length && t >= K[ki].t) {
+      const k = K[ki]; prevPos = posOf(k);
+      if (k.upload) { upload(); acted = true; pressAt = k.t; }
+      if (k.click) { let el = null; try { el = k.to(); } catch (e) {} if (el) { if (k.pre) k.pre(); el.click(); if (k.post) k.post(); acted = true; } pressAt = k.t; }
+      ki++;
+    }
+    if (t >= TYPE.t0 && t < TYPE.t1 + .1) { const inp = D.querySelector(TYPE.sel); if (inp) { inp.value = TYPE.text.slice(0, Math.round(TYPE.text.length * seg(t, TYPE.t0, TYPE.t1))); inp.dispatchEvent(new W.Event("input", { bubbles: true })); } }
+    if (!acted) W.scrollTo({ top: scrollAt(t), behavior: "instant" });
+    const cur = $("cursor"), ring = $("ring");
+    let pos = prevPos || posOf(K[0]); const nk = K[ki];
+    if (nk && prevPos) { const sm = Math.max(K[ki - 1].t + .12, nk.t - .45); const p = eio(seg(t, sm, nk.t - .03)); const np = posOf(nk); pos = { x: lerp(prevPos.x, np.x, p), y: lerp(prevPos.y, np.y, p) }; }
+    const r = appf.getBoundingClientRect(), kk = r.width / 390;
+    cur.style.transform = `translate(${r.left + pos.x * kk}px,${r.top + pos.y * kk}px)`;
+    cur.style.opacity = (t >= 8.9 && t < 37.9) ? ss(seg(t, 8.9, 9.1)) * (1 - ss(seg(t, 37.6, 37.9))) : 0;
+    const last = K[ki - 1], pd = t - pressAt; let rs = 1, rop = 0;
+    if (pd >= -.22 && pd < .42) { rop = pd < 0 ? seg(pd, -.22, -.05) : 1 - seg(pd, .1, .42); rs = pd < 0 ? 1 : lerp(.8, 1.25, eo(seg(pd, 0, .38))); }
+    if (last && last.ring && nk) { const h = t - last.t; const o = ss(seg(h, 0, .2)) * (1 - ss(seg(t, nk.t - .5, nk.t - .35))); if (o > rop) { rop = o; rs = 1 + Math.sin(h * 6) * .05; } }
+    if (nk && nk.ring) { const o = ss(seg(t, nk.t - .18, nk.t)); if (o > rop) { rop = o; rs = 1; } }
+    ring.style.opacity = rop; ring.style.transform = `scale(${rs})`;
+    for (const a of D.getAnimations()) { if (a.__t0 == null) a.__t0 = t; a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000); }
+  }
+  // ---------- REVIEWS 38.2–43.2 ----------
+  const ro = seg(t, 42.9, 43.25), ron = t >= 38.2 && t < 43.3;
+  put($("rT"), { y: 420, s: lerp(.6, 1, pop(t, 38.3)), op: ron ? clamp(seg(t, 38.3, 38.45)) * (1 - ro) : 0 });
+  [["q1", 38.8, 760], ["q2", 40.0, 1100], ["q3", 41.2, 1440]].forEach(([id, a, y], i) => {
+    put($(id), { y: y - ro * 80, x: 540 + (1 - eo(seg(t, a, a + .45))) * (i % 2 ? -900 : 900), r: (1 - eo(seg(t, a, a + .45))) * (i % 2 ? -6 : 6) + (i - 1) * 1.2,
+      op: ron ? clamp(seg(t, a, a + .1)) * (1 - ro) : 0, s: 1 + Math.max(0, .06 - Math.abs(t - a - .5) * .12) });
+  });
+  // ---------- CTA 43.2–48.5 ----------
+  const ce = t >= 43.2, c1 = ss(seg(t, 43.2, 44.0));
+  put($("lap"), { y: 1250 + (1 - c1) * 200, s: .9 * lerp(1, 1.04, ss(seg(t, 43.5, 48))), op: ce ? c1 : 0, rx: (1 - c1) * 25 });
+  put($("lg2"), { y: 280, s: lerp(.2, 1, pop(t, 43.4, .5)), op: ce ? clamp(seg(t, 43.4, 43.6)) : 0, r: (1 - pop(t, 43.4, .5)) * -25 });
+  put($("e1"), { y: 470, s: lerp(.6, 1, pop(t, 43.6)), op: ce ? clamp(seg(t, 43.6, 43.8)) : 0 });
+  put($("e2"), { y: 610 + (1 - eo(seg(t, 44.0, 44.5))) * 30, op: eo(seg(t, 44.0, 44.5)) });
+  put($("e3"), { y: 1700, s: lerp(.6, 1, pop(t, 44.6)) * (1 + (t > 45.4 ? Math.max(0, Math.sin((t - 45.4) * 5)) * .025 : 0)), op: ce ? clamp(seg(t, 44.6, 44.8)) : 0 });
+  $("shine").style.left = lerp(-200, 1000, seg(t, 45.2, 45.9)) + "px";
+  put($("e4"), { y: 1820, op: eo(seg(t, 45.0, 45.5)) });
+  $("flash").style.opacity = Math.max(0, ...FLASHES.map(f => (1 - Math.abs(t - f) / .16) * .7));
+  $("fade").style.opacity = ss(seg(t, 47.7, 48.5));
+  return acted;
+}
+window.step = step; window.DUR = DUR;
+window.ready = new Promise(res => {
+  appf.addEventListener("load", () => { W = appf.contentWindow; D = appf.contentDocument; setTimeout(() => Promise.all([document.fonts.ready, D.fonts.ready]).then(res), 1500); }, { once: true });
+  appf.src = "http://localhost:8765/#/app/dashboard";
+});
+</script></body></html>
