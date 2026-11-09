@@ -22,7 +22,7 @@ for k, src in enumerate(srcs, 1):
     for q in data["questions"]:
         e = {"id": f"{tid}-q{q['n']}", "module": mod}
         if q["items"]:
-            assert len(q["items"]) == 2 and len(q["opts"]) == 4, (tid, q["n"])
+            assert len(q["items"]) == 2 and 2 <= len(q["opts"]) <= 4, (tid, q["n"])
             e.update(type="match", q="Сәйкестендіріңіз", options=[tx(o["t"]) for o in q["opts"]],
                      items=[{"text": tx(it["text"]), "answer": it["answer"]} for it in q["items"]], correct=[it["answer"] for it in q["items"]])
         else:
@@ -38,6 +38,7 @@ for k, src in enumerate(srcs, 1):
     title = data["title"] or TITLE[mod, k]
     for a, b in TITLE_FIX.items(): title = title.replace(a, b)
     tests.append({"id": tid, "title": title, "questions": out})
+    if data.get("exam"): tests[-1]["exam"] = True  # бақылау тесті: бәріне ашық, сұрақ реті араласады
 entry = {"module": mod, "note": NOTE, "tests": tests}
 path = f"{repo}/js/tests/chapters.js"
 head, body = open(path).read().split("window.CHAPTER_TESTS = ", 1)

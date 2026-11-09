@@ -879,9 +879,9 @@
     const best = tid => { const h = u.history.filter(x => x.testId === tid); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; };
     const tests = ch ? `${ch.note ? `<div class="card ch-note">${ic("bulb", 24)}<span>${esc(ch.note)}</span></div>` : ""}
       ${ch.tests.length > 1 ? `<p class="hint" style="margin:-4px 0 10px">${u.role === "teacher" ? "Мұғалім аккаунты: барлық тесттер ашық." : "Тесттер ретімен ашылады: алдыңғы тестті тапсырсаң, келесісі ашылады."}</p>` : ""}
-      <div class="grid g-3 ch-tests">${ch.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u),
-          open = !paid && (k === 0 || u.role === "teacher" || u.history.some(h => h.testId === ch.tests[k - 1].id)); return `
-        <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}"><div class="tc-top"><b>${esc(t.title)}</b>${b != null && !paid ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : PREMIUM && k === 0 ? `<span class="tag t-single">Тегін</span>` : PREMIUM && (paid || open) ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
+      <div class="grid g-3 ch-tests">${ch.tests.map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u) && !t.exam,
+          open = !paid && (k === 0 || t.exam || u.role === "teacher" || u.history.some(h => h.testId === ch.tests[k - 1].id)); return `
+        <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}"><div class="tc-top"><b>${esc(t.title)}</b>${t.exam ? `<span class="tag t-context">${ic("clock", 14)} Бақылау тесті</span>` : b != null && !paid ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : PREMIUM && k === 0 ? `<span class="tag t-single">Тегін</span>` : PREMIUM && (paid || open) ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
           <small class="muted">${t.questions.length} тапсырма · бір жауапты, ${t.questions.some(q => q.type === "context") ? "контекстік, " : ""}көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
           ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
             open ? `<button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
@@ -1609,6 +1609,12 @@
     go("#/test");
   }
 
+  const qKind = q => q.type === "match" ? "match" : q.type === "context" ? "context:" + (q.contextTitle || q.context || "") : isMulti(q) ? "multi" : "single";
+  function shuffleRuns(qs) {  // қатар тұрған бір түрлі сұрақтар тобын (бір жауапты, көп жауапты…) өз ішінде араластырады
+    const out = [];
+    for (let i = 0; i < qs.length;) { let j = i; while (j < qs.length && qKind(qs[j]) === qKind(qs[i])) j++; out.push(...shuffle(qs.slice(i, j))); i = j; }
+    return out;
+  }
   function startMode(mode, id) {
     const u = currentUser();
     if (!u) return go("#/login");
@@ -1622,6 +1628,8 @@
     if (mode === "ch") {
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
       const k = t.chapter.tests.findIndex(x => x.id === t.id);
+      // Бақылау тесті: барлық оқушыға ашық, әр бастағанда сұрақтардың реті әртүрлі (бір түрлі сұрақтар өз ішінде араласады)
+      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions), instant: false, module: t.chapter.module });
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.title} — премиум тест. Әр тараудағы бірінші тест тегін.`);
       if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.chapter.tests[k - 1].id)) return toast("Алдымен алдыңғы тестті тапсыр");
       return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
@@ -2007,7 +2015,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611090740")
+    import("./cloud.js?v=202611090759")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
