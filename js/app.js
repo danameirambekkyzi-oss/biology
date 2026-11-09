@@ -1615,6 +1615,14 @@
     for (let i = 0; i < qs.length;) { let j = i; while (j < qs.length && qKind(qs[j]) === qKind(qs[i])) j++; out.push(...shuffle(qs.slice(i, j))); i = j; }
     return out;
   }
+  function shuffleOpts(q) {  // нұсқалардың ретін араластырып, дұрыс жауап индекстерін сәйкесінше ауыстырады
+    const perm = shuffle(q.options.map((_, i) => i)), inv = [];
+    perm.forEach((old, i) => { inv[old] = i; });
+    const c = Object.assign({}, q, { options: perm.map(i => q.options[i]), correct: q.correct.map(i => inv[i]) });
+    if (q.type === "match") c.items = q.items.map(it => Object.assign({}, it, { answer: inv[it.answer] }));
+    else c.correct.sort((a, b) => a - b);
+    return c;
+  }
   function startMode(mode, id) {
     const u = currentUser();
     if (!u) return go("#/login");
@@ -1628,8 +1636,8 @@
     if (mode === "ch") {
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
       const k = t.chapter.tests.findIndex(x => x.id === t.id);
-      // Бақылау тесті: барлық оқушыға ашық, әр бастағанда сұрақтардың реті әртүрлі (бір түрлі сұрақтар өз ішінде араласады)
-      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions), instant: false, module: t.chapter.module });
+      // Бақылау тесті: барлық оқушыға ашық, әр бастағанда сұрақтардың реті (бір түрлі сұрақтар өз ішінде) және нұсқалардың реті әртүрлі
+      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions).map(shuffleOpts), instant: false, module: t.chapter.module });
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.title} — премиум тест. Әр тараудағы бірінші тест тегін.`);
       if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.chapter.tests[k - 1].id)) return toast("Алдымен алдыңғы тестті тапсыр");
       return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
@@ -2015,7 +2023,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611090759")
+    import("./cloud.js?v=202611090808")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
