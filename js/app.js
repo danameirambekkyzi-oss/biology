@@ -706,6 +706,7 @@
     { id: "mistakes",    ico: "refresh",   t: "Қатемен жұмыс" },
     { id: "real",        ico: "book",      t: "ҰБТ-да жиі кездесетін сұрақтар тізімі" },
     { id: "plants",      ico: "bulb",      t: "Негізгі жаттау керек ақпараттар" },
+    { id: "images",      ico: "camera",    t: "Суретпен жұмыс" },
     { id: "filetest",    ico: "clipboard", t: "Файлдан тест жасау" },
     { id: "search",      ico: "search",    t: "Сұрақ іздеу" },
     { id: "leaderboard", ico: "trophy",    t: "Рейтинг" },
@@ -764,7 +765,7 @@
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
   function renderApp(u, page, arg) {
-    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings, filetest: pageFiletest, search: pageSearch };
+    const pages = { dashboard: pageDashboard, chapters: pageChapters, chapter: pageChapter, mock: pageMock, mistakes: pageMistakes, real: pageReal, plants: pagePlants, leaderboard: pageLeaderboard, settings: pageSettings, filetest: pageFiletest, search: pageSearch, images: pageImages };
     if (CLOUD && u.role === "teacher") pages.teacher = pageTeacher;
     const fn = pages[page] || (CLOUD && u.role === "teacher" ? pageTeacher : pageDashboard);
     app.innerHTML = shell(u, page, fn(u, arg));
@@ -1638,6 +1639,19 @@
     else c.correct.sort((a, b) => a - b);
     return c;
   }
+  /* ---- Суретпен жұмыс ---- */
+  const IMG_TASKS = (window.IMAGE_TASKS || []).map(t => Object.assign({ type: "label", q: t.q || "Суреттегі бөліктердің атауын орнына қой", correct: [] }, t));
+  function pageImages(u) {
+    const best = tid => { const h = u.history.filter(x => x.testId === tid); if (!h.length) return null; const b = h.reduce((a, x) => (x.score || 0) > (a.score || 0) ? x : a); return `${b.score}/${b.max}`; };
+    const head = `<h1 class="page-title">Суретпен жұмыс</h1><p class="page-sub">Суреттегі атаулар жабылған. Астындағы сөздерді суреттегі ұяшықтарға орналастыр — әр дұрыс атауға 1 балл.</p>`;
+    if (!IMG_TASKS.length) return head + `<div class="card empty"><div class="e-ico">${ic("camera", 40)}</div><h3>Суреттер жақында қосылады</h3>
+      <p>Мұнда ботаника, зоология, анатомия және басқа тараулардың суреттері болады: жүрек, нефрон, гүл, жасуша және т.б.</p></div>`;
+    const mods = MODULES.filter(m => IMG_TASKS.some(t => t.module === m.id));
+    return head + mods.map(m => `<h2 class="img-mod">${esc(m.title)}</h2><div class="grid g-3 img-tasks">${IMG_TASKS.filter(t => t.module === m.id).map(t => { const b = best(t.id); return `
+      <div class="card img-card"><img src="${esc(t.img[0])}" alt="" loading="lazy"><div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
+        <small class="muted">${t.zones.length} атау</small>
+        <button class="btn btn-cta btn-block" data-act="start-img" data-id="${esc(t.id)}">${b != null ? "Қайта орындау" : "Бастау"}</button></div>`; }).join("")}</div>`).join("");
+  }
   function startMode(mode, id) {
     const u = currentUser();
     if (!u) return go("#/login");
@@ -1647,6 +1661,10 @@
       if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.folder.tests[k - 1].id)) return toast(`Алдымен ${t.folder.tests[k - 1].title} тапсыр`);
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.folder.title} · ${t.title} — премиум тест. Әр папкадағы Тест-1 тегін.`);
       return startTest({ mode: "mock", testId: t.id, title: `${t.folder.title} · ${t.title}`, questions: t.questions, timeLimit: state.mockMin * 60, instant: false });
+    }
+    if (mode === "img") {  // «Суретпен жұмыс»: бір суретті тапсырма, атаулардың реті араласады
+      const x = IMG_TASKS.find(t => t.id === id); if (!x) return;
+      return startTest({ mode: "topic", testId: x.id, title: x.title, questions: [shuffleOpts(x)], instant: true, module: x.module });
     }
     if (mode === "ch") {
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
@@ -1979,6 +1997,7 @@
     "start-express": () => startMode("express"),
     "start-topic": el => startMode("topic", el.dataset.id),
     "start-ch": el => startMode("ch", el.dataset.id),
+    "start-img": el => startMode("img", el.dataset.id),
     "start-mistakes": el => startMode("mistakes", el.dataset.id),
     "start-hist": el => startMode("hist", el.dataset.d),
     pick: el => {
@@ -2061,7 +2080,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611101800")
+    import("./cloud.js?v=202611101901")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

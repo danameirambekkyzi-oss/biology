@@ -777,3 +777,9 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .lb-word.used { opacity: .45; }
 .lb-key { display: grid; gap: 4px; margin-bottom: 14px; font-size: 14px; }
 .lb-key .ok { color: var(--green); } .lb-key .bad { color: var(--red); }
+
+/* ---------- Суретпен жұмыс ---------- */
+.img-mod { font-size: 20px; margin: 18px 0 10px; }
+.img-card { display: flex; flex-direction: column; gap: 10px; }
+.img-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
+.img-card .btn { margin-top: auto; }
