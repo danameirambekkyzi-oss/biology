@@ -85,6 +85,8 @@
   const itAns = it => it.answers || [it.answer];
   const mAll = q => q.type === "match" && q.items.some(it => it.answers);
   const pickedIn = (x, i) => Array.isArray(x) ? x.includes(i) : x === i;
+  // Суретке белгілеу: ұяшыққа қойылған сөз дұрыс па (бірдей атаулар болса, мәтіні бойынша салыстырамыз)
+  const lbOk = (q, sel, k) => sel[k] != null && q.options[sel[k]] === q.options[q.zones[k].answer];
   const hasAnswer = (q, a) => q.type === "match" || q.type === "label" ? (a || []).some(x => Array.isArray(x) ? x.length > 0 : x != null && x >= 0) : (a || []).length > 0;
   const modTitle = id => (MODULES.find(m => m.id === id) || {}).title || id;
 
@@ -212,7 +214,7 @@
    *   Сәйкестендіру: әр дұрыс сәйкестік — 1 балл.
    */
   function scorePoints(q, sel) {
-    if (q.type === "label") return q.zones.reduce((a, z, k) => a + (sel[k] === z.answer ? 1 : 0), 0);
+    if (q.type === "label") return q.zones.reduce((a, z, k) => a + (lbOk(q, sel, k) ? 1 : 0), 0);
     if (mAll(q)) return q.items.reduce((a, it, k) => a + (sel[k] || []).filter(i => itAns(it).includes(i)).length, 0);  // мұғалімнің ережесі: әр дұрыс әріпке 1 балл (қате әріп балл алмайды)
     if (q.type === "match") return q.items.reduce((a, it, k) => a + (sel[k] === it.answer ? 1 : 0), 0);
     const k = q.correct.length, c = sel.filter(i => q.correct.includes(i)).length, w = sel.length - c;
@@ -1728,12 +1730,13 @@
     sel = sel || []; const pick = state.labelPick;
     const used = new Set(sel.filter(x => x != null));
     return `<div class="lb-wrap"><img class="lb-img" src="${esc(q.img[0])}" alt="">
-      ${q.zones.map((z, k) => { const v = sel[k], ok = checked ? (v === z.answer ? "ok" : "bad") : "";
-        const txt = v != null ? esc(plain(q.options[v])) : `<b>${k + 1}</b>`;
-        const st = `left:${z.x}%;top:${z.y}%;width:${z.w}%;min-height:${z.h}%`;
-        return interactive && !checked ? `<button class="lb-zone ${v != null ? "filled" : ""}" style="${st}" data-act="label-zone" data-k="${k}" data-drop="${k}">${txt}</button>`
-          : `<div class="lb-zone ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}</div>`; }).join("")}</div>
-      ${checked ? `<div class="lb-key">${q.zones.map((z, k) => `<span class="${sel[k] === z.answer ? "ok" : "bad"}"><b>${k + 1}.</b> ${esc(plain(q.options[z.answer]))}</span>`).join("")}</div>`
+      ${q.zones.map((z, k) => { const v = sel[k], ok = checked ? (lbOk(q, sel, k) ? "ok" : "bad") : "";
+        const txt = v != null ? `<b class="lb-n">${k + 1}</b><span class="lb-t">${esc(plain(q.options[v]))}</span>` : `<b>${k + 1}</b>`;
+        const st = `left:${z.x}%;top:${z.y}%;width:${z.w}%;${z.v ? "height" : "min-height"}:${z.h}%`;
+        return interactive && !checked ? `<button class="lb-zone ${z.v ? "vert" : ""} ${v != null ? "filled" : ""}" style="${st}" data-act="label-zone" data-k="${k}" data-drop="${k}">${txt}</button>`
+          : `<div class="lb-zone ${z.v ? "vert" : ""} ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}</div>`; }).join("")}</div>
+      ${!checked ? `<div class="lb-list">${q.zones.map((z, k) => `<span class="${sel[k] != null ? "on" : ""}"><b>${k + 1}.</b> ${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</span>`).join("")}</div>` : ""}
+      ${checked ? `<div class="lb-key">${q.zones.map((z, k) => `<span class="${lbOk(q, sel, k) ? "ok" : "bad"}"><b>${k + 1}.</b> ${esc(plain(q.options[z.answer]))}</span>`).join("")}</div>`
         : interactive ? `<p class="muted lb-hint">Сөзді басып, суреттегі ұяшықты бас (немесе сөзді ұяшыққа сүйреп апар). Ұяшықты қайта бассаң — сөз алынады.</p>
       <div class="lb-words">${q.options.map((o, i) => `<button class="lb-word ${pick === i ? "sel" : ""} ${used.has(i) ? "used" : ""}" draggable="true" data-act="label-word" data-i="${i}">${esc(plain(o))}</button>`).join("")}</div>` : ""}`;
   }
@@ -2080,7 +2083,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611101901")
+    import("./cloud.js?v=202611101916")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
