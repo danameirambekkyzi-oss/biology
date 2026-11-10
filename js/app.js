@@ -1616,7 +1616,7 @@
     go("#/test");
   }
 
-  const qKind = q => q.type === "label" ? "label" : q.type === "match" ? "match" : q.type === "context" ? "context:" + (q.contextTitle || q.context || "") : isMulti(q) ? "multi" : "single";
+  const qKind = q => q.type === "label" ? "label" : mAll(q) ? "match-multi" : q.type === "match" ? "match" : q.type === "context" ? "context:" + (q.contextTitle || q.context || "") : isMulti(q) ? "multi" : "single";
   function shuffleRuns(qs) {  // қатар тұрған бір түрлі сұрақтар тобын (бір жауапты, көп жауапты…) өз ішінде араластырады
     const out = [];
     for (let i = 0; i < qs.length;) { let j = i; while (j < qs.length && qKind(qs[j]) === qKind(qs[i])) j++; out.push(...shuffle(qs.slice(i, j))); i = j; }
@@ -2061,7 +2061,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611101747")
+    import("./cloud.js?v=202611101753")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
