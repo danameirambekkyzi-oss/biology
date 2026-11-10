@@ -15,3 +15,8 @@ python3 -I tools/chapters/build_ubt_chapter.py . anatomy <ana t1..t6 json> /tmp/
 ```
 
 `test.json`-да `"exam": true` — сайт оны премиумсыз, алдыңғы тестсіз ашады және әр оқушыда сұрақ ретін араластырады.
+
+## anatomy-zachet.enc — «Анатомия — жалпы сынақ (зачет) сұрақтары» (бақылау тесті, 112 сұрақ)
+
+Ашу жолы жоғарыдағыдай (`anatomy-exam.enc` орнына осы файл), суреттер `img/chapters/ana-zachet/` папкасына көшіріледі.
+110–111 — бірнеше әріпті сәйкестендіру (`items[].answers`), 112 — суретке белгілеу (`type: "label"`, `zones`).

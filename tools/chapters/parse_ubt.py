@@ -71,6 +71,7 @@ for li in range(skip, len(lines)):
     if prev is not None: attach(prev)
     prev = li
     t, m, lst = lines[li]
+    if re.match(r'^\s*[IVX]+\s*бөлім\b', t): continue  # «II бөлім. …» — бөлім атауы, сұрақ емес
     if cur and not lst and not QS.match(t) and not marks(t, len(cur["opts"])) and not (cur["match"] and not cur["opts"]):
         pend.append((t, m)); continue
     flush(bool(QS.match(t)))

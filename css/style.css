@@ -760,3 +760,19 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .trial-note { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 16px; color: var(--text); background: var(--purple-50); border-color: color-mix(in srgb, var(--purple) 25%, transparent); }
 .trial-note > .ic, .trial-note svg { color: var(--purple); flex-shrink: 0; }
 .chat-box.chat-done { height: auto; max-height: 520px; min-height: 0; margin-bottom: 16px; }
+
+/* ---------- Суретке белгілеу ---------- */
+.lb-wrap { position: relative; margin: 10px auto 14px; max-width: 760px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #fff; }
+.lb-img { display: block; width: 100%; height: auto; }
+.lb-zone { position: absolute; display: flex; align-items: center; justify-content: center; padding: 2px 6px; border: 2px dashed var(--purple); border-radius: 8px; background: #fff; color: #1e1b3a; font: inherit; font-size: clamp(10px, 1.6vw, 14px); font-weight: 700; line-height: 1.15; text-align: center; cursor: pointer; }
+.lb-zone b { color: var(--purple); font-size: 1.1em; }
+.lb-zone.filled { border-style: solid; background: #f1ecff; }
+.lb-zone.ok { border: 2px solid var(--green); background: #e7f8ef; }
+.lb-zone.bad { border: 2px solid var(--red); background: #fdecec; }
+.lb-hint { font-size: 13px; margin: 0 0 8px; }
+.lb-words { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.lb-word { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: grab; }
+.lb-word.sel { background: var(--purple); border-color: var(--purple); color: #fff; }
+.lb-word.used { opacity: .45; }
+.lb-key { display: grid; gap: 4px; margin-bottom: 14px; font-size: 14px; }
+.lb-key .ok { color: var(--green); } .lb-key .bad { color: var(--red); }

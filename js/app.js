@@ -81,7 +81,11 @@
   const firstName = u => esc((u.name || "Түлек").trim().split(/\s+/)[0]);
   const initials = name => (name || "Т").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
   const isMulti = q => q.type === "multi" || (q.type !== "match" && q.correct.length > 1);
-  const hasAnswer = (q, a) => q.type === "match" ? (a || []).some(x => x != null && x >= 0) : (a || []).length > 0;
+  // Сәйкестендіру элементінің дұрыс әріптері (бір элементке бірнеше әріп те болуы мүмкін: it.answers)
+  const itAns = it => it.answers || [it.answer];
+  const mAll = q => q.type === "match" && q.items.some(it => it.answers);
+  const pickedIn = (x, i) => Array.isArray(x) ? x.includes(i) : x === i;
+  const hasAnswer = (q, a) => q.type === "match" || q.type === "label" ? (a || []).some(x => Array.isArray(x) ? x.length > 0 : x != null && x >= 0) : (a || []).length > 0;
   const modTitle = id => (MODULES.find(m => m.id === id) || {}).title || id;
 
   /* ================= Icons (SVG) ================= */
@@ -208,6 +212,8 @@
    *   Сәйкестендіру: әр дұрыс сәйкестік — 1 балл.
    */
   function scorePoints(q, sel) {
+    if (q.type === "label") return q.zones.reduce((a, z, k) => a + (sel[k] === z.answer ? 1 : 0), 0);
+    if (mAll(q)) return q.items.reduce((a, it, k) => { const x = sel[k] || [], c = x.filter(i => itAns(it).includes(i)).length; return a + Math.max(0, c - (x.length - c)); }, 0);  // әр дұрыс әріпке 1 балл, қате әріп 1 балды алады
     if (q.type === "match") return q.items.reduce((a, it, k) => a + (sel[k] === it.answer ? 1 : 0), 0);
     const k = q.correct.length, c = sel.filter(i => q.correct.includes(i)).length, w = sel.length - c;
     if (!sel.length) return 0;
@@ -218,7 +224,7 @@
     if (w === 1) return c >= need ? 1 : 0;
     return 0;
   }
-  const maxPoints = q => q.type === "match" ? q.items.length : (q.type === "multi" || q.correct.length > 1) ? 2 : 1;
+  const maxPoints = q => q.type === "label" ? q.zones.length : mAll(q) ? q.items.reduce((a, it) => a + itAns(it).length, 0) : q.type === "match" ? q.items.length : (q.type === "multi" || q.correct.length > 1) ? 2 : 1;
   const ptsCls = (q, p) => p === maxPoints(q) ? 2 : p > 0 ? 1 : 0; // 2 — толық, 1 — жартылай, 0 — қате
 
   function grade(test) {
@@ -1559,7 +1565,8 @@
     return SQ_KEYS[sqKey(q)] || [q];
   }
   function sqAnswer(q) {
-    if (q.type === "match") return q.items.map((it, k) => `${k + 1}. ${esc(plain(it.text))} — <b>${LETTERS[it.answer]}. ${esc(plain(q.options[it.answer]))}</b>`).join("<br>");
+    if (q.type === "label") return q.zones.map((z, k) => `${k + 1} — <b>${esc(plain(q.options[z.answer]))}</b>`).join("<br>");
+    if (q.type === "match") return q.items.map((it, k) => `${k + 1}. ${esc(plain(it.text))} — <b>${itAns(it).map(i => `${LETTERS[i]}. ${esc(plain(q.options[i]))}`).join(", ")}</b>`).join("<br>");
     return q.correct.map(i => `<b>${LETTERS[i]}. ${esc(plain(q.options[i]))}</b>`).join("<br>");
   }
   function sqReply(found) {
@@ -1609,17 +1616,25 @@
     go("#/test");
   }
 
-  const qKind = q => q.type === "match" ? "match" : q.type === "context" ? "context:" + (q.contextTitle || q.context || "") : isMulti(q) ? "multi" : "single";
+  const qKind = q => q.type === "label" ? "label" : q.type === "match" ? "match" : q.type === "context" ? "context:" + (q.contextTitle || q.context || "") : isMulti(q) ? "multi" : "single";
   function shuffleRuns(qs) {  // қатар тұрған бір түрлі сұрақтар тобын (бір жауапты, көп жауапты…) өз ішінде араластырады
     const out = [];
     for (let i = 0; i < qs.length;) { let j = i; while (j < qs.length && qKind(qs[j]) === qKind(qs[i])) j++; out.push(...shuffle(qs.slice(i, j))); i = j; }
     return out;
   }
+  function labelPut(k, i) {  // k-ұяшыққа i-сөзді қою (i жоқ болса — ұяшықты босату)
+    const t = state.test; if (!t || t.checked[t.cur]) return;
+    const q = t.questions[t.cur], sel = (t.answers[t.cur] || []).slice(); while (sel.length < q.zones.length) sel.push(null);
+    if (i == null) sel[k] = null;
+    else { const j = sel.indexOf(i); if (j >= 0) sel[j] = null; sel[k] = i; }  // бір сөз бір ұяшықта ғана
+    state.labelPick = null; t.answers[t.cur] = sel; renderTestKeepScroll();
+  }
   function shuffleOpts(q) {  // нұсқалардың ретін араластырып, дұрыс жауап индекстерін сәйкесінше ауыстырады
     const perm = shuffle(q.options.map((_, i) => i)), inv = [];
     perm.forEach((old, i) => { inv[old] = i; });
     const c = Object.assign({}, q, { options: perm.map(i => q.options[i]), correct: q.correct.map(i => inv[i]) });
-    if (q.type === "match") c.items = q.items.map(it => Object.assign({}, it, { answer: inv[it.answer] }));
+    if (q.type === "label") c.zones = q.zones.map(z => Object.assign({}, z, { answer: inv[z.answer] }));
+    else if (q.type === "match") c.items = q.items.map(it => Object.assign({}, it, it.answers ? { answers: it.answers.map(i => inv[i]).sort((a, b) => a - b) } : { answer: inv[it.answer] }));
     else c.correct.sort((a, b) => a - b);
     return c;
   }
@@ -1681,14 +1696,29 @@
     sel = sel || [];
     return `<div class="match-opts">${q.options.map((o, i) => `<div class="mo"><span class="letter">${LETTERS[i]}</span><span>${o}</span></div>`).join("")}</div>
       <div class="match-items">${q.items.map((it, k) => {
-        const chosen = sel[k];
-        return `<div class="mi ${checked ? (chosen === it.answer ? "ok" : "bad") : ""}"><div class="mi-text"><b>${k + 1}.</b> ${it.text}</div>
+        const chosen = sel[k], ans = itAns(it), full = ans.length === (Array.isArray(chosen) ? chosen : chosen == null ? [] : [chosen]).length && ans.every(i => pickedIn(chosen, i));
+        return `<div class="mi ${checked ? (full ? "ok" : "bad") : ""}"><div class="mi-text"><b>${k + 1}.</b> ${it.text}</div>
           <div class="mi-letters">${q.options.map((o, i) => {
-            const cls = checked ? (i === it.answer ? "ok" : i === chosen ? "bad" : "") : (i === chosen ? "sel" : "");
+            const cls = checked ? (ans.includes(i) ? "ok" : pickedIn(chosen, i) ? "bad" : "") : (pickedIn(chosen, i) ? "sel" : "");
             return interactive ? `<button class="ml ${cls}" data-act="pick-match" data-k="${k}" data-i="${i}" ${checked ? "disabled" : ""}>${LETTERS[i]}</button>` : `<span class="ml ${cls}">${LETTERS[i]}</span>`;
           }).join("")}</div></div>`; }).join("")}</div>`;
   }
-  const correctText = q => q.type === "match" ? q.items.map((it, k) => `${k + 1}–${LETTERS[it.answer]}`).join(", ") : q.correct.map(i => LETTERS[i]).join(", ");
+  const correctText = q => q.type === "label" ? q.zones.map((z, k) => `${k + 1} – ${plain(q.options[z.answer])}`).join(", ")
+    : q.type === "match" ? q.items.map((it, k) => `${k + 1}–${itAns(it).map(i => LETTERS[i]).join("")}`).join(", ") : q.correct.map(i => LETTERS[i]).join(", ");
+  // Суретке белгілеу: суреттегі нөмірленген ұяшықтарға астындағы сөздерді қою (сөзді басып, сосын ұяшықты бас; компьютерде сүйреп апаруға да болады)
+  function labelHtml(q, sel, checked, interactive) {
+    sel = sel || []; const pick = state.labelPick;
+    const used = new Set(sel.filter(x => x != null));
+    return `<div class="lb-wrap"><img class="lb-img" src="${esc(q.img[0])}" alt="">
+      ${q.zones.map((z, k) => { const v = sel[k], ok = checked ? (v === z.answer ? "ok" : "bad") : "";
+        const txt = v != null ? esc(plain(q.options[v])) : `<b>${k + 1}</b>`;
+        const st = `left:${z.x}%;top:${z.y}%;width:${z.w}%;min-height:${z.h}%`;
+        return interactive && !checked ? `<button class="lb-zone ${v != null ? "filled" : ""}" style="${st}" data-act="label-zone" data-k="${k}" data-drop="${k}">${txt}</button>`
+          : `<div class="lb-zone ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}</div>`; }).join("")}</div>
+      ${checked ? `<div class="lb-key">${q.zones.map((z, k) => `<span class="${sel[k] === z.answer ? "ok" : "bad"}"><b>${k + 1}.</b> ${esc(plain(q.options[z.answer]))}</span>`).join("")}</div>`
+        : interactive ? `<p class="muted lb-hint">Сөзді басып, суреттегі ұяшықты бас (немесе сөзді ұяшыққа сүйреп апар). Ұяшықты қайта бассаң — сөз алынады.</p>
+      <div class="lb-words">${q.options.map((o, i) => `<button class="lb-word ${pick === i ? "sel" : ""} ${used.has(i) ? "used" : ""}" draggable="true" data-act="label-word" data-i="${i}">${esc(plain(o))}</button>`).join("")}</div>` : ""}`;
+  }
 
   // «Мұғалімге жіберу»: оқушы сұрақтан қате тапса, хабарлама мұғалім кабинетіне түседі
   const plain = h => { const d = document.createElement("div"); d.innerHTML = h || ""; return d.textContent.replace(/\s+/g, " ").trim(); };
@@ -1720,7 +1750,7 @@
   function renderTest() {
     const t = state.test, q = t.questions[t.cur], sel = t.answers[t.cur], multi = isMulti(q), checked = t.checked[t.cur];
     const answered = t.answers.filter((a, i) => hasAnswer(t.questions[i], a)).length;
-    const typeTag = q.type === "match" ? `<span class="tag t-context">Сәйкестендіру</span>` : q.type === "context" ? `<span class="tag t-context">Контекстік тапсырма</span>` :
+    const typeTag = q.type === "label" ? `<span class="tag t-context">Суретке белгілеу</span>` : mAll(q) ? `<span class="tag t-context">Сәйкестендіру · бірнеше әріп</span>` : q.type === "match" ? `<span class="tag t-context">Сәйкестендіру</span>` : q.type === "context" ? `<span class="tag t-context">Контекстік тапсырма</span>` :
       multi ? `<span class="tag t-multi">Бір немесе бірнеше дұрыс жауап</span>` : `<span class="tag t-single">Бір дұрыс жауап</span>`;
     const optClass = i => {
       if (!checked) return sel.includes(i) ? "sel" : "";
@@ -1744,8 +1774,8 @@
           ${checked ? `<span class="pts p${ptsCls(q, pts)}">${pts} балл</span>` : ""}</div>
         ${contextHtml(q)}
         <div class="q-text">${q.q}</div>
-        ${imgsHtml(q.img)}
-        ${q.type === "match" ? matchHtml(q, sel, checked, true) : `<div class="opts">${q.options.map((o, i) => `
+        ${q.type === "label" ? "" : imgsHtml(q.img)}
+        ${q.type === "label" ? labelHtml(q, sel, checked, true) : q.type === "match" ? matchHtml(q, sel, checked, true) : `<div class="opts">${q.options.map((o, i) => `
           <button class="opt ${multi ? "multi" : "single"} ${optClass(i)}" data-act="pick" data-i="${i}" ${checked ? "disabled" : ""} aria-pressed="${sel.includes(i)}">
             <span class="letter">${LETTERS[i]}</span><span>${o}</span></button>`).join("")}
         </div>`}
@@ -1823,8 +1853,8 @@
           <div class="q-meta"><span class="tag">${i + 1}</span>${q.module ? `<span class="tag">${modTitle(q.module)}</span>` : ""}<span class="pts p${ptsCls(q, p)}">${p} балл</span>${hasAnswer(q, sel) ? "" : `<span class="tag">Жауап берілмеген</span>`}</div>
           ${q.context && (i === 0 || t.questions[i - 1].context !== q.context) ? contextHtml(Object.assign({}, q, { _ctxOpen: false })) : ""}
           <div class="q-text">${q.q}</div>
-          ${imgsHtml(q.img)}
-          ${q.type === "match" ? matchHtml(q, sel, true, false) : `<div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>`}
+          ${q.type === "label" ? "" : imgsHtml(q.img)}
+          ${q.type === "label" ? labelHtml(q, sel, true, false) : q.type === "match" ? matchHtml(q, sel, true, false) : `<div class="opts">${q.options.map((o, j) => `<div class="opt ${isMulti(q) ? "multi" : "single"} ${cls(j)}"><span class="letter">${LETTERS[j]}</span><span>${o}</span></div>`).join("")}</div>`}
           ${q.explain ? `<div class="explain"><b>Түсініктеме:</b> ${q.explain}</div>` : ""}${reportBtn(u, t, i, "res")}</div>`; }).join("")}
       <div class="card" style="margin-top:8px">${rulesHtml()}</div>
     </div>`;
@@ -1960,11 +1990,14 @@
       t.answers[t.cur] = sel;
       renderTestKeepScroll();
     },
+    "label-word": el => { const i = +el.dataset.i; state.labelPick = state.labelPick === i ? null : i; renderTestKeepScroll(); },
+    "label-zone": el => labelPut(+el.dataset.k, state.labelPick),
     "pick-match": el => {
       const t = state.test, q = t.questions[t.cur], k = +el.dataset.k, i = +el.dataset.i;
       if (t.checked[t.cur]) return;
       const sel = (t.answers[t.cur] || []).slice(); while (sel.length < q.items.length) sel.push(null);
-      sel[k] = sel[k] === i ? null : i;
+      if (mAll(q)) { const x = (sel[k] || []).slice(), j = x.indexOf(i); if (j >= 0) x.splice(j, 1); else x.push(i); sel[k] = x.sort((a, b) => a - b); }  // бірнеше әріп
+      else sel[k] = sel[k] === i ? null : i;
       t.answers[t.cur] = sel;
       renderTestKeepScroll();
     },
@@ -1993,6 +2026,11 @@
     if (e.target.closest(".sidebar .nav-item")) actions["close-menu"]();
   });
 
+  // Суретке белгілеу: сөзді ұяшыққа сүйреп апару (компьютерде)
+  document.addEventListener("dragstart", e => { const w = e.target.closest && e.target.closest(".lb-word"); if (w) { e.dataTransfer.setData("text/plain", w.dataset.i); state.labelPick = +w.dataset.i; } });
+  document.addEventListener("dragover", e => { if (e.target.closest && e.target.closest("[data-drop]")) e.preventDefault(); });
+  document.addEventListener("drop", e => { const z = e.target.closest && e.target.closest("[data-drop]"); if (!z) return; e.preventDefault();
+    const i = e.dataTransfer.getData("text/plain"); if (i !== "") labelPut(+z.dataset.drop, +i); });
   document.addEventListener("submit", e => { if (e.target.matches("[data-chat-form]")) { e.preventDefault(); chatSend(); } });
   document.addEventListener("input", e => { if (e.target.id === "chat-input" && state.chat) state.chat.draft = e.target.value; });
 
@@ -2002,7 +2040,7 @@
     const idx = "abcdefgh".indexOf(e.key.toLowerCase());
     const n = "123456".indexOf(e.key);
     const i = idx >= 0 ? idx : n;
-    if (q.type === "match") { if (e.key === "ArrowRight") actions.next(); else if (e.key === "ArrowLeft") actions.prev(); return; }
+    if (q.type === "match" || q.type === "label") { if (e.key === "ArrowRight") actions.next(); else if (e.key === "ArrowLeft") actions.prev(); return; }
     if (i >= 0 && i < q.options.length) actions.pick({ dataset: { i } });
     else if (e.key === "ArrowRight") actions.next();
     else if (e.key === "ArrowLeft") actions.prev();
@@ -2023,7 +2061,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611090808")
+    import("./cloud.js?v=202611101747")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

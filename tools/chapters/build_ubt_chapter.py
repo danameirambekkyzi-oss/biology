@@ -21,6 +21,8 @@ for k, src in enumerate(srcs, 1):
     tid, data, out = f"{NAME[1]}-{k}", json.load(open(src)), []
     for q in data["questions"]:
         e = {"id": f"{tid}-q{q['n']}", "module": mod}
+        if q.get("site"):  # дайын түрдегі сұрақ (бірнеше әріпті сәйкестендіру, суретке белгілеу) — өзгертпей аламыз
+            e.update(q["site"]); out.append(e); continue
         if q["items"]:
             assert len(q["items"]) == 2 and 2 <= len(q["opts"]) <= 4, (tid, q["n"])
             e.update(type="match", q="Сәйкестендіріңіз", options=[tx(o["t"]) for o in q["opts"]],
