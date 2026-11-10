@@ -213,7 +213,7 @@
    */
   function scorePoints(q, sel) {
     if (q.type === "label") return q.zones.reduce((a, z, k) => a + (sel[k] === z.answer ? 1 : 0), 0);
-    if (mAll(q)) return q.items.reduce((a, it, k) => { const x = sel[k] || [], c = x.filter(i => itAns(it).includes(i)).length; return a + Math.max(0, c - (x.length - c)); }, 0);  // әр дұрыс әріпке 1 балл, қате әріп 1 балды алады
+    if (mAll(q)) return q.items.reduce((a, it, k) => a + (sel[k] || []).filter(i => itAns(it).includes(i)).length, 0);  // мұғалімнің ережесі: әр дұрыс әріпке 1 балл (қате әріп балл алмайды)
     if (q.type === "match") return q.items.reduce((a, it, k) => a + (sel[k] === it.answer ? 1 : 0), 0);
     const k = q.correct.length, c = sel.filter(i => q.correct.includes(i)).length, w = sel.length - c;
     if (!sel.length) return 0;
@@ -1699,7 +1699,7 @@
         const chosen = sel[k], ans = itAns(it), full = ans.length === (Array.isArray(chosen) ? chosen : chosen == null ? [] : [chosen]).length && ans.every(i => pickedIn(chosen, i));
         return `<div class="mi ${checked ? (full ? "ok" : "bad") : ""}"><div class="mi-text"><b>${k + 1}.</b> ${it.text}</div>
           <div class="mi-letters">${q.options.map((o, i) => {
-            const cls = checked ? (ans.includes(i) ? "ok" : pickedIn(chosen, i) ? "bad" : "") : (pickedIn(chosen, i) ? "sel" : "");
+            const cls = checked ? (ans.includes(i) ? (mAll(q) && !pickedIn(chosen, i) ? "miss" : "ok") : pickedIn(chosen, i) ? "bad" : "") : (pickedIn(chosen, i) ? "sel" : "");
             return interactive ? `<button class="ml ${cls}" data-act="pick-match" data-k="${k}" data-i="${i}" ${checked ? "disabled" : ""}>${LETTERS[i]}</button>` : `<span class="ml ${cls}">${LETTERS[i]}</span>`;
           }).join("")}</div></div>`; }).join("")}</div>`;
   }
@@ -2061,7 +2061,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611101753")
+    import("./cloud.js?v=202611101800")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
