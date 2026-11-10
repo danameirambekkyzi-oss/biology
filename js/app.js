@@ -1649,10 +1649,11 @@
     if (!IMG_TASKS.length) return head + `<div class="card empty"><div class="e-ico">${ic("camera", 40)}</div><h3>Суреттер жақында қосылады</h3>
       <p>Мұнда ботаника, зоология, анатомия және басқа тараулардың суреттері болады: жүрек, нефрон, гүл, жасуша және т.б.</p></div>`;
     const mods = MODULES.filter(m => IMG_TASKS.some(t => t.module === m.id));
-    return head + mods.map(m => `<h2 class="img-mod">${esc(m.title)}</h2><div class="grid g-3 img-tasks">${IMG_TASKS.filter(t => t.module === m.id).map(t => { const b = best(t.id); return `
-      <div class="card img-card"><img src="${esc(t.img[0])}" alt="" loading="lazy"><div class="tc-top"><b>${esc(t.title)}</b>${b != null ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : ""}</div>
+    return head + mods.map(m => `<h2 class="img-mod">${esc(m.title)}</h2><div class="grid g-3 img-tasks">${IMG_TASKS.filter(t => t.module === m.id).map((t, k) => { const b = best(t.id), paid = k > 0 && !hasPremium(u); return `
+      <div class="card img-card ${paid ? "paid" : ""}"><img src="${esc(t.img[0])}" alt="" loading="lazy"><div class="tc-top"><b>${esc(t.title)}</b>${b != null && !paid ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : !PREMIUM ? "" : k === 0 ? `<span class="tag t-single">Тегін</span>` : `<span class="tag t-multi">${ic("star", 14)} Премиум</span>`}</div>
         <small class="muted">${t.zones.length} атау</small>
-        <button class="btn btn-cta btn-block" data-act="start-img" data-id="${esc(t.id)}">${b != null ? "Қайта орындау" : "Бастау"}</button></div>`; }).join("")}</div>`).join("");
+        ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>`
+          : `<button class="btn btn-cta btn-block" data-act="start-img" data-id="${esc(t.id)}">${b != null ? "Қайта орындау" : "Бастау"}</button>`}</div>`; }).join("")}</div>`).join("");
   }
   function startMode(mode, id) {
     const u = currentUser();
@@ -1666,6 +1667,7 @@
     }
     if (mode === "img") {  // «Суретпен жұмыс»: бір суретті тапсырма, атаулардың реті араласады
       const x = IMG_TASKS.find(t => t.id === id); if (!x) return;
+      if (IMG_TASKS.filter(t => t.module === x.module).indexOf(x) > 0 && !hasPremium(u)) return upgradeModal(`${x.title} — премиум тапсырма. Әр тараудағы бірінші сурет тегін.`);  // әр тараудың 1-суреті тегін
       return startTest({ mode: "topic", testId: x.id, title: x.title, questions: [shuffleOpts(x)], instant: true, module: x.module });
     }
     if (mode === "ch") {
@@ -1893,7 +1895,7 @@
       const msg = `Сәлеметсіз бе! Мен ${SITE} сайтында «${pl.title}» премиум тарифін (${fmtPrice(pl.price)}) Kaspi арқылы төледім. Чекті жіберемін.\nАты-жөнім: ${u ? u.name : ""}\nТелефон: ${u ? (u.phone || "") : ""}`;
       m.innerHTML = `<h3>Премиум рұқсат</h3>
         ${reason ? `<p class="muted" style="margin-top:0">${esc(reason)}</p>` : ""}
-        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Файлдан тест жасау: конспектіңді сал — сол тақырып бойынша тест жиналады</li><li>Сұрақ іздеу чаты: сұрақты жазсаң, қай тестте тұрғанын және жауабын табады</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
+        <ul class="pm-list"><li>Барлық папкадағы толық ҰБТ сынамалары</li><li>Әр сынаманың дұрыс жауаптары және қатемен жұмыс</li><li>Тараулық тесттердің барлығы (әр тараудағы бірінші тест тегін)</li><li>Файлдан тест жасау: конспектіңді сал — сол тақырып бойынша тест жиналады</li><li>Сұрақ іздеу чаты: сұрақты жазсаң, қай тестте тұрғанын және жауабын табады</li><li>Суретпен жұмыс: барлық суреттер (әр тараудағы бірінші сурет тегін)</li><li>Негізгі жаттау керек ақпараттар: ботаника, дәрумендер, жұқпалы аурулар, қорықтар, Қызыл кітап</li><li>Тест-1 әр папкада тегін қалады</li></ul>
         <div class="plans">${PLANS.map(p => `<button class="plan ${p.id === sel ? "active" : ""}" data-plan="${p.id}">
           ${p.best ? `<span class="plan-best">Тиімді</span>` : ""}<b>${esc(p.title)}</b><span class="plan-price">${fmtPrice(p.price)}</span>
           <small class="muted">${p.untilUbt ? `${fmtDate(UBT_END)} дейін` : `${p.days} күн`}</small></button>`).join("")}</div>
@@ -2083,7 +2085,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611101916")
+    import("./cloud.js?v=202611101919")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
