@@ -770,7 +770,10 @@
         if (!was && hasPremium(cloudUser)) toast("Премиум ашылды! Барлық тесттер қолжетімді.", "xp");
         if (!location.hash.startsWith("#/test")) render();
       }
-    }).catch(e => { cloudUser = null; state.lb = null; stopTimer(); state.test = null; toast(e.message); go("#/login"); });
+    }).catch(e => {
+      if (!e.verdict) return;  // интернет үзілсе — оқушыны шығармаймыз (тест жалғаса береді), бір минуттан кейін қайта тексереміз
+      saveProgress(); cloudUser = null; state.lb = null; stopTimer(); state.test = null; state.resumeChecked = false; toast(e.message); go("#/login");
+    });
   }
   setInterval(() => { if (CLOUD && cloudUser) { state.verifiedAt = 0; verifySession(); } }, 60000);
 
@@ -1967,6 +1970,7 @@
     print: () => window.print(),
     theme: el => { store.set(THEME_KEY, el.dataset.v); applyTheme(); render(); },
     logout: () => confirmModal("Шығу", "Аккаунттан шыққыңыз келе ме?", "Шығу", () => {
+      saveProgress(); stopTimer(); state.test = null; state.resumeChecked = false;  // аяқталмаған тест сақталады — қайта кіргенде жалғасады
       if (CLOUD) return window.Cloud.logout().finally(() => { cloudUser = null; state.lb = null; go("#/"); });
       store.del(SESSION_KEY); memSession = null; go("#/");
     }),
@@ -2112,7 +2116,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110811")
+    import("./cloud.js?v=202611110815")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

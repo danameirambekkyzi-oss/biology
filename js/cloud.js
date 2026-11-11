@@ -175,12 +175,12 @@ window.Cloud = {
   // Ашық сессияны тексеру: бұғатталса немесе құрылғы ауысса — шығарып жібереді
   async verify() {
     const fbUser = auth.currentUser;
-    if (!fbUser) throw fail("Сессия аяқталды. Қайта кіріңіз.");
+    if (!fbUser) throw Object.assign(fail("Сессия аяқталды. Қайта кіріңіз."), { verdict: true });
     const snap = await F.getDoc(userRef(fbUser.uid));
     const u = snap.exists() ? snap.data() : null;
     const bad = !u ? "Аккаунт табылмады." : u.blocked ? "Бұл аккаунт бұғатталған. Мұғаліммен байланысыңыз." :
       (u.role !== "teacher" && u.deviceId && u.deviceId !== deviceId()) ? "Бұл аккаунт басқа құрылғыда ашылды. Құрылғыны ауыстыру үшін мұғаліммен байланысыңыз." : "";
-    if (bad) { pending = null; await A.signOut(auth); throw fail(bad); }
+    if (bad) { pending = null; await A.signOut(auth); throw Object.assign(fail(bad), { verdict: true }); }  // verdict — нақты себеп (интернет қатесі емес)
     return u;
   },
 
