@@ -1645,8 +1645,8 @@
     else { const j = sel.indexOf(i); if (j >= 0) sel[j] = null; sel[k] = i; }  // бір сөз бір ұяшықта ғана
     state.labelPick = null; t.answers[t.cur] = sel; renderTestKeepScroll();
   }
-  function shuffleOpts(q) {  // нұсқалардың ретін араластырып, дұрыс жауап индекстерін сәйкесінше ауыстырады
-    const perm = shuffle(q.options.map((_, i) => i)), inv = [];
+  function shuffleOpts(q, given) {  // нұсқалардың ретін араластырып (немесе берілген ретпен), дұрыс жауап индекстерін сәйкесінше ауыстырады
+    const perm = given || shuffle(q.options.map((_, i) => i)), inv = [];
     perm.forEach((old, i) => { inv[old] = i; });
     const c = Object.assign({}, q, { options: perm.map(i => q.options[i]), correct: q.correct.map(i => inv[i]) });
     if (q.type === "label") c.zones = q.zones.map(z => Object.assign({}, z, { answer: inv[z.answer] }));
@@ -1690,7 +1690,7 @@
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
       const k = t.chapter.tests.findIndex(x => x.id === t.id);
       // Бақылау тесті: барлық оқушыға ашық, әр бастағанда сұрақтардың реті (бір түрлі сұрақтар өз ішінде) және нұсқалардың реті әртүрлі
-      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions).map(shuffleOpts), instant: false, module: t.chapter.module, exam: true, timeLimit: t.timeLimit || 0 });
+      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions).map(q => shuffleOpts(q)), instant: false, module: t.chapter.module, exam: true, timeLimit: t.timeLimit || 0 });
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.title} — премиум тест. Әр тараудағы бірінші тест тегін.`);
       if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.chapter.tests[k - 1].id)) return toast("Алдымен алдыңғы тестті тапсыр");
       return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
@@ -1723,13 +1723,38 @@
   /* ---- Аяқталмаған тест сақталады: шығып кетсе, бетті жаңартса, жабып қайта ашса — тоқтаған жерінен жалғасады.
      Тест тек «Аяқтау» басылғанда (немесе уақыт біткенде) аяқталады. Сақтау осы құрылғыда (браузерде), интернетсіз де. */
   const progKey = u => "bioubt_progress_" + u.id;
+  // Аккаунтқа (Firebase) да ықшам түрде сақтаймыз: сұрақ id-лері, нұсқалардың араласқан реті, жауаптар — басқа браузерден/қосымшадан кірсе де жалғасады
+  function packProgress(t) {
+    const perm = t.questions.map(q => {
+      const o = QBY[q.id]; if (!o || JSON.stringify(o.options) === JSON.stringify(q.options)) return null;
+      const used = new Set(); return q.options.map(x => { const i = o.options.findIndex((y, j) => y === x && !used.has(j)); used.add(i); return i; });
+    });
+    return JSON.stringify({ testId: t.testId || null, title: t.title, mode: t.mode, module: t.module || "", exam: !!t.exam, instant: !!t.instant, timeLimit: t.timeLimit || 0,
+      startedAt: t.startedAt, savedAt: t.savedAt, cur: t.cur, ids: t.questions.map(q => q.id), perm, answers: t.answers, checked: t.checked });
+  }
+  function unpackProgress(str) {
+    try {
+      const p = JSON.parse(str); if (!p || !Array.isArray(p.ids) || !p.ids.length || p.ids.some(id => !QBY[id])) return null;
+      const questions = p.ids.map((id, i) => p.perm && p.perm[i] ? shuffleOpts(QBY[id], p.perm[i]) : QBY[id]);
+      return { testId: p.testId, title: p.title, mode: p.mode, module: p.module, exam: p.exam, instant: p.instant, timeLimit: p.timeLimit, startedAt: p.startedAt, savedAt: p.savedAt,
+        cur: Math.min(p.cur || 0, questions.length - 1), questions, answers: p.answers || questions.map(() => []), checked: p.checked || questions.map(() => false) };
+    } catch (e) { return null; }
+  }
   function saveProgress() {
     const t = state.test, u = currentUser();
-    if (t && u && t.mode !== "demo") store.set(progKey(u), t);
+    if (!t || !u || t.mode === "demo") return;
+    t.savedAt = Date.now(); store.set(progKey(u), t);
+    const packed = packProgress(t);
+    if (packed !== u.testProg) { u.testProg = packed; saveUser(u); }
   }
   const inProgId = u => (state.test || loadProgress(u) || {}).testId;  // аяқталмаған тесттің id-і (карточкада «Жалғастыру»)
-  function clearProgress() { const u = currentUser(); if (u) store.del(progKey(u)); }
-  function loadProgress(u) { const t = store.get(progKey(u), null); return t && Array.isArray(t.questions) && t.questions.length ? t : null; }
+  function clearProgress() { const u = currentUser(); if (u) { store.del(progKey(u)); if (u.testProg) { u.testProg = ""; saveUser(u); } } }
+  function loadProgress(u) {  // осы браузердегі сақталғаны мен аккаунттағысының жаңасы
+    const loc = store.get(progKey(u), null), local = loc && Array.isArray(loc.questions) && loc.questions.length ? loc : null;
+    const cloud = u.testProg ? unpackProgress(u.testProg) : null;
+    if (local && cloud) return (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
+    return local || cloud;
+  }
   function timeLeft(t) { return t.timeLimit ? Math.max(0, t.timeLimit - Math.floor((Date.now() - t.startedAt) / 1000)) : null; }
   const fmtTime = s => (s >= 3600 ? Math.floor(s / 3600) + ":" + String(Math.floor(s % 3600 / 60)).padStart(2, "0") : String(Math.floor(s / 60)).padStart(2, "0")) + ":" + String(s % 60).padStart(2, "0");
 
@@ -2116,7 +2141,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110815")
+    import("./cloud.js?v=202611110821")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
