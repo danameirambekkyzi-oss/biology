@@ -901,7 +901,7 @@
         <div class="card test-card ${open ? "" : "locked"} ${paid ? "paid" : ""}"><div class="tc-top"><b>${esc(t.title)}</b>${t.exam ? `<span class="tag t-context">${ic("clock", 14)} Бақылау тесті</span>` : b != null && !paid ? `<span class="tag t-single">Ең жақсы: ${b}</span>` : PREMIUM && k === 0 ? `<span class="tag t-single">Тегін</span>` : PREMIUM && (paid || open) ? `<span class="tag t-multi">${ic("star", 14)} Премиум</span>` : open ? "" : `<span class="tag">${ic("lock", 14)} Құлыптаулы</span>`}</div>
           <small class="muted">${t.questions.length} тапсырма · бір жауапты, ${t.questions.some(q => q.type === "context") ? "контекстік, " : ""}көп жауапты${t.questions.some(q => q.type === "match") ? ", сәйкестендіру" : ""}</small>
           ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
-            open ? `<button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
+            open ? `<button class="btn btn-cta btn-block" data-act="start-ch" data-id="${t.id}">${inProgId(u) === t.id ? "Жалғастыру" : b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
             `<button class="btn btn-ghost btn-block" disabled>Алдыңғы тест тапсырылғаннан кейін ашылады</button>`}</div>`; }).join("")}</div>` : "";
     return `<a href="#/app/chapters" class="back-link">← Барлық тараулар</a>
       <div class="card chapter-head">
@@ -951,7 +951,7 @@
               ${t.sub ? `<small class="tc-sub">${esc(t.sub)}</small>` : ""}
               <small class="muted">${t.questions.length} тапсырма · ${state.mockMin} минут${k === 0 && b != null ? ` · ең жақсы: ${b}` : ""}</small>
               ${paid ? `<button class="btn btn-primary btn-block" data-act="upgrade">${ic("lock", 16)} Премиум алу</button>` :
-                open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
+                open ? `<button class="btn btn-cta btn-block" data-act="start-test" data-id="${t.id}">${inProgId(u) === t.id ? "Жалғастыру" : b != null ? "Қайта тапсыру" : "Бастау"}</button>` :
                 `<button class="btn btn-ghost btn-block" disabled>${esc(folder.tests[k - 1].title)} тапсырылғаннан кейін ашылады</button>`}
             </div>`; }).join("")}</div>
         </div>` : FOLDERS.length ? `<div class="grid g-3">${FOLDERS.map(f => `
@@ -1666,6 +1666,9 @@
   function startMode(mode, id) {
     const u = currentUser();
     if (!u) return go("#/login");
+    // Осы тест аяқталмаған болса — басынан бастамаймыз (жауаптар өшпейді), тоқтаған жерінен жалғастырамыз
+    const inProg = state.test || loadProgress(u);
+    if (id && inProg && inProg.testId === id && ["ch", "test", "img"].includes(mode)) { state.test = inProg; toast("Аяқталмаған тестің жалғасады"); return go("#/test"); }
     if (mode === "test") {
       const t = TESTS.find(x => x.id === id); if (!t) return;
       const k = t.folder.tests.findIndex(x => x.id === id);
@@ -1719,6 +1722,7 @@
     const t = state.test, u = currentUser();
     if (t && u && t.mode !== "demo") store.set(progKey(u), t);
   }
+  const inProgId = u => (state.test || loadProgress(u) || {}).testId;  // аяқталмаған тесттің id-і (карточкада «Жалғастыру»)
   function clearProgress() { const u = currentUser(); if (u) store.del(progKey(u)); }
   function loadProgress(u) { const t = store.get(progKey(u), null); return t && Array.isArray(t.questions) && t.questions.length ? t : null; }
   function timeLeft(t) { return t.timeLimit ? Math.max(0, t.timeLimit - Math.floor((Date.now() - t.startedAt) / 1000)) : null; }
@@ -2106,7 +2110,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110726")
+    import("./cloud.js?v=202611110735")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
