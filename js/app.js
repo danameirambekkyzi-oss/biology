@@ -279,7 +279,7 @@
   }
   function shortName(n) { const w = (n || "Түлек").trim().split(/\s+/); return w[0] + (w[1] ? " " + w[1][0] + "." : ""); }
   const myRank = u => { const r = leaderboard(u).find(x => x.me); return r ? r.rank : "—"; };
-  const mistakesCount = u => Object.keys(u.mistakes).length;
+  const mistakesCount = u => Object.keys(u.mistakes).filter(id => QBY[id]).length;
 
   function notify(u, icon, text) {
     u.notifications.unshift({ icon, text, time: Date.now(), read: false });
@@ -2146,6 +2146,9 @@
       const t = state.test; t.checked[t.cur] = true;
       const p = scorePoints(t.questions[t.cur], t.answers[t.cur]);
       toast(ptsCls(t.questions[t.cur], p) === 2 ? `Дұрыс! +${p} балл` : p ? `Жартылай дұрыс: ${p} балл` : "Қате жауап");
+      // Дұрыс шешілген сұрақ «Қатемен жұмыс» тізімінен бірден алынады (тестті аяқтауды күтпей)
+      const u = currentUser(), q = t.questions[t.cur];
+      if (u && t.mode !== "demo" && ptsCls(q, p) === 2) { u.solved[q.id] = true; if (u.mistakes[q.id]) { delete u.mistakes[q.id]; u.fixed++; saveUser(u); } }
       renderTestKeepScroll();
     },
     next: () => { const t = state.test; if (t.cur < t.questions.length - 1) { t.cur++; renderTest(); window.scrollTo(0, 0); } },
@@ -2207,7 +2210,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110920")
+    import("./cloud.js?v=202611111721")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
