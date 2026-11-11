@@ -92,6 +92,7 @@
 
   /* ================= Icons (SVG) ================= */
   const ICONS = {
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
     layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
     clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
@@ -303,6 +304,27 @@
     });
   }
 
+  /* ---- Бақылау тесті: оқушының әр сұраққа берген жауабы (бастапқы тесттің нөмірлері мен әріптерімен) ---- */
+  const examTests = () => CHAPTERS.flatMap(ch => ch.tests.filter(t => t.exam).map(t => Object.assign({ chapter: ch }, t)));
+  function ansText(q, sel) {
+    const o = QBY[q.id] || q, L = i => { const j = o.options.indexOf(q.options[i]); return j >= 0 ? LETTERS[j] || "?" : "?"; };
+    sel = sel || [];
+    if (q.type === "label") return q.zones.map((z, k) => `${k + 1}-${sel[k] != null && sel[k] >= 0 ? L(sel[k]) : "·"}`).join(" ");
+    if (q.type === "match") return q.items.map((it, k) => { const v = sel[k]; const a = Array.isArray(v) ? v : v != null && v >= 0 ? [v] : [];
+      return `${k + 1}-${a.length ? a.map(L).sort().join("") : "·"}`; }).join(" ");
+    return sel.map(L).sort().join("");
+  }
+  function rightText(q) {
+    if (q.type === "label") return q.zones.map((z, k) => `${k + 1}-${LETTERS[z.answer]}`).join(" ");
+    if (q.type === "match") return q.items.map((it, k) => `${k + 1}-${itAns(it).map(i => LETTERS[i]).join("")}`).join(" ");
+    return q.correct.map(i => LETTERS[i]).sort().join("");
+  }
+  function ansSheet(test) {  // бастапқы тест ретімен: әр сұраққа жауап мәтіні
+    const src = examTests().find(t => t.id === test.testId); if (!src) return null;
+    const at = {}; test.questions.forEach((q, i) => { at[q.id] = i; });
+    return src.questions.map(q => at[q.id] == null ? "" : ansText(test.questions[at[q.id]], test.answers[at[q.id]]));
+  }
+
   function applyResult(u, test, res) {
     const rankBefore = myRank(u);
     const xp = res.score; // жинаған балл
@@ -320,7 +342,9 @@
     });
     if (test.mode === "mock") u.mocks++;
     const wrong = test.questions.filter((q, i) => res.per[i] < maxPoints(q)).map(q => q.id);
-    u.history.push({ date: Date.now(), mode: test.mode, testId: test.testId || null, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong });
+    const h = { date: Date.now(), mode: test.mode, testId: test.testId || null, title: test.title, score: res.score, max: res.max, scaled: res.scaled, pct: res.pct, wrong };
+    if (test.exam) { const a = ansSheet(test); if (a) h.ans = a; }
+    u.history.push(h);
     u.history = u.history.slice(-200);
     checkBadges(u, res, test);
     const rankAfter = myRank(u);
@@ -1307,6 +1331,7 @@
             <button class="btn btn-green btn-sm" data-act="t-rp-done" data-id="${esc(r.id)}">${ic("check", 16)} Шешілді (өшіру)</button></div></details>`).join("")
           : `<p class="muted" style="margin:0">Әзірге хабарлама жоқ. Оқушы тесттегі сұрақтың астындағы «Мұғалімге жіберу» батырмасын басса, хабарлама осында түседі.</p>`}
       </div>
+      ${examResultsHtml(list)}
       <div class="grid g-3" style="margin-bottom:16px">
         <div class="card stat-card"><span class="muted">Барлық оқушы</span><b>${list.length}</b></div>
         <div class="card stat-card"><span class="muted">Соңғы 7 күнде белсенді</span><b>${active}</b></div>
@@ -1338,12 +1363,50 @@
       </div>
       <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Құпия сөзді жаңарту» — оқушының email-іне жаңа құпия сөз қоятын сілтеме кетеді (спам қалтасын да қарау керек). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
   }
+  /* ---- Мұғалім: бақылау тесттерінің нәтижесі (кесте + Excel) ---- */
+  function examRows(list, t) {
+    const pos = {}; t.questions.forEach((q, j) => { pos[q.id] = j; });
+    return list.map(x => { const hs = (x.history || []).filter(h => h.testId === t.id); if (!hs.length) return null;
+      const h = hs[hs.length - 1], wrong = (h.wrong || []).map(id => pos[id]).filter(j => j != null).sort((a, b) => a - b);
+      return { x, h, n: hs.length, wrong }; }).filter(Boolean).sort((a, b) => b.h.score - a.h.score);
+  }
+  function examResultsHtml(list) {
+    const ex = examTests(); if (!ex.length) return "";
+    const t = ex.find(e => e.id === state.exId) || ex[0], rows = examRows(list, t);
+    return `<div class="card rp-box">
+      <div class="row-between" style="margin:0 0 10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0">${ic("clipboard", 18)} Бақылау тестінің нәтижелері <span class="tag t-multi">${rows.length} оқушы</span></h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${ex.length > 1 ? `<select class="input" id="t-ex" style="width:auto">${ex.map(e => `<option value="${e.id}" ${e.id === t.id ? "selected" : ""}>${esc(e.title)}</option>`).join("")}</select>` : ""}
+          ${rows.length ? `<button class="btn btn-green btn-sm" data-act="t-ex-xls" data-id="${t.id}">${ic("download", 16)} Excel-ге жүктеу</button>` : ""}</div></div>
+      <p class="muted" style="margin:0 0 10px">${esc(t.title)} · ${t.questions.length} сұрақ. Excel файлында әр оқушының әр сұрақ бойынша жауабы бар (+ дұрыс, − қате немесе жартылай).</p>
+      ${rows.length ? `<div class="t-table-wrap"><table class="t-table"><thead><tr><th>#</th><th>Оқушы</th><th>Күні</th><th>Балл</th><th>Қате/жартылай сұрақтар (нөмірі)</th></tr></thead><tbody>
+        ${rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.x.name || "")}</b><br><small class="muted">${esc(r.x.phone || "")}</small></td>
+          <td>${fmtDate(r.h.date)}${r.n > 1 ? `<br><small class="muted">${r.n} рет тапсырған (соңғысы)</small>` : ""}</td>
+          <td><b>${r.h.score}/${r.h.max}</b><br><small class="muted">${r.h.pct}%</small></td>
+          <td style="max-width:420px"><small>${r.wrong.length ? r.wrong.map(j => j + 1).join(", ") : "—"}</small></td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="muted" style="margin:0">Әзірге ешкім тапсырмаған.</p>`}
+    </div>`;
+  }
+  function examXls(id) {
+    const t = examTests().find(e => e.id === id); if (!t) return;
+    const rows = examRows(state.students || [], t), N = t.questions.length;
+    const cell = v => `<td>${esc(String(v == null ? "" : v))}</td>`;
+    const head = ["#", "Оқушы", "Телефон", "Күні", "Балл", "Максимум", "%", "Қате/жартылай сұрақтар"].concat(t.questions.map((q, j) => j + 1));
+    const right = ["", "ДҰРЫС ЖАУАП", "", "", "", "", "", ""].concat(t.questions.map(rightText));
+    const body = rows.map((r, i) => { const bad = new Set(r.wrong);
+      return [i + 1, r.x.name || "", r.x.phone || "", fmtDate(r.h.date), r.h.score, r.h.max, r.h.pct, r.wrong.map(j => j + 1).join(", ")]
+        .concat(t.questions.map((q, j) => (bad.has(j) ? "− " : "+ ") + (r.h.ans && r.h.ans[j] != null ? r.h.ans[j] : "")).map(v => v.trim())); });
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">
+      ${[head, right].concat(body).map((r, k) => `<tr${k < 2 ? ' style="font-weight:bold"' : ""}>${r.map(cell).join("")}</tr>`).join("")}</table></body></html>`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + html], { type: "application/vnd.ms-excel" }));
+    a.download = `bakylau-testi-natizheler-${t.id}.xls`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
   function loadStudents() {
     window.Cloud.reports().then(l => { state.reports = l; render(); }).catch(() => { state.reports = []; });
     return window.Cloud.students().then(l => { state.students = l; }).catch(e => { toast(window.Cloud.errorText(e)); state.students = []; });
   }
   function bindTeacher() {
     if (!state.students && !state.stLoading) { state.stLoading = true; loadStudents().finally(() => { state.stLoading = false; render(); }); }
+    const ex = $("#t-ex"); if (ex) ex.addEventListener("change", () => { state.exId = ex.value; render(); });
     const inp = $("#t-search");
     if (inp) inp.addEventListener("input", () => { state.tq = inp.value; const pos = inp.selectionStart; render(); const n = $("#t-search"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } });
   }
@@ -2005,6 +2068,7 @@
       saveUser(u); toast("Прогресс тазаланды"); render();
     }),
     "t-reload": () => { state.students = null; render(); },
+    "t-ex-xls": el => examXls(el.dataset.id),
     "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
     "ft-make": () => ftMake(),
     "ft-start": () => { const r = state.ft && state.ft.res, u = currentUser(); if (!r || !r.questions.length || !u) return;
@@ -2143,7 +2207,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110844")
+    import("./cloud.js?v=202611110920")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
