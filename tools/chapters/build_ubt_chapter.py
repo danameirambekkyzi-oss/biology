@@ -48,6 +48,7 @@ for k, src in enumerate(srcs, len(KEEP) + 1):
     for a, b in TITLE_FIX.items(): title = title.replace(a, b)
     tests.append({"id": tid, "title": title, "questions": out})
     if data.get("exam"): tests[-1]["exam"] = True  # бақылау тесті: бәріне ашық, сұрақ реті араласады
+    if data.get("timeLimit"): tests[-1]["timeLimit"] = data["timeLimit"]  # уақыт шегі (секунд)
 entry = {"module": mod, "note": NOTE, "tests": tests}
 data = [entry if m["module"] == mod else m for m in OLD] + ([] if any(m["module"] == mod for m in OLD) else [entry])  # тарау бұрынғы орнында қалады
 open(path, "w").write(head + "window.CHAPTER_TESTS = " + json.dumps(data, ensure_ascii=False, indent=1) + ";\n")

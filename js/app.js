@@ -344,11 +344,20 @@
     if (parts[0] !== "test") stopTimer();
     window.scrollTo(0, 0);
 
+    if (u && !state.test && !state.resumeChecked) {  // сайт ашылғанда: аяқталмаған тест болса — жалғастырамыз
+      state.resumeChecked = true;
+      const saved = loadProgress(u);
+      if (saved) {
+        state.test = saved;
+        if (saved.exam && (saved.leaves || 0) >= EXAM_LEAVES) { examLeftCheck(); return; }
+        if (parts[0] !== "test") { toast("Аяқталмаған тестің жалғасады"); return go("#/test"); }
+      }
+    }
     if (!parts.length) return renderLanding(u);
     switch (parts[0]) {
       case "login": state.authTab = "login"; return u ? go("#/app") : renderAuth();
       case "register": state.authTab = "register"; return u ? go("#/app") : renderAuth();
-      case "test": return state.test ? renderTest() : go(u ? "#/app" : "#/");
+      case "test": if (state.test) { renderTest(); examLeftCheck(); return; } return go(u ? "#/app" : "#/");
       case "result": return state.result ? renderResult() : go(u ? "#/app" : "#/");
       case "app": return u ? renderApp(u, parts[1] || "dashboard", parts[1] === "plants" ? parts.slice(2).join("/") : parts[2]) : go("#/login");
       default: return go("#/");
@@ -748,7 +757,7 @@
             </div>
             <div id="notif-pop" class="notif-pop hidden"></div>
           </header>
-          <main class="content">${inner}</main>
+          <main class="content">${state.test && active !== "test" && state.test.mode !== "demo" ? `<a class="card resume-bar" href="#/test">${ic("clock", 20)}<span>Аяқталмаған тест бар: <b>${esc(state.test.title)}</b></span><b class="resume-go">Жалғастыру →</b></a>` : ""}${inner}</main>
         </div>
       </div>`;
   }
@@ -1674,7 +1683,7 @@
       const t = CH_TESTS.find(x => x.id === id); if (!t) return;
       const k = t.chapter.tests.findIndex(x => x.id === t.id);
       // Бақылау тесті: барлық оқушыға ашық, әр бастағанда сұрақтардың реті (бір түрлі сұрақтар өз ішінде) және нұсқалардың реті әртүрлі
-      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions).map(shuffleOpts), instant: false, module: t.chapter.module });
+      if (t.exam) return startTest({ mode: "topic", testId: t.id, title: t.title, questions: shuffleRuns(t.questions).map(shuffleOpts), instant: false, module: t.chapter.module, exam: true, timeLimit: t.timeLimit || 0 });
       if (k > 0 && !hasPremium(u)) return upgradeModal(`${t.title} — премиум тест. Әр тараудағы бірінші тест тегін.`);
       if (k > 0 && u.role !== "teacher" && !u.history.some(h => h.testId === t.chapter.tests[k - 1].id)) return toast("Алдымен алдыңғы тестті тапсыр");
       return startTest({ mode: "topic", testId: t.id, title: t.title, questions: t.questions, instant: false, module: t.chapter.module });
@@ -1704,8 +1713,28 @@
   }
 
   function stopTimer() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
+  /* ---- Аяқталмаған тест сақталады: шығып кетсе, бетті жаңартса, жабып қайта ашса — тоқтаған жерінен жалғасады.
+     Тест тек «Аяқтау» басылғанда (немесе уақыт біткенде) аяқталады. Сақтау осы құрылғыда (браузерде). */
+  const progKey = u => "bioubt_progress_" + u.id;
+  function saveProgress() {
+    const t = state.test, u = currentUser();
+    if (t && u && t.mode !== "demo") store.set(progKey(u), t);
+  }
+  function clearProgress() { const u = currentUser(); if (u) store.del(progKey(u)); }
+  function loadProgress(u) { const t = store.get(progKey(u), null); return t && Array.isArray(t.questions) && t.questions.length ? t : null; }
+  // Бақылау тесті: беттен (басқа вкладкаға, басқа қосымшаға) шығуға болмайды. 1-рет — ескерту, 2-рет — тест аяқталады.
+  const EXAM_LEAVES = 2;
+  function examLeftCheck() {
+    const t = state.test; if (!t || !t.exam || location.hash !== "#/test") return;
+    if ((t.leaves || 0) >= EXAM_LEAVES) { toast("Тест бетінен шығып кеткеніңіз үшін тест аяқталды."); finishTest(); return true; }
+    if (t.leaves === 1 && !t.warned) {
+      t.warned = true; saveProgress();
+      setTimeout(() => openModal(`<h3>⚠️ Ескерту</h3><p>Сен тест бетінен шығып кеттің (басқа вкладка, басқа қосымша немесе бетті жапқан). Бұл — бақылау тесті.</p>
+        <p><b>Тағы бір рет шықсаң, тест сол жауаптарыңмен автоматты түрде аяқталады.</b></p><button class="btn btn-primary btn-block" data-close>Түсіндім, жалғастырамын</button>`), 50);
+    }
+  }
   function timeLeft(t) { return t.timeLimit ? Math.max(0, t.timeLimit - Math.floor((Date.now() - t.startedAt) / 1000)) : null; }
-  const fmtTime = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  const fmtTime = s => (s >= 3600 ? Math.floor(s / 3600) + ":" + String(Math.floor(s % 3600 / 60)).padStart(2, "0") : String(Math.floor(s / 60)).padStart(2, "0")) + ":" + String(s % 60).padStart(2, "0");
 
   const imgsHtml = list => (list || []).map(src => `<img class="q-img" src="${esc(src)}" alt="Сурет" loading="lazy">`).join("");
   function contextHtml(q) {
@@ -1821,6 +1850,7 @@
     else app.innerHTML = `<header class="topbar"><div class="container"><a class="logo" href="#/">${LOGO}${esc(SITE)}</a>
       <a class="btn btn-ghost" href="#/register">Тіркелу</a></div></header><div class="content" style="margin:0 auto">${inner}</div>`;
 
+    saveProgress();
     stopTimer();
     if (t.timeLimit) state.timer = setInterval(() => {
       const left = timeLeft(t), el = $("#timer");
@@ -1842,7 +1872,7 @@
       if (u) { xp = applyResult(u, t, res); try { sessionStorage.removeItem(DEMO_KEY); } catch (e) { /* ignore */ } }
     }
     state.result = { test: t, res, xp };
-    state.test = null;
+    state.test = null; clearProgress();
     if (xp) setTimeout(() => toast(`+${xp} балл`, "xp"), 300);
     go("#/result");
   }
@@ -2050,6 +2080,13 @@
     if (e.target.closest(".sidebar .nav-item")) actions["close-menu"]();
   });
 
+  // Бақылау тесті: беттен шыққанын санау (вкладка ауыстыру, қосымшадан шығу, бетті жабу)
+  document.addEventListener("visibilitychange", () => {
+    const t = state.test; if (!t || location.hash !== "#/test") return;
+    if (document.visibilityState === "hidden") { if (t.exam) { t.leaves = (t.leaves || 0) + 1; } saveProgress(); }
+    else examLeftCheck();
+  });
+  window.addEventListener("pagehide", () => saveProgress());
   // Суретке белгілеу: сөзді ұяшыққа сүйреп апару (компьютерде)
   document.addEventListener("dragstart", e => { const w = e.target.closest && e.target.closest(".lb-word"); if (w) { e.dataTransfer.setData("text/plain", w.dataset.i); state.labelPick = +w.dataset.i; } });
   document.addEventListener("dragover", e => { if (e.target.closest && e.target.closest("[data-drop]")) e.preventDefault(); });
@@ -2085,7 +2122,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110623")
+    import("./cloud.js?v=202611110723")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

@@ -20,3 +20,6 @@ python3 -I tools/chapters/build_ubt_chapter.py . anatomy <ana t1..t6 json> /tmp/
 
 Ашу жолы жоғарыдағыдай (`anatomy-exam.enc` орнына осы файл), суреттер `img/chapters/ana-zachet/` папкасына көшіріледі.
 110–111 — бірнеше әріпті сәйкестендіру (`items[].answers`), 112 — суретке белгілеу (`type: "label"`, `zones`).
+Уақыты — 2 сағат (`"timeLimit": 7200`). Ашқанда: `build_ubt_chapter.py . anatomy --append /tmp/exam/test.json`.
+
+`anatomy-exam.enc` 2026-11-11 ашылды (Анатомия, 7-тест).
