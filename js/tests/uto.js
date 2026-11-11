@@ -7989,7 +7989,7 @@
       "телофаза"
      ],
      "correct": [
-      0
+      3
      ],
      "img": [
       "img/tests/uto-12/s11.png"
