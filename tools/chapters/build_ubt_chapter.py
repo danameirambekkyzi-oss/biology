@@ -1,7 +1,14 @@
 """ҰБТ форматындағы тараулық тесттер: parse_ubt.py шығарған JSON → js/tests/chapters.js (сол тарау бөлімін қосады/жаңартады)
-Қолданылуы: python3 -I build_ubt_chapter.py repo module t1.json t2.json ...   (module: anatomy, genetics, ...)"""
+Қолданылуы: python3 -I build_ubt_chapter.py repo module t1.json t2.json ...   (module: anatomy, genetics, ...)
+           python3 -I build_ubt_chapter.py repo module --append t7.json   — бар тесттерге тиіспей, жаңасын соңына қосу (мысалы, жабық тестті ашқанда)"""
 import json, sys
 repo, mod, srcs = sys.argv[1], sys.argv[2], sys.argv[3:]
+APPEND = bool(srcs) and srcs[0] == "--append"
+if APPEND: srcs = srcs[1:]
+path = f"{repo}/js/tests/chapters.js"
+head, body = open(path).read().split("window.CHAPTER_TESTS = ", 1)
+OLD = json.loads(body.rstrip().rstrip(";"))
+KEEP = next((m["tests"] for m in OLD if m["module"] == mod), []) if APPEND else []
 NAME = {"anatomy": ("анатомия", "ana"), "genetics": ("генетика", "gen"), "molecular": ("молекулалық биология", "mol"),
         "cell": ("жасушалық биология", "cell")}[mod]
 # Файлда тақырып жазылмаса — тест атауы (тараудағы реті бойынша)
@@ -16,8 +23,8 @@ def tx(s):
     s = " ".join(s.split())
     for a, b in (TEXT_FIX.items() if mod in ("molecular", "cell") else ()): s = s.replace(a, b)
     return s
-tests = []
-for k, src in enumerate(srcs, 1):
+tests = list(KEEP)
+for k, src in enumerate(srcs, len(KEEP) + 1):
     tid, data, out = f"{NAME[1]}-{k}", json.load(open(src)), []
     for q in data["questions"]:
         e = {"id": f"{tid}-q{q['n']}", "module": mod}
@@ -42,9 +49,7 @@ for k, src in enumerate(srcs, 1):
     tests.append({"id": tid, "title": title, "questions": out})
     if data.get("exam"): tests[-1]["exam"] = True  # бақылау тесті: бәріне ашық, сұрақ реті араласады
 entry = {"module": mod, "note": NOTE, "tests": tests}
-path = f"{repo}/js/tests/chapters.js"
-head, body = open(path).read().split("window.CHAPTER_TESTS = ", 1)
-data = [m for m in json.loads(body.rstrip().rstrip(";")) if m["module"] != mod] + [entry]
+data = [entry if m["module"] == mod else m for m in OLD] + ([] if any(m["module"] == mod for m in OLD) else [entry])  # тарау бұрынғы орнында қалады
 open(path, "w").write(head + "window.CHAPTER_TESTS = " + json.dumps(data, ensure_ascii=False, indent=1) + ";\n")
 from collections import Counter
 for t in tests: print(t["title"], len(t["questions"]), Counter(q.get("type", "single") for q in t["questions"]))
