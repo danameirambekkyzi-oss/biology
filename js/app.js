@@ -964,9 +964,11 @@
 
   // Соңғы сынамалар және балл жүйесі («Қатемен жұмыс» бетінде)
   function recentMocksHtml(u) {
-    const mocks = u.history.filter(h => h.mode === "mock").slice(-10).reverse();
+    // ҰБТ сынамалары + бақылау тесттері (exam): әрқайсысының қатесінен жеке тест
+    const examIds = new Set(CH_TESTS.filter(t => t.exam).map(t => t.id));
+    const mocks = u.history.filter(h => h.mode === "mock" || examIds.has(h.testId)).slice(-10).reverse();
     return `<div class="grid g-2" style="margin-top:16px">
-        <div class="card"><h3>Соңғы сынамалар</h3>
+        <div class="card"><h3>Соңғы сынамалар мен бақылау тесттері</h3>
           ${mocks.length ? mocks.map(h => {
             const wrong = (h.wrong || []).filter(id => QBY[id]);
             return `<div class="lb-row hist-row"><span class="lb-name hist-date">${fmtDate(h.date)}</span><span class="muted hist-title">${esc(h.title || "")}</span>
@@ -1699,7 +1701,7 @@
       const h = u.history.find(x => String(x.date) === String(id));
       const list = h ? (h.wrong || []).map(k => QBY[k]).filter(Boolean) : [];
       if (!list.length) return toast("Бұл сынамада қате жоқ");
-      return startTest({ mode: "mistakes", title: "Сынама қателерімен жұмыс", questions: shuffle(list), instant: true });
+      return startTest({ mode: "mistakes", title: h.mode === "mock" ? "Сынама қателерімен жұмыс" : `${h.title} — қатемен жұмыс`, questions: shuffle(list), instant: true });
     }
     if (mode === "topic") {
       const m = MODULES.find(x => x.id === id);
@@ -2110,7 +2112,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110735")
+    import("./cloud.js?v=202611110811")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
