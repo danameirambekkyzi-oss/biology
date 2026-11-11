@@ -31,6 +31,16 @@ function deviceId() {
   }
   return id;
 }
+// Құрылғының «таңбасы»: браузер деректері өшсе де (WhatsApp/Instagram ішіндегі браузер), сол телефонда өзгермейді
+function deviceFp() {
+  try {
+    const ua = navigator.userAgent, sw = screen.width, sh = screen.height;
+    const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "macOS" : "other";
+    let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { /* ignore */ }
+    return [os, Math.min(sw, sh) + "x" + Math.max(sw, sh), window.devicePixelRatio || 1, tz, navigator.hardwareConcurrency || 0, navigator.maxTouchPoints || 0].join("|");
+  } catch (e) { return ""; }
+}
+function adoptDevice(id) { try { localStorage.setItem(DEVICE_KEY, id); } catch (e) { /* ignore */ } }
 function deviceLabel() {
   const ua = navigator.userAgent;
   const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "Құрылғы";
@@ -56,7 +66,7 @@ const userRef = uid => F.doc(fs, "users", uid);
 const strip = u => { const o = Object.assign({}, u); delete o.pass; return o; };
 // Оқушы өзі өзгерте алмайтын өрістер (оларды тек мұғалім өзгертеді) — сақтағанда жіберілмейді
 const progressOnly = u => {
-  const o = strip(u); ["id", "role", "blocked", "deviceId", "device", "deviceAt", "premiumUntil", "premium"].forEach(k => delete o[k]);
+  const o = strip(u); ["id", "role", "blocked", "deviceId", "deviceFp", "device", "deviceAt", "premiumUntil", "premium"].forEach(k => delete o[k]);
   // Firestore бос кілтті қабылдамайды — сақтамас бұрын тазалау
   ["solved", "mistakes", "modulesTried", "activity"].forEach(k => { if (o[k]) { o[k] = Object.assign({}, o[k]); delete o[k][""]; } });
   return o;
@@ -71,8 +81,12 @@ async function openSession(fbUser) {
   if (u.role !== "teacher") {
     const mine = deviceId();
     if (!u.deviceId) {
-      await F.updateDoc(userRef(fbUser.uid), { deviceId: mine, device: deviceLabel(), deviceAt: Date.now() });
+      await F.updateDoc(userRef(fbUser.uid), { deviceId: mine, deviceFp: deviceFp(), device: deviceLabel(), deviceAt: Date.now() });
       u.deviceId = mine; u.device = deviceLabel();
+    } else if (u.deviceId !== mine && u.deviceFp && u.deviceFp === deviceFp()) {
+      adoptDevice(u.deviceId);  // сол телефон, тек браузер деректері өшкен (WhatsApp) — қайта бұғаттамаймыз
+    } else if (u.deviceId === mine && !u.deviceFp) {
+      F.updateDoc(userRef(fbUser.uid), { deviceFp: deviceFp() }).catch(() => {});
     } else if (u.deviceId !== mine) {
       await A.signOut(auth);
       throw fail("Бұл аккаунт басқа құрылғыда ашылған. Бір аккаунтқа тек бір құрылғыдан кіруге болады. Құрылғыны ауыстыру үшін мұғаліммен байланысыңыз.");
@@ -133,7 +147,7 @@ window.Cloud = {
       await A.setPersistence(auth, A.browserLocalPersistence);
       const cred = await A.createUserWithEmailAndPassword(auth, data.email, password);
       const uid = cred.user.uid;
-      const u = Object.assign({}, data, { id: uid, role: "student", blocked: false, deviceId: deviceId(), device: deviceLabel(), deviceAt: Date.now(), lastSeen: Date.now() });
+      const u = Object.assign({}, data, { id: uid, role: "student", blocked: false, deviceId: deviceId(), deviceFp: deviceFp(), device: deviceLabel(), deviceAt: Date.now(), lastSeen: Date.now() });
       const first = strip(u); delete first.id;
       await F.setDoc(userRef(uid), first);
       await F.setDoc(F.doc(fs, "phones", phoneDigits), { email: data.email, uid });
@@ -143,6 +157,8 @@ window.Cloud = {
   },
 
   save(u) { pending = u; clearTimeout(saveTimer); saveTimer = setTimeout(() => flush().catch(e => console.warn("save", e)), 600); },
+
+  flush() { clearTimeout(saveTimer); return flush().catch(e => console.warn("save", e)); },
 
   async logout() { if (pending) await flush().catch(() => {}); await A.signOut(auth); },
 
@@ -178,6 +194,7 @@ window.Cloud = {
     if (!fbUser) throw Object.assign(fail("Сессия аяқталды. Қайта кіріңіз."), { verdict: true });
     const snap = await F.getDoc(userRef(fbUser.uid));
     const u = snap.exists() ? snap.data() : null;
+    if (u && u.deviceId && u.deviceId !== deviceId() && u.deviceFp && u.deviceFp === deviceFp()) adoptDevice(u.deviceId);
     const bad = !u ? "Аккаунт табылмады." : u.blocked ? "Бұл аккаунт бұғатталған. Мұғаліммен байланысыңыз." :
       (u.role !== "teacher" && u.deviceId && u.deviceId !== deviceId()) ? "Бұл аккаунт басқа құрылғыда ашылды. Құрылғыны ауыстыру үшін мұғаліммен байланысыңыз." : "";
     if (bad) { pending = null; await A.signOut(auth); throw Object.assign(fail(bad), { verdict: true }); }  // verdict — нақты себеп (интернет қатесі емес)
@@ -208,7 +225,7 @@ window.Cloud = {
   },
   // Мұғалім кабинетінен: оқушының email-іне құпия сөзді жаңарту сілтемесін жіберу
   async sendReset(email) { try { await A.sendPasswordResetEmail(auth, email); } catch (e) { throw fail(msg(e)); } },
-  async resetDevice(uid) { await F.updateDoc(userRef(uid), { deviceId: "", device: "", deviceAt: null }); },
+  async resetDevice(uid) { await F.updateDoc(userRef(uid), { deviceId: "", deviceFp: "", device: "", deviceAt: null }); },
   async setBlocked(uid, blocked) { await F.updateDoc(userRef(uid), { blocked }); },
   async setPremium(uid, until) { await F.updateDoc(userRef(uid), { premiumUntil: until || 0, premiumSetAt: Date.now() }); }
 };

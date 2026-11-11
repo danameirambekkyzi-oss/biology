@@ -2104,8 +2104,10 @@
   });
 
   // Беттен шыққанда (вкладка, қосымша, бетті жабу) тест прогресі сақталып қалады — қайта келгенде жалғасады
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveProgress(); });
-  window.addEventListener("pagehide", () => saveProgress());
+  // Беттен шыққанда (WhatsApp жабылса, басқа қосымшаға өтсе) — бұлтқа бірден жазу, 600 мс күтпей
+  const flushNow = () => { saveProgress(); if (CLOUD && window.Cloud.flush) window.Cloud.flush(); };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushNow(); });
+  window.addEventListener("pagehide", flushNow);
   // Суретке белгілеу: сөзді ұяшыққа сүйреп апару (компьютерде)
   document.addEventListener("dragstart", e => { const w = e.target.closest && e.target.closest(".lb-word"); if (w) { e.dataTransfer.setData("text/plain", w.dataset.i); state.labelPick = +w.dataset.i; } });
   document.addEventListener("dragover", e => { if (e.target.closest && e.target.closest("[data-drop]")) e.preventDefault(); });
@@ -2141,7 +2143,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611110821")
+    import("./cloud.js?v=202611110844")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
