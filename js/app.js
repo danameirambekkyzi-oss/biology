@@ -1841,8 +1841,13 @@
     const t = state.test, u = currentUser();
     if (!t || !u || t.mode === "demo") return;
     t.savedAt = Date.now(); store.set(progKey(u), t);
+    // Қатемен жұмыс: толық дұрыс жауап берілген сұрақ тізімнен бірден алынады («Тексеру» баспай, «Келесі» басса да)
+    let fixed = false;
+    if (t.mode === "mistakes") t.questions.forEach((q, i) => {
+      if (u.mistakes[q.id] && hasAnswer(q, t.answers[i]) && scorePoints(q, t.answers[i]) === maxPoints(q)) { delete u.mistakes[q.id]; u.solved[q.id] = true; u.fixed++; fixed = true; }
+    });
     const packed = packProgress(t);
-    if (packed !== u.testProg) { u.testProg = packed; saveUser(u); }
+    if (packed !== u.testProg) { u.testProg = packed; saveUser(u); } else if (fixed) saveUser(u);
   }
   const inProgId = u => (state.test || loadProgress(u) || {}).testId;  // аяқталмаған тесттің id-і (карточкада «Жалғастыру»)
   function clearProgress() { const u = currentUser(); if (u) { store.del(progKey(u)); if (u.testProg) { u.testProg = ""; saveUser(u); } } }
@@ -2272,7 +2277,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611121544")
+    import("./cloud.js?v=202611121620")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
