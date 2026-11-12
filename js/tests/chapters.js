@@ -15438,7 +15438,7 @@ window.CHAPTER_TESTS = [
        "Емізікше"
       ],
       "correct": [
-       0
+       2
       ]
      },
      {
