@@ -368,6 +368,7 @@
     if (parts[0] !== "test") stopTimer();
     window.scrollTo(0, 0);
 
+    if (u && CLOUD && state.unsyncFor !== u.id) { state.unsyncFor = u.id; restoreUnsynced(u); }
     if (u && !state.test && !state.resumeChecked) {  // сайт ашылғанда: аяқталмаған тест болса — жалғастырамыз
       state.resumeChecked = true;
       const saved = loadProgress(u);
@@ -1845,9 +1846,14 @@
   }
   const inProgId = u => (state.test || loadProgress(u) || {}).testId;  // аяқталмаған тесттің id-і (карточкада «Жалғастыру»)
   function clearProgress() { const u = currentUser(); if (u) { store.del(progKey(u)); if (u.testProg) { u.testProg = ""; saveUser(u); } } }
+  // Тест бастағаннан кейін аяқталған болса (басқа құрылғыда/бетте «Аяқтау» басылған) — ол сақталған прогресс ескірген
+  const finishedSince = (u, p) => p && (u.history || []).some(h => h.testId && h.testId === p.testId && (h.date || 0) >= (p.startedAt || 0));
   function loadProgress(u) {  // осы браузердегі сақталғаны мен аккаунттағысының жаңасы
-    const loc = store.get(progKey(u), null), local = loc && Array.isArray(loc.questions) && loc.questions.length ? loc : null;
-    const cloud = u.testProg ? unpackProgress(u.testProg) : null;
+    const loc = store.get(progKey(u), null);
+    let local = loc && Array.isArray(loc.questions) && loc.questions.length ? loc : null;
+    let cloud = u.testProg ? unpackProgress(u.testProg) : null;
+    if (local && finishedSince(u, local)) { store.del(progKey(u)); local = null; }
+    if (cloud && finishedSince(u, cloud)) { u.testProg = ""; saveUser(u); cloud = null; }
     if (local && cloud) return (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
     return local || cloud;
   }
@@ -1977,6 +1983,22 @@
     }, 1000);
   }
 
+  /* ---- Аяқталған тест нәтижесі серверге жеткенше осы браузерде де сақталады (бет жабылса / интернет үзілсе жоғалмайды) ---- */
+  const unsyncKey = u => "bioubt_unsynced_" + u.id;
+  function syncResults(u, onDone) {
+    if (!CLOUD || !u) return;
+    window.Cloud.flush().then(ok => { if (ok) store.del(unsyncKey(u)); if (onDone) onDone(ok); });
+  }
+  function restoreUnsynced(u) {  // кіргенде: серверге жетпей қалған нәтижелерді аккаунтқа қосамыз
+    const list = store.get(unsyncKey(u), []); if (!Array.isArray(list) || !list.length) return;
+    let added = 0;
+    list.forEach(h => { if (h && h.date && !u.history.some(x => x.date === h.date)) {
+      u.history.push(h); u.xp += h.score || 0; (h.wrong || []).forEach(id => { u.mistakes[id] = true; }); added++; } });
+    if (added) { u.history.sort((a, b) => a.date - b.date); u.history = u.history.slice(-200); }
+    const cp = u.testProg ? unpackProgress(u.testProg) : null; if (cp && finishedSince(u, cp)) u.testProg = "";
+    saveUser(u); syncResults(u);
+  }
+
   function finishTest() {
     const t = state.test; if (!t) return;
     stopTimer();
@@ -1989,12 +2011,17 @@
       try { sessionStorage.setItem(DEMO_KEY, JSON.stringify(t.questions.map((q, i) => ({ id: q.id, sel: t.answers[i] })))); } catch (e) { /* ignore */ }
       if (u) { xp = applyResult(u, t, res); try { sessionStorage.removeItem(DEMO_KEY); } catch (e) { /* ignore */ } }
     }
-    state.result = { test: t, res, xp };
+    state.result = { test: t, res, xp, sync: CLOUD && u && t.mode !== "demo" ? "wait" : "" };
+    if (state.result.sync) { const q = store.get(unsyncKey(u), []); store.set(unsyncKey(u), (Array.isArray(q) ? q : []).concat(u.history.slice(-1)).slice(-20)); }
     state.test = null; clearProgress();
+    if (state.result.sync) { const r = state.result; syncResults(u, ok => { r.sync = ok ? "ok" : "fail"; const el = $("#sync-st"); if (el && state.result === r) el.outerHTML = syncHtml(r.sync); }); }
     if (xp) setTimeout(() => toast(`+${xp} балл`, "xp"), 300);
     go("#/result");
   }
 
+  const syncHtml = st => st === "ok" ? `<div id="sync-st" class="sync-st ok">${ic("check", 18)} Нәтиже сақталды және мұғалімге жетті</div>`
+    : st === "fail" ? `<div id="sync-st" class="sync-st bad">Нәтиже серверге әлі жетпеді. Интернетті тексер — сайтқа қайта кіргенде өзі жіберіледі.</div>`
+    : `<div id="sync-st" class="sync-st wait">Нәтиже серверге жіберілуде… Бетті жаппай, біраз күте тұр.</div>`;
   function renderResult() {
     const { test: t, res, xp } = state.result, u = currentUser();
     const msg = res.pct >= 90 ? "Керемет! Сен 50/50-ге дайынсың!" : res.pct >= 70 ? "Жақсы нәтиже! Аз ғана қалды" : res.pct >= 40 ? "Жаман емес! Қателерді талдап, қайталайық" : "Бастама жасалды! Түсініктемелерді оқып шық";
@@ -2005,6 +2032,7 @@
         <p>${res.score} / ${res.max} балл · ${res.pct}%</p>
         <p style="font-weight:700">${msg}</p>
       </div>
+      ${state.result.sync ? syncHtml(state.result.sync) : ""}
       <div class="result-stats">
         <div class="card"><b style="color:var(--green)">${res.full}</b><span>толық дұрыс</span></div>
         <div class="card"><b style="color:var(--amber)">${res.part}</b><span>жартылай дұрыс</span></div>
@@ -2244,7 +2272,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611120809")
+    import("./cloud.js?v=202611120813")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

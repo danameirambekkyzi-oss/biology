@@ -801,3 +801,7 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .resume-bar > svg { color: var(--purple); flex-shrink: 0; }
 .resume-bar span { flex: 1; min-width: 0; }
 .resume-go { color: var(--purple); white-space: nowrap; }
+.sync-st { margin: 12px 0; padding: 10px 14px; border-radius: 12px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.sync-st.ok { background: rgba(16,185,129,.12); color: #047857; }
+.sync-st.wait { background: rgba(245,158,11,.14); color: #92400e; }
+.sync-st.bad { background: rgba(239,68,68,.12); color: #b91c1c; }

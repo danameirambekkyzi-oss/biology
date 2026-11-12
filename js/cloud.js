@@ -96,17 +96,22 @@ async function openSession(fbUser) {
   return Object.assign(u, { id: fbUser.uid });
 }
 
-let saveTimer = null, pending = null;
-async function flush() {
+let saveTimer = null, pending = null, inflight = Promise.resolve();
+// Жазулар кезекпен жүреді; flush() — қазір күтіп тұрған жазу (және алдыңғы жазу) серверге жеткенде ғана аяқталады
+function flush() { inflight = inflight.catch(() => {}).then(doFlush); return inflight; }
+async function doFlush() {
   if (!pending) return;
   const u = pending; pending = null;
-  await F.setDoc(userRef(u.id), progressOnly(u), { merge: true });
-  const mk = monthKey();
-  const pts = (u.history || []).filter(h => monthKey(h.date) === mk).reduce((a, h) => a + h.score, 0);
-  const mocks = (u.history || []).filter(h => h.mode === "mock" && monthKey(h.date) === mk);
-  await F.setDoc(F.doc(fs, "leaderboard", u.id), {
-    name: u.name || "", month: mk, pts, best: mocks.length ? (b => `${b.score}/${b.max}`)(mocks.reduce((a, h) => h.score / (h.max || 1) > a.score / (a.max || 1) ? h : a)) : null, role: u.role || "student"
-  });
+  try { await F.setDoc(userRef(u.id), progressOnly(u), { merge: true }); }
+  catch (e) { if (!pending) pending = u; throw e; }  // жетпесе — келесі жолы қайта жібереміз
+  try {
+    const mk = monthKey();
+    const pts = (u.history || []).filter(h => monthKey(h.date) === mk).reduce((a, h) => a + h.score, 0);
+    const mocks = (u.history || []).filter(h => h.mode === "mock" && monthKey(h.date) === mk);
+    await F.setDoc(F.doc(fs, "leaderboard", u.id), {
+      name: u.name || "", month: mk, pts, best: mocks.length ? (b => `${b.score}/${b.max}`)(mocks.reduce((a, h) => h.score / (h.max || 1) > a.score / (a.max || 1) ? h : a)) : null, role: u.role || "student"
+    });
+  } catch (e) { console.warn("leaderboard", e); }
 }
 function monthKey(t) { const d = t ? new Date(t) : new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
 window.addEventListener("pagehide", () => { if (pending) flush(); });
@@ -158,7 +163,8 @@ window.Cloud = {
 
   save(u) { pending = u; clearTimeout(saveTimer); saveTimer = setTimeout(() => flush().catch(e => console.warn("save", e)), 600); },
 
-  flush() { clearTimeout(saveTimer); return flush().catch(e => console.warn("save", e)); },
+  // true — сервер қабылдады, false — жетпеді
+  flush() { clearTimeout(saveTimer); return flush().then(() => true, e => { console.warn("save", e); return false; }); },
 
   async logout() { if (pending) await flush().catch(() => {}); await A.signOut(auth); },
 
