@@ -13,25 +13,25 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=202611121620">
+  <link rel="stylesheet" href="css/style.css?v=202611121626">
 </head>
 <body>
   <div id="app"></div>
   <div id="modal-root"></div>
   <div id="toast-root" aria-live="polite"></div>
 
-  <script src="js/config.js?v=202611121620"></script>
-  <script src="js/questions.js?v=202611121620"></script>
-  <script src="js/tests/nagyz.js?v=202611121620"></script>
-  <script src="js/tests/naurz.js?v=202611121620"></script>
-  <script src="js/tests/uto.js?v=202611121620"></script>
-  <script src="js/tests/chapters.js?v=202611121620"></script>
-  <script src="js/plants.js?v=202611121620"></script>
-  <script src="js/notes.js?v=202611121620"></script>
-  <script src="js/content.js?v=202611121620"></script>
-  <script src="js/realubt.js?v=202611121620"></script>
-  <script src="js/images.js?v=202611121620"></script>
-  <script src="js/app.js?v=202611121620"></script>
+  <script src="js/config.js?v=202611121626"></script>
+  <script src="js/questions.js?v=202611121626"></script>
+  <script src="js/tests/nagyz.js?v=202611121626"></script>
+  <script src="js/tests/naurz.js?v=202611121626"></script>
+  <script src="js/tests/uto.js?v=202611121626"></script>
+  <script src="js/tests/chapters.js?v=202611121626"></script>
+  <script src="js/plants.js?v=202611121626"></script>
+  <script src="js/notes.js?v=202611121626"></script>
+  <script src="js/content.js?v=202611121626"></script>
+  <script src="js/realubt.js?v=202611121626"></script>
+  <script src="js/images.js?v=202611121626"></script>
+  <script src="js/app.js?v=202611121626"></script>
   <script>
   /* Жаңа нұсқа шықса, ескі index.html-ді кэштен алмасын: тексеріп, бетті жаңартады.
      Телефон экранына («Домой») қосылған сайт фонда тұрып қалады, сондықтан қайта ашылғанда және 5 минут сайын тексереді. */
@@ -41,24 +41,24 @@
       cur = (cur.match(/v=(\d+)/) || [])[1];
       if (!cur || !window.fetch || location.protocol === "file:") return;
       var busy = false;
-      function check() {
+      function check(back) {  // back — қолданушы бетке қайта оралды (тест прогресі беттен шыққанда сақталған)
         if (busy || document.visibilityState === "hidden") return;
         busy = true;
         fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (t) {
           busy = false;
           var v = (t.match(/js\/app\.js\?v=(\d+)/) || [])[1];
-          if (!v || v === cur || /^#\/test/.test(location.hash)) return; // тест кезінде бөлмейміз
+          if (!v || v === cur || (!back && /^#\/test/.test(location.hash))) return; // тест кезінде бөлмейміз (бетке қайта оралғанда ғана)
           var k = "bioubt_reload_" + v;
           try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, "1"); } catch (e) {}
           // кэштегі ескі бетті айналып өту үшін жаңа адреспен ашамыз (#/... сақталады)
           location.replace(location.pathname + "?u=" + v + location.hash);
         }).catch(function () { busy = false; });
       }
-      check();
-      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") check(); });
-      window.addEventListener("pageshow", function (e) { if (e.persisted) check(); });
-      window.addEventListener("focus", check);
-      setInterval(check, 5 * 60 * 1000);
+      check(true);
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") check(true); });
+      window.addEventListener("pageshow", function (e) { if (e.persisted) check(true); });
+      window.addEventListener("focus", function () { check(); });
+      setInterval(function () { check(); }, 5 * 60 * 1000);
     } catch (e) {}
   })();
   </script>

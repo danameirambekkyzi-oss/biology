@@ -1946,6 +1946,7 @@
     const inner = `<div class="test-wrap">
       <div class="test-top">
         <h2>${esc(t.title)}</h2>
+        ${t.mode === "mistakes" && currentUser() ? `<span class="tag t-multi" title="«Қатемен жұмыс» тізімінде қалған сұрақтар">Тізімде қалды: ${mistakesCount(currentUser())}</span>` : ""}
         ${tl != null ? `<span class="timer ${tl < 300 ? "low" : ""}" id="timer">⏱ ${fmtTime(tl)}</span>` : ""}
         <button class="btn btn-outline" style="padding:8px 14px" data-act="finish">Аяқтау</button>
       </div>
@@ -2238,6 +2239,10 @@
   });
 
   // Беттен шыққанда (вкладка, қосымша, бетті жабу) тест прогресі сақталып қалады — қайта келгенде жалғасады
+  // Серверге сақталмаса — көрсетеміз (себебін білу үшін), жиі қайталамай
+  let saveErrAt = 0;
+  window.addEventListener("cloud-save-error", e => { if (Date.now() - saveErrAt < 60000) return; saveErrAt = Date.now();
+    toast(/unavailable|network|offline/i.test(e.detail) ? "Интернет жоқ — деректер интернет қосылғанда сақталады" : "Деректер серверге сақталмады (" + e.detail + "). Скриншот жасап, мұғалімге жіберіңіз."); });
   // Беттен шыққанда (WhatsApp жабылса, басқа қосымшаға өтсе) — бұлтқа бірден жазу, 600 мс күтпей
   const flushNow = () => { saveProgress(); if (CLOUD && window.Cloud.flush) window.Cloud.flush(); };
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushNow(); });
@@ -2277,7 +2282,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611121620")
+    import("./cloud.js?v=202611121626")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

@@ -103,7 +103,7 @@ async function doFlush() {
   if (!pending) return;
   const u = pending; pending = null;
   try { await F.setDoc(userRef(u.id), progressOnly(u), { merge: true }); }
-  catch (e) { if (!pending) pending = u; throw e; }  // жетпесе — келесі жолы қайта жібереміз
+  catch (e) { if (!pending) pending = u; try { window.dispatchEvent(new CustomEvent("cloud-save-error", { detail: (e && (e.code || e.message)) || "" })); } catch (x) { /* ignore */ } throw e; }  // жетпесе — келесі жолы қайта жібереміз
   try {
     const mk = monthKey();
     const pts = (u.history || []).filter(h => monthKey(h.date) === mk).reduce((a, h) => a + h.score, 0);
