@@ -64,18 +64,20 @@ def build(spec):
     for b in [z[1] for z in Z] + M: d.rectangle((b[0] - x0 - 2, b[1] - y0 - 2, b[2] - x0 + 2, b[3] - y0 + 2), fill="white")
     S = S.resize((round(W * k), round(H * k)), Image.LANCZOS)
     if k > 1.2: S = S.filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=3))
-    S.save(f"{repo}/img/images/{tid}.jpg", quality=88)
+    fn = FILE.get(tid, tid)  # сурет ауысса — жаңа файл аты (браузер ескі суретті кэштен көрсетпесін)
+    S.save(f"{repo}/img/images/{fn}.jpg", quality=88)
     opts, zones = [], []
     for ans, b in Z:  # бірдей атау екі жерде болса — тізімде де екі рет (әр сөз бір ұяшыққа)
         opts.append(ans)
         zx, zy, zw, zh = b[0] - x0 - 1, b[1] - y0 - 1, b[2] - b[0] + 2, b[3] - b[1] + 2
         zones.append({"x": round(zx / W * 100, 2), "y": round(zy / H * 100, 2), "w": round(zw / W * 100, 2), "h": round(zh / H * 100, 2), "answer": len(opts) - 1})
-    return {"id": "img-" + tid, "module": mod, "title": title, "img": [f"img/images/{tid}.jpg"], "options": opts, "zones": zones}
+    return {"id": "img-" + tid, "module": mod, "title": title, "img": [f"img/images/{fn}.jpg"], "options": opts, "zones": zones}
 
 def col(x, y, w, h, gap, names):  # бос орынға тізіліп қойылатын ұяшықтар (суреттегі нөмірлер ретімен)
     return [(n, (x, y + i * (h + gap), x + w, y + i * (h + gap) + h)) for i, n in enumerate(names)]
 
 # тазалағанда тимейтін аумақтар (суреттің өзі): қарағай — 8 суреттің жақтаулары
+FILE = {"pine": "pine-2"}
 KEEP = {"pine": [(155, 165, 277, 307), (288, 0, 410, 142), (442, 0, 560, 142), (445, 190, 562, 332), (578, 190, 700, 332), (740, 190, 862, 332), (293, 330, 417, 472), (447, 372, 566, 514)]}
 SP = [
  ("leaf", "i-000", "botany", "Жапырақтың құрылысы", (60, 30, 470, 314), (0, 0), 2, False,
