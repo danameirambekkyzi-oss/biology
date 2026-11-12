@@ -1364,11 +1364,26 @@
       <p class="hint">«Құрылғыны босату» — оқушы жаңа телефоннан кіре алады (кірген сәтте жаңа құрылғы бекітіледі). «Құпия сөзді жаңарту» — оқушының email-іне жаңа құпия сөз қоятын сілтеме кетеді (спам қалтасын да қарау керек). «Бұғаттау» — оқушы сайтқа кіре алмайды. «+ 1 ай» — премиумды 30 күнге ұзартады, «+ ҰБТ-ға дейін» — ${fmtDate(UBT_END)} дейін ашады.</p>`;
   }
   /* ---- Мұғалім: бақылау тесттерінің нәтижесі (кесте + Excel) ---- */
+  function parseAns(q, str) {  // ansText-тің керісінше: «AD», «1-A 2-BD», «1-· 2-C» → таңдау индекстері (бастапқы нұсқа реті)
+    const L = c => LETTERS.indexOf(c); str = str || "";
+    if (q.type !== "match" && q.type !== "label") return [...str].map(L).filter(i => i >= 0);
+    const sel = [];
+    str.split(" ").forEach(tok => { const m = tok.match(/^(\d+)-(.*)$/); if (!m) return; const k = +m[1] - 1, ls = [...m[2]].map(L).filter(i => i >= 0);
+      sel[k] = q.type === "match" && q.items[k] && q.items[k].answers ? ls : ls.length ? ls[0] : null; });
+    return sel;
+  }
   function examRows(list, t) {
     const pos = {}; t.questions.forEach((q, j) => { pos[q.id] = j; });
+    const max = t.questions.reduce((a, q) => a + maxPoints(q), 0);
     return list.map(x => { const hs = (x.history || []).filter(h => h.testId === t.id); if (!hs.length) return null;
-      const h = hs[hs.length - 1], wrong = (h.wrong || []).map(id => pos[id]).filter(j => j != null).sort((a, b) => a - b);
-      return { x, h, n: hs.length, wrong }; }).filter(Boolean).sort((a, b) => b.h.score - a.h.score);
+      const h = hs[hs.length - 1];
+      if (Array.isArray(h.ans) && h.ans.length === t.questions.length) {  // жауаптары сақталған — қазіргі (түзетілген) кілтпен қайта есептейміз
+        const per = t.questions.map((q, j) => scorePoints(q, parseAns(q, h.ans[j]))), score = per.reduce((a, b) => a + b, 0);
+        const wrong = t.questions.map((q, j) => j).filter(j => per[j] < maxPoints(t.questions[j]));
+        return { x, h, n: hs.length, wrong, score, max, pct: max ? Math.round(score / max * 100) : 0, was: score !== h.score ? h.score : null };
+      }
+      const wrong = (h.wrong || []).map(id => pos[id]).filter(j => j != null).sort((a, b) => a - b);
+      return { x, h, n: hs.length, wrong, score: h.score, max: h.max, pct: h.pct, was: null }; }).filter(Boolean).sort((a, b) => b.score - a.score);
   }
   function examResultsHtml(list) {
     const ex = examTests(); if (!ex.length) return "";
@@ -1381,7 +1396,7 @@
       ${rows.length ? `<div class="t-table-wrap"><table class="t-table"><thead><tr><th>#</th><th>Оқушы</th><th>Күні</th><th>Балл</th><th>Қате/жартылай сұрақтар (нөмірі)</th></tr></thead><tbody>
         ${rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.x.name || "")}</b><br><small class="muted">${esc(r.x.phone || "")}</small></td>
           <td>${fmtDate(r.h.date)}${r.n > 1 ? `<br><small class="muted">${r.n} рет тапсырған (соңғысы)</small>` : ""}</td>
-          <td><b>${r.h.score}/${r.h.max}</b><br><small class="muted">${r.h.pct}%</small></td>
+          <td><b>${r.score}/${r.max}</b><br><small class="muted">${r.pct}%${r.was != null ? ` · бұрын ${r.was} (жауап кілті түзетілді)` : ""}</small></td>
           <td style="max-width:420px"><small>${r.wrong.length ? r.wrong.map(j => j + 1).join(", ") : "—"}</small></td></tr>`).join("")}
       </tbody></table></div>` : `<p class="muted" style="margin:0">Әзірге ешкім тапсырмаған.</p>`}
     </div>`;
@@ -1393,7 +1408,7 @@
     const head = ["#", "Оқушы", "Телефон", "Күні", "Балл", "Максимум", "%", "Қате/жартылай сұрақтар"].concat(t.questions.map((q, j) => j + 1));
     const right = ["", "ДҰРЫС ЖАУАП", "", "", "", "", "", ""].concat(t.questions.map(rightText));
     const body = rows.map((r, i) => { const bad = new Set(r.wrong);
-      return [i + 1, r.x.name || "", r.x.phone || "", fmtDate(r.h.date), r.h.score, r.h.max, r.h.pct, r.wrong.map(j => j + 1).join(", ")]
+      return [i + 1, r.x.name || "", r.x.phone || "", fmtDate(r.h.date), r.score, r.max, r.pct, r.wrong.map(j => j + 1).join(", ")]
         .concat(t.questions.map((q, j) => (bad.has(j) ? "− " : "+ ") + (r.h.ans && r.h.ans[j] != null ? r.h.ans[j] : "")).map(v => v.trim())); });
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">
       ${[head, right].concat(body).map((r, k) => `<tr${k < 2 ? ' style="font-weight:bold"' : ""}>${r.map(cell).join("")}</tr>`).join("")}</table></body></html>`;
@@ -2210,7 +2225,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611120702")
+    import("./cloud.js?v=202611120724")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
