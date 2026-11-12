@@ -102,7 +102,10 @@ function flush() { inflight = inflight.catch(() => {}).then(doFlush); return inf
 async function doFlush() {
   if (!pending) return;
   const u = pending; pending = null;
-  try { await F.setDoc(userRef(u.id), progressOnly(u), { merge: true }); }
+  // mergeFields: әр өріс толық ауыстырылады (merge: true картадан өшірілген кілтті серверде қалдырып қоятын —
+  // мысалы «Қатемен жұмыстан» алынған сұрақ бетті жаңартқанда қайта шығатын). Тізімде жоқ өрістерге (рөл, бұғат, премиум) тимейді.
+  const data = progressOnly(u);
+  try { await F.setDoc(userRef(u.id), data, { mergeFields: Object.keys(data) }); }
   catch (e) { if (!pending) pending = u; try { window.dispatchEvent(new CustomEvent("cloud-save-error", { detail: (e && (e.code || e.message)) || "" })); } catch (x) { /* ignore */ } throw e; }  // жетпесе — келесі жолы қайта жібереміз
   try {
     const mk = monthKey();
