@@ -1375,32 +1375,49 @@
   function examRows(list, t) {
     const pos = {}; t.questions.forEach((q, j) => { pos[q.id] = j; });
     const max = t.questions.reduce((a, q) => a + maxPoints(q), 0);
-    return list.map(x => { const hs = (x.history || []).filter(h => h.testId === t.id); if (!hs.length) return null;
-      const h = hs[hs.length - 1];
-      if (Array.isArray(h.ans) && h.ans.length === t.questions.length) {  // жауаптары сақталған — қазіргі (түзетілген) кілтпен қайта есептейміз
-        const per = t.questions.map((q, j) => scorePoints(q, parseAns(q, h.ans[j]))), score = per.reduce((a, b) => a + b, 0);
-        const wrong = t.questions.map((q, j) => j).filter(j => per[j] < maxPoints(t.questions[j]));
-        return { x, h, n: hs.length, wrong, score, max, pct: max ? Math.round(score / max * 100) : 0, was: score !== h.score ? h.score : null };
-      }
-      const wrong = (h.wrong || []).map(id => pos[id]).filter(j => j != null).sort((a, b) => a - b);
-      return { x, h, n: hs.length, wrong, score: h.score, max: h.max, pct: h.pct, was: null }; }).filter(Boolean).sort((a, b) => b.score - a.score);
+    // Әр тапсыру — бөлек жол (бір аккаунттан бірнеше рет тапсырылса да, бәрі көрінеді)
+    return list.flatMap(x => { const hs = (x.history || []).filter(h => h.testId === t.id);
+      return hs.map((h, k) => {
+        const base = { x, h, k: k + 1, n: hs.length };
+        if (Array.isArray(h.ans) && h.ans.length === t.questions.length) {  // жауаптары сақталған — қазіргі (түзетілген) кілтпен қайта есептейміз
+          const per = t.questions.map((q, j) => scorePoints(q, parseAns(q, h.ans[j]))), score = per.reduce((a, b) => a + b, 0);
+          const wrong = t.questions.map((q, j) => j).filter(j => per[j] < maxPoints(t.questions[j]));
+          return Object.assign(base, { wrong, score, max, pct: max ? Math.round(score / max * 100) : 0, was: score !== h.score ? h.score : null });
+        }
+        const wrong = (h.wrong || []).map(id => pos[id]).filter(j => j != null).sort((a, b) => a - b);
+        return Object.assign(base, { wrong, score: h.score, max: h.max, pct: h.pct, was: null }); }); })
+      .sort((a, b) => b.score - a.score);
   }
+  function examPending(list, t) {  // бастап, «Аяқтау» баспаған оқушылар (аккаунтқа сақталған аяқталмаған тест)
+    return list.map(x => { let p = null; try { p = x.testProg ? JSON.parse(x.testProg) : null; } catch (e) { /* ignore */ }
+      if (!p || p.testId !== t.id) return null;
+      const done = (p.answers || []).filter(a => Array.isArray(a) && a.some(v => Array.isArray(v) ? v.length : v != null && v >= 0)).length;
+      return { x, done, at: p.savedAt || p.startedAt }; }).filter(Boolean).sort((a, b) => b.done - a.done);
+  }
+  const fmtHm = t => { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
   function examResultsHtml(list) {
     const ex = examTests(); if (!ex.length) return "";
     // Әдепкі — оқушылар ең соңғы тапсырған бақылау тесті
     const last = id => Math.max(0, ...list.map(x => Math.max(0, ...(x.history || []).filter(h => h.testId === id).map(h => h.date || 0))));
-    const t = ex.find(e => e.id === state.exId) || ex.slice().sort((a, b) => last(b.id) - last(a.id))[0], rows = examRows(list, t);
+    const t = ex.find(e => e.id === state.exId) || ex.slice().sort((a, b) => last(b.id) - last(a.id))[0], rows = examRows(list, t), pend = examPending(list, t);
+    const people = new Set(rows.map(r => r.x.id)).size;
     return `<div class="card rp-box">
-      <div class="row-between" style="margin:0 0 10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0">${ic("clipboard", 18)} Бақылау тестінің нәтижелері <span class="tag t-multi">${rows.length} оқушы</span></h3>
+      <div class="row-between" style="margin:0 0 10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0">${ic("clipboard", 18)} Бақылау тестінің нәтижелері <span class="tag t-multi">${rows.length} тапсыру · ${people} аккаунт</span></h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap">${ex.length > 1 ? ex.map(e => `<button class="btn btn-sm ${e.id === t.id ? "btn-primary" : "btn-ghost"}" data-act="t-ex" data-id="${e.id}">${esc(e.title)} · ${e.questions.length} сұрақ</button>`).join("") : ""}
           ${rows.length ? `<button class="btn btn-green btn-sm" data-act="t-ex-xls" data-id="${t.id}">${ic("download", 16)} Excel-ге жүктеу</button>` : ""}</div></div>
       <p class="muted" style="margin:0 0 10px">${esc(t.title)} · ${t.questions.length} сұрақ. Excel файлында әр оқушының әр сұрақ бойынша жауабы бар (+ дұрыс, − қате немесе жартылай).</p>
       ${rows.length ? `<div class="t-table-wrap"><table class="t-table"><thead><tr><th>#</th><th>Оқушы</th><th>Күні</th><th>Балл</th><th>Қате/жартылай сұрақтар (нөмірі)</th></tr></thead><tbody>
         ${rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.x.name || "")}</b><br><small class="muted">${esc(r.x.phone || "")}</small></td>
-          <td>${fmtDate(r.h.date)}${r.n > 1 ? `<br><small class="muted">${r.n} рет тапсырған (соңғысы)</small>` : ""}</td>
+          <td>${fmtDate(r.h.date)} ${fmtHm(r.h.date)}${r.n > 1 ? `<br><small class="err-txt">осы аккаунттан ${r.n} рет тапсырылған (${r.k}-сі)</small>` : ""}</td>
           <td><b>${r.score}/${r.max}</b><br><small class="muted">${r.pct}%${r.was != null ? ` · бұрын ${r.was} (жауап кілті түзетілді)` : ""}</small></td>
           <td style="max-width:420px"><small>${r.wrong.length ? r.wrong.map(j => j + 1).join(", ") : "—"}</small></td></tr>`).join("")}
       </tbody></table></div>` : `<p class="muted" style="margin:0">Әзірге ешкім тапсырмаған.</p>`}
+      ${pend.length ? `<h4 style="margin:16px 0 8px">Бастаған, бірақ «Аяқтау» баспаған <span class="tag">${pend.length}</span></h4>
+        <p class="muted" style="margin:0 0 8px">Бұл оқушылардың тесті аяқталмаған: сайтқа қайта кіріп, «Аяқтау» батырмасын басса, нәтижесі жоғарыдағы кестеге түседі.</p>
+        <div class="t-table-wrap"><table class="t-table"><thead><tr><th>#</th><th>Оқушы</th><th>Жауап берген сұрақ</th><th>Соңғы сақталған</th></tr></thead><tbody>
+        ${pend.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.x.name || "")}</b><br><small class="muted">${esc(r.x.phone || "")}</small></td>
+          <td>${r.done} / ${t.questions.length}</td><td>${r.at ? fmtDate(r.at) + " " + fmtHm(r.at) : "—"}</td></tr>`).join("")}
+        </tbody></table></div>` : ""}
     </div>`;
   }
   function examXls(id) {
@@ -1410,7 +1427,7 @@
     const head = ["#", "Оқушы", "Телефон", "Күні", "Балл", "Максимум", "%", "Қате/жартылай сұрақтар"].concat(t.questions.map((q, j) => j + 1));
     const right = ["", "ДҰРЫС ЖАУАП", "", "", "", "", "", ""].concat(t.questions.map(rightText));
     const body = rows.map((r, i) => { const bad = new Set(r.wrong);
-      return [i + 1, r.x.name || "", r.x.phone || "", fmtDate(r.h.date), r.score, r.max, r.pct, r.wrong.map(j => j + 1).join(", ")]
+      return [i + 1, r.x.name || "", r.x.phone || "", fmtDate(r.h.date) + " " + fmtHm(r.h.date), r.score, r.max, r.pct, r.wrong.map(j => j + 1).join(", ")]
         .concat(t.questions.map((q, j) => (bad.has(j) ? "− " : "+ ") + (r.h.ans && r.h.ans[j] != null ? r.h.ans[j] : "")).map(v => v.trim())); });
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">
       ${[head, right].concat(body).map((r, k) => `<tr${k < 2 ? ' style="font-weight:bold"' : ""}>${r.map(cell).join("")}</tr>`).join("")}</table></body></html>`;
@@ -2227,7 +2244,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611120806")
+    import("./cloud.js?v=202611120809")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
