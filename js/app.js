@@ -1332,7 +1332,6 @@
             <button class="btn btn-green btn-sm" data-act="t-rp-done" data-id="${esc(r.id)}">${ic("check", 16)} Шешілді (өшіру)</button></div></details>`).join("")
           : `<p class="muted" style="margin:0">Әзірге хабарлама жоқ. Оқушы тесттегі сұрақтың астындағы «Мұғалімге жіберу» батырмасын басса, хабарлама осында түседі.</p>`}
       </div>
-      ${examResultsHtml(list)}
       <div class="grid g-3" style="margin-bottom:16px">
         <div class="card stat-card"><span class="muted">Барлық оқушы</span><b>${list.length}</b></div>
         <div class="card stat-card"><span class="muted">Соңғы 7 күнде белсенді</span><b>${active}</b></div>
@@ -2282,7 +2281,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611121712")
+    import("./cloud.js?v=202611121726")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
