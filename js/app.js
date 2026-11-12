@@ -1387,10 +1387,12 @@
   }
   function examResultsHtml(list) {
     const ex = examTests(); if (!ex.length) return "";
-    const t = ex.find(e => e.id === state.exId) || ex[0], rows = examRows(list, t);
+    // Әдепкі — оқушылар ең соңғы тапсырған бақылау тесті
+    const last = id => Math.max(0, ...list.map(x => Math.max(0, ...(x.history || []).filter(h => h.testId === id).map(h => h.date || 0))));
+    const t = ex.find(e => e.id === state.exId) || ex.slice().sort((a, b) => last(b.id) - last(a.id))[0], rows = examRows(list, t);
     return `<div class="card rp-box">
       <div class="row-between" style="margin:0 0 10px;gap:10px;flex-wrap:wrap"><h3 style="margin:0">${ic("clipboard", 18)} Бақылау тестінің нәтижелері <span class="tag t-multi">${rows.length} оқушы</span></h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">${ex.length > 1 ? `<select class="input" id="t-ex" style="width:auto">${ex.map(e => `<option value="${e.id}" ${e.id === t.id ? "selected" : ""}>${esc(e.title)}</option>`).join("")}</select>` : ""}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${ex.length > 1 ? ex.map(e => `<button class="btn btn-sm ${e.id === t.id ? "btn-primary" : "btn-ghost"}" data-act="t-ex" data-id="${e.id}">${esc(e.title)} · ${e.questions.length} сұрақ</button>`).join("") : ""}
           ${rows.length ? `<button class="btn btn-green btn-sm" data-act="t-ex-xls" data-id="${t.id}">${ic("download", 16)} Excel-ге жүктеу</button>` : ""}</div></div>
       <p class="muted" style="margin:0 0 10px">${esc(t.title)} · ${t.questions.length} сұрақ. Excel файлында әр оқушының әр сұрақ бойынша жауабы бар (+ дұрыс, − қате немесе жартылай).</p>
       ${rows.length ? `<div class="t-table-wrap"><table class="t-table"><thead><tr><th>#</th><th>Оқушы</th><th>Күні</th><th>Балл</th><th>Қате/жартылай сұрақтар (нөмірі)</th></tr></thead><tbody>
@@ -1421,7 +1423,6 @@
   }
   function bindTeacher() {
     if (!state.students && !state.stLoading) { state.stLoading = true; loadStudents().finally(() => { state.stLoading = false; render(); }); }
-    const ex = $("#t-ex"); if (ex) ex.addEventListener("change", () => { state.exId = ex.value; render(); });
     const inp = $("#t-search");
     if (inp) inp.addEventListener("input", () => { state.tq = inp.value; const pos = inp.selectionStart; render(); const n = $("#t-search"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } });
   }
@@ -2084,6 +2085,7 @@
     }),
     "t-reload": () => { state.students = null; render(); },
     "t-ex-xls": el => examXls(el.dataset.id),
+    "t-ex": el => { state.exId = el.dataset.id; render(); },
     "ft-size": el => { state.ft.size = +el.dataset.n; state.ft.res = null; render(); },
     "ft-make": () => ftMake(),
     "ft-start": () => { const r = state.ft && state.ft.res, u = currentUser(); if (!r || !r.questions.length || !u) return;
@@ -2225,7 +2227,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611120724")
+    import("./cloud.js?v=202611120806")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;
