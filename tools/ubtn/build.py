@@ -1,6 +1,7 @@
 """«ҰБТ сынамасы → ҰБТ нұсқалары» (мұғалімнің 5 .docx файлы, 2026-11-19).
 Қолданылуы: python3 -I tools/ubtn/build.py src_dir repo
-  src_dir: v1.docx v2.docx v3.docx v5.docx v6.docx (мұғалімнің «1», «2», «3», «5», «6» файлдары)
+  src_dir: v1.docx v2.docx v3.docx v5.docx v6.docx (мұғалімнің «1», «2», «3», «5», «6» файлдары → 1–5-нұсқа)
+           v7.docx v8.docx v9.docx v10.docx v12.docx («7», «8», «9», «10», «12» → 6–10-нұсқа; 2026-11-19)
 v1, v2, v3, v6 — tools/ubt_docx.py арқылы (дұрыс жауап — қалың қаріп), содан кейін төмендегі түзетулер.
 v5 — жауаптары «+» белгісімен, сәйкестендіру жауабы жолдың соңындағы әріп, сондықтан бөлек оқылады."""
 import json, os, re, subprocess, sys, shutil, tempfile
@@ -72,20 +73,30 @@ qs[23]["correct"] = [3]   # Түтіктәрізді сүйектердің жу
 qs[24]["correct"] = [3]   # Екіншілік активті тасымалдау — аминқышқылдары
 for q in qs: assert q["correct"], q["id"]
 t5 = {"id": "ubtn-4", "title": "", "questions": qs}
+# 2б) екінші топ (6–10-нұсқа) — бәрі қалың қаріппен белгіленген
+tmp2 = tempfile.mkdtemp()
+subprocess.run([sys.executable, "-I", os.path.join(here, "..", "ubt_docx.py"), "--folder", "x", "--id", "ubtb", "--out", f"{tmp2}/b.js", "--img-dir", f"{tmp2}/img",
+                f"{src}/v7.docx", f"{src}/v8.docx", f"{src}/v9.docx", f"{src}/v10.docx", f"{src}/v12.docx"], check=True, stdout=subprocess.DEVNULL)
+txt = open(f"{tmp2}/b.js", encoding="utf-8").read()
+B = json.loads(txt[txt.index(".push(") + 6: txt.rindex(");")])["tests"]
 # 3) реттеу, атаулар, id-лер
-tests = [t1, t2, t3, t5, t6]
+tests = [t1, t2, t3, t5, t6] + B
+NUMQ = re.compile(r"^(Нұсқа\s*\d+\s*)?(\d+\s*\.\s*)?")  # сұрақ басындағы «17.», «Нұсқа 4» қалдықтары
+for t in tests:
+    for q in t["questions"]:
+        if q.get("q"): q["q"] = NUMQ.sub("", q["q"]).strip()
 for i, t in enumerate(tests, 1):
     old = t["id"]; t["id"] = f"ubtn-{i}"; t["title"] = f"{i}-нұсқа"
     for j, q in enumerate(t["questions"], 1):
         q["id"] = f"ubtn-{i}-q{j}"
         for k in ("img", "contextImg"):
-            if k in q: q[k] = [s.replace(f"{tmp}/img/{old}", f"img/tests/ubtn-{i}") for s in q[k]]
+            if k in q: q[k] = [s.replace(f"{tmp}/img/{old}", f"img/tests/ubtn-{i}").replace(f"{tmp2}/img/{old}", f"img/tests/ubtn-{i}") for s in q[k]]
 for i, t in enumerate(tests, 1):
-    assert len(t["questions"]) == 40, (t["title"], len(t["questions"]))
+    assert len(t["questions"]) in (40, 41), (t["title"], len(t["questions"]))  # 8-, 9-нұсқа: мұғалім файлында 41 сұрақ
 folder = {"id": "ubtn", "title": "ҰБТ нұсқалары", "tests": tests}
 with open(f"{repo}/js/tests/ubtn.js", "w", encoding="utf-8") as fh:
     fh.write("/* «ҰБТ нұсқалары» — мұғалімнің 5 .docx файлы (tools/ubtn/build.py) */\n")
     fh.write("(window.TEST_FOLDERS = window.TEST_FOLDERS || []).push(" + json.dumps(folder, ensure_ascii=False, indent=1) + ");\n")
 from collections import Counter
 for t in tests: print(t["title"], len(t["questions"]), dict(Counter(q["type"] for q in t["questions"])))
-shutil.rmtree(tmp)
+shutil.rmtree(tmp); shutil.rmtree(tmp2)
