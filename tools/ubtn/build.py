@@ -3,6 +3,7 @@
   src_dir: v1.docx v2.docx v3.docx v5.docx v6.docx (мұғалімнің «1», «2», «3», «5», «6» файлдары → 1–5-нұсқа)
            v7.docx v8.docx v9.docx v10.docx v12.docx («7», «8», «9», «10», «12» → 6–10-нұсқа; 2026-11-19)
            v13.docx v14.docx v15.docx v16.docx v17.docx («13»–«17» → 11–15-нұсқа)
+           v18.docx («18» → 16-нұсқа)
 v1, v2, v3, v6 — tools/ubt_docx.py арқылы (дұрыс жауап — қалың қаріп), содан кейін төмендегі түзетулер.
 v5 — жауаптары «+» белгісімен, сәйкестендіру жауабы жолдың соңындағы әріп, сондықтан бөлек оқылады."""
 import json, os, re, subprocess, sys, shutil, tempfile
@@ -83,7 +84,7 @@ B = json.loads(txt[txt.index(".push(") + 6: txt.rindex(");")])["tests"]
 # 2в) үшінші топ (11–15-нұсқа)
 tmp3 = tempfile.mkdtemp()
 subprocess.run([sys.executable, "-I", os.path.join(here, "..", "ubt_docx.py"), "--folder", "x", "--id", "ubtc", "--out", f"{tmp3}/c.js", "--img-dir", f"{tmp3}/img",
-                f"{src}/v13.docx", f"{src}/v14.docx", f"{src}/v15.docx", f"{src}/v16.docx", f"{src}/v17.docx"], check=True, stdout=subprocess.DEVNULL)
+                f"{src}/v13.docx", f"{src}/v14.docx", f"{src}/v15.docx", f"{src}/v16.docx", f"{src}/v17.docx", f"{src}/v18.docx"], check=True, stdout=subprocess.DEVNULL)
 txt = open(f"{tmp3}/c.js", encoding="utf-8").read()
 C = json.loads(txt[txt.index(".push(") + 6: txt.rindex(");")])["tests"]
 c3, c4 = C[2], C[3]
@@ -95,6 +96,9 @@ c3["questions"].insert(27, q28)
 # — «16» файлы, 17: «Б» нұсқасы «Ы.» деп терілген, сұрақ екіге бөлініп кеткен
 q, q18 = Q(c4, 17), Q(c4, 18); assert q18["q"].startswith("Ы.")
 q.update({"options": ["HbA", "HbP", "HbC", "HbF"], "correct": [3]}); c4["questions"].remove(q18)
+# — «18» файлы, 2: «Д. Отосклероз» екі рет терілген
+q = Q(C[5], 2); assert q["options"][3] == q["options"][4]
+q.update({"type": "single", "options": q["options"][:4]})
 # 3) реттеу, атаулар, id-лер
 tests = [t1, t2, t3, t5, t6] + B + C
 NUMQ = re.compile(r"^(Нұсқа\s*\d+\s*)?(\d+\s*\.\s*)?")  # сұрақ басындағы «17.», «Нұсқа 4» қалдықтары
