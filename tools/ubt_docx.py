@@ -24,10 +24,12 @@ except ImportError:
 LETTER_INDEX = {  # кирилл/латын әріптері → нұсқа реті
     "А": 0, "A": 0, "В": 1, "B": 1, "Б": 1, "С": 2, "C": 2, "Д": 3, "D": 3, "Г": 3,
     "Е": 4, "E": 4, "Ф": 5, "F": 5,
+    "a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5,  # кіші латын әріптері (кейбір файлдарда)
 }
-OPT_RE = re.compile(r"^\s*([A-FАБВСДЕФГ])\s*[.)]\s*(.*)$")
+OPT_RE = re.compile(r"^\s*([A-FАБВСДЕФГ]|[a-f](?=\s*\)))\s*[.)]\s*(.*)$")
 NUM_RE = re.compile(r"^\s*\d+\s*[.)]\s*")
-MATCH_HEAD_RE = re.compile(r"^\s*(\d+\s*[.)]\s*)?сәйкестендір(у|іңіз)?\s*:?\s*$", re.I)
+MATCH_HEAD_RE = re.compile(r"^\s*(\d+\s*[.)]\s*)?сәйкест[еә]нд[іә]р(у|іңіз)?\s*:?\s*([-–—]\s*Жауабы\s*:.*)?$", re.I)
+ANS_HEAD_RE = re.compile(r"Жауабы\s*:\s*1\s*[-–—]\s*([A-FАБВСДЕФГ])\s*,\s*2\s*[-–—]\s*([A-FАБВСДЕФГ])", re.I)  # «Сәйкестендіру — Жауабы: 1–A, 2–C»
 ITEM_RE = re.compile(r"^\s*(?:\d+\s*[.)]\s*)?(.+?)\s*[-–—]?\s*([A-FАБВСДЕФГ])\s*$")
 
 
@@ -131,14 +133,19 @@ def classify(texts, opts):
     if any(MATCH_HEAD_RE.match(t["plain"]) for t in lines):
         return "match"
     items = [t for t in lines if ITEM_RE.match(NUM_RE.sub("", t["plain"], count=1)) and re.search(r"[-–—]\s*[A-FАБВСДЕФГ]\s*$|\s[A-FАБВСДЕФГ]\s*$", t["plain"])]
-    if len(items) >= 2 and not any(o["bold"] for o in opts) and len(opts) == 4:
-        return "match"
+    if len(items) >= 2 and len(opts) == 4:
+        # дұрыс нұсқалар қалың қаріппен де белгіленуі мүмкін — олар элементтердің әріптерімен сәйкес келсе, бұл сәйкестендіру
+        bold = {LETTER_INDEX.get(o["letter"]) for o in opts if o["bold"]}
+        ans = {LETTER_INDEX.get(re.search(r"([A-FАБВСДЕФГ])\s*$", t["plain"]).group(1)) for t in items}
+        if not bold or bold <= ans:
+            return "match"
     return "multi" if len(opts) >= 5 else "single"
 
 
 def starts_context(texts):
     lines = [t for t in texts if t["plain"]]
     before = lines[:-1]
+    if before and lines and any(t["imgs"] for t in texts[:texts.index(lines[-1])]): return True  # тақырып + сурет
     return bool(before) and (sum(len(t["plain"]) for t in before) > 150 or len(before) >= 2)
 
 
@@ -153,6 +160,12 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
     if kind == "match":  # сәйкестендіру
         cand = [t for t in lines if not MATCH_HEAD_RE.match(t["plain"])]
         its = []
+        hm = next((ANS_HEAD_RE.search(t["plain"]) for t in lines if ANS_HEAD_RE.search(t["plain"])), None)
+        if hm:  # жауаптар тақырыпта: элементтер — нөмірленген жолдар
+            nums = [t for t in cand if NUM_RE.match(t["plain"])][-2:]
+            for t, letter in zip(nums, hm.groups()):
+                its.append({"text": html.escape(NUM_RE.sub("", t["plain"], count=1).strip()), "answer": letter_map.get(letter, LETTER_INDEX.get(letter))})
+            cand = []
         for t in cand:
             m = ITEM_RE.match(NUM_RE.sub("", t["plain"], count=1))
             if not m: continue
@@ -160,7 +173,8 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
             ans = letter_map.get(letter, LETTER_INDEX.get(letter))
             its.append({"text": html.escape(m.group(1).strip(" -–—")), "answer": ans})
         if len(its) != 2: warn(f"{qid}: сәйкестендіруде {len(its)} элемент табылды (күтілгені 2)")
-        q.update({"type": "match", "q": "Сәйкестендіріңіз:", "items": its, "correct": [i["answer"] for i in its]})
+        head = [t for t in cand if not ITEM_RE.match(NUM_RE.sub("", t["plain"], count=1))]  # сұрақтың өз мәтіні (болса)
+        q.update({"type": "match", "q": strip_num(head[-1]["html"]) if head else "Сәйкестендіріңіз:", "items": its, "correct": [i["answer"] for i in its]})
         if imgs_all: q["img"] = imgs_all
         return q
 
@@ -171,7 +185,7 @@ def build_question(idx, texts, opts, qid, warn, ctx_holder):
     correct = [k for k, o in enumerate(opts) if o["bold"]]
     q["q"] = qtext
 
-    if kind == "single" and starts_context(texts) and not ctx_holder.get("left"):  # контекст басталады
+    if kind == "single" and idx >= 20 and starts_context(texts) and not ctx_holder.get("left"):  # контекст басталады (ҰБТ-да 26-сұрақтан; ұзын шарты бар бір жауапты сұрақтар контекст емес)
         # сұрақ жолының өз суреттері сұраққа; одан бұрынғы суреттер контекстке
         qline = lines[-1] if lines else None
         ctx_imgs, q_imgs, seen_q = [], [], False
