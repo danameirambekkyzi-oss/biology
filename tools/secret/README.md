@@ -24,3 +24,4 @@ python3 -I tools/chapters/build_ubt_chapter.py . anatomy <ana t1..t6 json> /tmp/
 
 `anatomy-exam.enc` 2026-11-11 ашылды (Анатомия, 7-тест).
 `anatomy-zachet.enc` 2026-11-12 ашылды (Анатомия, 8-тест).
+`anatomy-zachet.enc` 2026-11-19 мұғалімнің өтінішімен қайта жабылды (сайттан алынды; ашу — жоғарыдағы жолмен, --append).
