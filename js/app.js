@@ -87,7 +87,22 @@
   const pickedIn = (x, i) => Array.isArray(x) ? x.includes(i) : x === i;
   // Суретке белгілеу: ұяшыққа қойылған сөз дұрыс па (бірдей атаулар болса, мәтіні бойынша салыстырамыз)
   const zn = (z, k) => esc(z.n || String(k + 1));  // ұяшық белгісі: әдетте нөмір, кейде әріп (мысалы «а», «ә»)
-  const lbOk = (q, sel, k) => sel[k] != null && q.options[sel[k]] === q.options[q.zones[k].answer];
+  // Ұяшықтың дұрыстығы. Бір топтағы (zones[].g) ұяшықтардың реті маңызды емес: топтың кез келген жауабы қабылданады (әрқайсысы бір рет)
+  const lbOk = (q, sel, k) => {
+    const z = q.zones[k], t = i => q.options[i];
+    if (sel[k] == null) return false;
+    if (!z.g) return t(sel[k]) === t(z.answer);
+    const left = q.zones.filter(x => x.g === z.g).map(x => t(x.answer));
+    for (let j = 0; j < k; j++) if (q.zones[j].g === z.g && sel[j] != null) { const i = left.indexOf(t(sel[j])); if (i >= 0) left.splice(i, 1); }
+    return left.includes(t(sel[k]));
+  };
+  // Қате ұяшыққа көрсетілетін дұрыс жауап: топта — әлі ешбір ұяшыққа дұрыс қойылмаған жауаптар
+  const lbRight = (q, sel, k) => {
+    const z = q.zones[k]; if (!z.g) return plain(q.options[z.answer]);
+    const left = q.zones.filter(x => x.g === z.g).map(x => q.options[x.answer]);
+    q.zones.forEach((x, j) => { if (x.g === z.g && lbOk(q, sel, j)) { const i = left.indexOf(q.options[sel[j]]); if (i >= 0) left.splice(i, 1); } });
+    return left.map(plain).join(" / ");
+  };
   const hasAnswer = (q, a) => q.type === "match" || q.type === "label" ? (a || []).some(x => Array.isArray(x) ? x.length > 0 : x != null && x >= 0) : (a || []).length > 0;
   const modTitle = id => (MODULES.find(m => m.id === id) || {}).title || id;
 
@@ -1906,10 +1921,10 @@
         const txt = v != null ? `<b class="lb-n">${zn(z, k)}</b><span class="lb-t">${esc(plain(q.options[v]))}</span>` : `<b>${zn(z, k)}</b>`;
         const st = `left:${z.x}%;top:${z.y}%;width:${z.w}%;${z.v ? "height" : "min-height"}:${z.h}%`;
         return interactive && !checked ? `<button class="lb-zone ${z.v ? "vert" : ""} ${v != null ? "filled" : ""}" style="${st}" data-act="label-zone" data-k="${k}" data-drop="${k}">${txt}</button>`
-          : `<div class="lb-zone ${z.v ? "vert" : ""} ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}${ok === "bad" ? `<span class="lb-fix${z.y + z.h > 86 ? " up" : ""}">${esc(plain(q.options[z.answer]))}</span>` : ""}</div>`; }).join("")}</div>
+          : `<div class="lb-zone ${z.v ? "vert" : ""} ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}${ok === "bad" ? `<span class="lb-fix${z.y + z.h > 86 ? " up" : ""}">${esc(lbRight(q, sel, k))}</span>` : ""}</div>`; }).join("")}</div>
       ${!checked ? `<div class="lb-list">${q.zones.map((z, k) => `<span class="${sel[k] != null ? "on" : ""}"><b>${zn(z, k)}.</b> ${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</span>`).join("")}</div>` : ""}
       ${checked ? `<div class="lb-key">${q.zones.map((z, k) => lbOk(q, sel, k) ? `<span class="ok"><b>${zn(z, k)}.</b> ${esc(plain(q.options[z.answer]))}</span>`
-          : `<span class="bad"><b>${zn(z, k)}.</b> <s>${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</s> → <em>${esc(plain(q.options[z.answer]))}</em></span>`).join("")}</div>`
+          : `<span class="bad"><b>${zn(z, k)}.</b> <s>${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</s> → <em>${esc(lbRight(q, sel, k))}</em></span>`).join("")}</div>`
         : interactive ? `<p class="muted lb-hint">Сөзді басып, суреттегі ұяшықты бас (немесе сөзді ұяшыққа сүйреп апар). Ұяшықты қайта бассаң — сөз алынады.</p>
       <div class="lb-words">${q.options.map((o, i) => `<button class="lb-word ${pick === i ? "sel" : ""} ${used.has(i) ? "used" : ""}" draggable="true" data-act="label-word" data-i="${i}">${esc(plain(o))}</button>`).join("")}</div>` : ""}`;
   }
@@ -2296,7 +2311,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611190610")
+    import("./cloud.js?v=202611190613")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

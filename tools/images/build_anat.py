@@ -33,10 +33,14 @@ def build(spec):
         o = {"x": round(zx / W * 100, 2), "y": round(zy / H * 100, 2), "w": round(zw / W * 100, 2), "h": round(zh / H * 100, 2), "answer": len(opts) - 1}
         if len(z) > 2 and z[2]: o["v"] = True
         if (tid, ans) in ZN: o["n"] = ZN[(tid, ans)]
+        if (tid, ans) in GRP: o["g"] = GRP[(tid, ans)]
         zones.append(o)
     return {"id": "img-a-" + tid, "module": "anatomy", "folder": folder, "title": title, "img": [f"img/images/a-{tid}.jpg"], "options": opts, "zones": zones}
 
 ZN = {("phagocytosis", "Тікен қадалғандағы қабыну"): "а", ("phagocytosis", "Фагоциттердің микробтарды жоюы"): "ә"}  # нөмір орнына әріп (суреттегі а), ә))
+# Реті маңызды емес ұяшықтар (бір топ ішінде орындарын ауыстырса да дұрыс)
+GRP = {("adh", a): 1 for a in ["Бүйректегі судың реабсорбциясы", "Гемокоагуляция, гипергликемия", "Қантамырларының тарылуы"]}
+GRP.update({("water-salt", a): 1 for a in ["Өкпе", "Асқазан, ішек", "Тер бездері"]})
 def col(x, y, w, h, gap, names):
     return [(n, (x, y + i * (h + gap), x + w, y + i * (h + gap) + h)) for i, n in enumerate(names)]
 def grid(x, y, w, h, gx, gy, cols, names):
