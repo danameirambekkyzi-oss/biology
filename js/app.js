@@ -1906,9 +1906,10 @@
         const txt = v != null ? `<b class="lb-n">${zn(z, k)}</b><span class="lb-t">${esc(plain(q.options[v]))}</span>` : `<b>${zn(z, k)}</b>`;
         const st = `left:${z.x}%;top:${z.y}%;width:${z.w}%;${z.v ? "height" : "min-height"}:${z.h}%`;
         return interactive && !checked ? `<button class="lb-zone ${z.v ? "vert" : ""} ${v != null ? "filled" : ""}" style="${st}" data-act="label-zone" data-k="${k}" data-drop="${k}">${txt}</button>`
-          : `<div class="lb-zone ${z.v ? "vert" : ""} ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}</div>`; }).join("")}</div>
+          : `<div class="lb-zone ${z.v ? "vert" : ""} ${ok} ${v != null ? "filled" : ""}" style="${st}">${txt}${ok === "bad" ? `<span class="lb-fix${z.y + z.h > 86 ? " up" : ""}">${esc(plain(q.options[z.answer]))}</span>` : ""}</div>`; }).join("")}</div>
       ${!checked ? `<div class="lb-list">${q.zones.map((z, k) => `<span class="${sel[k] != null ? "on" : ""}"><b>${zn(z, k)}.</b> ${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</span>`).join("")}</div>` : ""}
-      ${checked ? `<div class="lb-key">${q.zones.map((z, k) => `<span class="${lbOk(q, sel, k) ? "ok" : "bad"}"><b>${zn(z, k)}.</b> ${esc(plain(q.options[z.answer]))}</span>`).join("")}</div>`
+      ${checked ? `<div class="lb-key">${q.zones.map((z, k) => lbOk(q, sel, k) ? `<span class="ok"><b>${zn(z, k)}.</b> ${esc(plain(q.options[z.answer]))}</span>`
+          : `<span class="bad"><b>${zn(z, k)}.</b> <s>${sel[k] != null ? esc(plain(q.options[sel[k]])) : "—"}</s> → <em>${esc(plain(q.options[z.answer]))}</em></span>`).join("")}</div>`
         : interactive ? `<p class="muted lb-hint">Сөзді басып, суреттегі ұяшықты бас (немесе сөзді ұяшыққа сүйреп апар). Ұяшықты қайта бассаң — сөз алынады.</p>
       <div class="lb-words">${q.options.map((o, i) => `<button class="lb-word ${pick === i ? "sel" : ""} ${used.has(i) ? "used" : ""}" draggable="true" data-act="label-word" data-i="${i}">${esc(plain(o))}</button>`).join("")}</div>` : ""}`;
   }
@@ -2295,7 +2296,7 @@
   if (!CLOUD) { dailyGreeting(); render(); }
   else {
     app.innerHTML = `<div class="boot"><img class="logo-mark" src="img/brand/icon-96.png" alt=""><p>Жүктелуде…</p></div>`;
-    import("./cloud.js?v=202611190605")
+    import("./cloud.js?v=202611190610")
       .then(() => window.Cloud.restore())
       .then(({ user, error }) => {
         cloudUser = user ? fillUser(user) : null;

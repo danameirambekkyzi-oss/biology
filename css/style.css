@@ -777,7 +777,7 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .lb-word.sel { background: var(--purple); border-color: var(--purple); color: #fff; }
 .lb-word.used { opacity: .45; }
 .lb-key { display: grid; gap: 4px; margin-bottom: 14px; font-size: 14px; }
-.lb-key .ok { color: var(--green); } .lb-key .bad { color: var(--red); }
+.lb-key .ok { color: var(--green); } .lb-key .bad { color: var(--red); } .lb-key .bad em { color: var(--green); font-style: normal; font-weight: 700; }
 
 /* ---------- Суретпен жұмыс ---------- */
 .img-mod { font-size: 20px; margin: 18px 0 10px; }
@@ -786,6 +786,13 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .img-card .btn { margin-top: auto; }
 .lb-zone .lb-n { display: none; }
 .lb-list { display: none; }
+/* Тексергеннен кейін: қате ұяшықтың дәл астында дұрыс жауабы (жасылмен); астындағы тізім тек телефонда */
+.lb-zone.bad { overflow: visible; }
+.lb-fix { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); z-index: 5; width: max-content; max-width: 220px;
+  padding: 2px 8px; border-radius: 6px; background: var(--green); color: #fff; font-size: .95em; font-weight: 700; line-height: 1.2; white-space: normal; box-shadow: 0 2px 6px rgba(0,0,0,.18); writing-mode: horizontal-tb; }
+.lb-fix.up { top: auto; bottom: calc(100% + 3px); }
+.lb-zone.vert .lb-fix { transform: rotate(180deg); top: auto; bottom: calc(100% + 3px); left: 0; }
+.lb-key { display: none; }
 /* Телефонда ұяшыққа сөз сыймайды: ұяшықта тек нөмір, қойылған сөздер суреттің астында тізіммен */
 @media (max-width: 640px) {
   .lb-zone { padding: 0; font-size: 11px; }
@@ -794,6 +801,8 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
   .lb-list { display: grid; gap: 4px; margin: -4px 0 12px; font-size: 13px; }
   .lb-list span { color: var(--muted); }
   .lb-list span.on { color: var(--text); }
+  .lb-fix { display: none; }
+  .lb-key { display: grid; }
 }
 
 /* ---------- Аяқталмаған тест ---------- */
