@@ -784,7 +784,10 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 .img-card { display: flex; flex-direction: column; gap: 10px; }
 .img-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
 .img-card .btn { margin-top: auto; }
-.lb-zone .lb-n { display: none; }
+/* Ұяшық нөмірі әрдайым көрінеді (қай ұяшық суреттегі қай нөмірге сәйкес екені білінсін) */
+.lb-zone .lb-n { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 1.5em; height: 1.5em; margin-right: 5px; padding: 0 3px; border-radius: 999px; background: var(--purple); color: #fff; font-size: .85em; }
+.lb-zone.ok .lb-n { background: var(--green); } .lb-zone.bad .lb-n { background: var(--red); }
+.lb-zone.vert .lb-n { margin: 0 0 5px; }
 .lb-list { display: none; }
 /* Тексергеннен кейін: қате ұяшықтың дәл астында дұрыс жауабы (жасылмен); астындағы тізім тек телефонда */
 .lb-zone.bad { overflow: visible; }
@@ -796,7 +799,8 @@ img.logo-mark { width: 40px; height: 40px; background: #fff; object-fit: contain
 /* Телефонда ұяшыққа сөз сыймайды: ұяшықта тек нөмір, қойылған сөздер суреттің астында тізіммен */
 @media (max-width: 640px) {
   .lb-zone { padding: 0; font-size: 11px; }
-  .lb-zone .lb-n { display: inline; color: var(--purple); }
+  .lb-zone .lb-n { display: inline; min-width: 0; height: auto; margin: 0; padding: 0; background: none; color: var(--purple); }
+  .lb-zone.ok .lb-n, .lb-zone.bad .lb-n { background: none; }
   .lb-zone .lb-t { display: none; }
   .lb-list { display: grid; gap: 4px; margin: -4px 0 12px; font-size: 13px; }
   .lb-list span { color: var(--muted); }
