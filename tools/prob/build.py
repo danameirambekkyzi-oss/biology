@@ -9,6 +9,7 @@ L = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "А": 0, "В": 1, "С": 2, 
 OPT = re.compile(r"^([A-FАВСДЕ])\)\s*(.*?)\s*(✅)?\s*$")
 QN = re.compile(r"^(\d+)\.\s*(.*)$")
 FIX = {  # файл → {сұрақ: өзгерту}
+    2: {15: {"q": "Суретте көрсетілген үдеріс", "img": ["img/tests/prob-2/q15.png"]}},  # сурет — мұғалім жіберген (2026-11-23)
     1: {35: {"options": {1: "популяциядағы даралар ие барлық геннің, олардың түр өзгерістерінің жиынтығы",
                          2: "популяциядағы жыныстық жағынан жетілген аталық және аналық арасындағы қатынас",
                          3: "популяциядағы әр түрлі жастағы даралар арасындағы қатынас"}}},  # түпнұсқа тест бойынша
@@ -51,7 +52,10 @@ for n, f in enumerate(files, 1):
         pending_ctx = {"contextTitle": t.strip(), "context": rest.strip()}
     for q in qs:
         k = int(q["id"].split("-q")[1])
-        for i, v in FIX.get(n, {}).get(k, {}).get("options", {}).items(): q["options"][i] = v
+        fx = FIX.get(n, {}).get(k, {})
+        for i, v in fx.get("options", {}).items(): q["options"][i] = v
+        for key in ("q", "img"):
+            if key in fx: q[key] = fx[key]
         q.setdefault("type", "multi" if len(q["options"]) > 4 else "single")
         assert q["correct"], q["id"]
     assert len(qs) == 40, (f, len(qs))
