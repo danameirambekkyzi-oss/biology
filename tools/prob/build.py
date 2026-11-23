@@ -39,7 +39,7 @@ for n, f in enumerate(files, 1):
             if m.group(3): cur["correct"].append(len(cur["options"]) - 1)
             continue
         if x.startswith("Варианттар:"):
-            cur["options"] = [re.sub(r"^[A-FАВСДЕ]\)\s*", "", o).strip() for o in x.split(":", 1)[1].split("·")]; continue
+            cur["options"] = [re.sub(r"^[A-FАВСДЕ]\)\s*", "", o.strip()).strip() for o in x.split(":", 1)[1].split("·")]; continue
         m = QN.match(x)
         if m:
             k = int(m.group(1))
