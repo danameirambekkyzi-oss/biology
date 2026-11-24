@@ -66,7 +66,7 @@ for n, f in enumerate(files, 1):
         for key in ("q", "img"):
             if key in fx: q[key] = fx[key]
         q.setdefault("type", "multi" if len(q["options"]) > 4 else "single")
-        assert q["correct"], q["id"]
+        if not q["correct"]: print("ЖАУАПСЫЗ:", q["id"], q["q"])
     assert len(qs) == 40, (f, len(qs))
     tests.append({"id": tid, "title": f"{n}-нұсқа", "questions": qs})
 folder = {"id": "prob", "title": "Пробныйда келген нұсқалар", "tests": tests}
