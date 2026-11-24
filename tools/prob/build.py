@@ -17,7 +17,10 @@ FIX = {  # файл → {сұрақ: өзгерту}
 
 def body(d):  # абзацтар мен кестелер құжаттағы ретімен
     for el in d.element.body.iterchildren():
-        if el.tag == qn("w:p"): yield "p", "".join(t.text or "" for t in el.iter(qn("w:t"))).strip()
+        if el.tag == qn("w:p"):
+            for bl in el.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}blip"):
+                yield "img", d.part.related_parts[bl.get(qn("r:embed"))]
+            yield "p", "".join(t.text or "" for t in el.iter(qn("w:t"))).strip()
         elif el.tag == qn("w:tbl"):
             rows = [["".join(t.text or "" for t in c.iter(qn("w:t"))).strip() for c in r.iter(qn("w:tc"))] for r in el.iter(qn("w:tr"))]
             yield "t", rows
@@ -26,6 +29,12 @@ tests = []
 for n, f in enumerate(files, 1):
     tid = f"prob-{n}"; qs = []; cur = None; ctx = None; ctx_left = 0; pending_ctx = None
     for kind, x in body(docx.Document(f)):
+        if kind == "img":  # сурет — ағымдағы сұраққа
+            import os
+            k = cur["id"].split("-q")[1]; ext = os.path.splitext(x.partname)[1] or ".png"
+            os.makedirs(f"{repo}/img/tests/{tid}", exist_ok=True)
+            path = f"img/tests/{tid}/q{k}{'' if not cur.get('img') else '-' + str(len(cur['img']) + 1)}{ext}"
+            open(f"{repo}/{path}", "wb").write(x.blob); cur.setdefault("img", []).append(path); continue
         if kind == "t":  # сәйкестендіру жауаптары
             items = []
             for r in x[1:]:
