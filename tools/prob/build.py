@@ -15,11 +15,16 @@ FIX = {  # файл → {сұрақ: өзгерту}
                          3: "популяциядағы әр түрлі жастағы даралар арасындағы қатынас"}}},  # түпнұсқа тест бойынша
 }
 
+BOLD = [False]  # соңғы абзац толық қалың қаріппен бе
 def body(d):  # абзацтар мен кестелер құжаттағы ретімен
     for el in d.element.body.iterchildren():
         if el.tag == qn("w:p"):
             for bl in el.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}blip"):
                 yield "img", d.part.related_parts[bl.get(qn("r:embed"))]
+            runs = [r for r in el.iter(qn("w:r")) if "".join(t.text or "" for t in r.iter(qn("w:t"))).strip()]
+            bold = bool(runs) and all(r.find(qn("w:rPr")) is not None and r.find(qn("w:rPr")).find(qn("w:b")) is not None
+                                      and r.find(qn("w:rPr")).find(qn("w:b")).get(qn("w:val"), "true") not in ("0", "false") for r in runs)
+            BOLD[0] = bold
             yield "p", "".join(t.text or "" for t in el.iter(qn("w:t"))).strip()
         elif el.tag == qn("w:tbl"):
             rows = [["".join(t.text or "" for t in c.iter(qn("w:t"))).strip() for c in r.iter(qn("w:tc"))] for r in el.iter(qn("w:tr"))]
@@ -46,6 +51,7 @@ for n, f in enumerate(files, 1):
         m = OPT.match(x)
         if m and cur is not None and "items" not in cur:
             cur["options"].append(m.group(2))
+            if BOLD[0]: cur.setdefault("bold", []).append(len(cur["options"]) - 1)
             if m.group(3): cur["correct"].append(len(cur["options"]) - 1)
             continue
         if x.startswith("Варианттар:"):
@@ -66,6 +72,8 @@ for n, f in enumerate(files, 1):
         for key in ("q", "img"):
             if key in fx: q[key] = fx[key]
         q.setdefault("type", "multi" if len(q["options"]) > 4 else "single")
+        bold = q.pop("bold", [])
+        if not q["correct"] and bold: q["correct"] = bold  # ✅ жоқ — жауап қалың қаріппен белгіленген
         if not q["correct"]: print("ЖАУАПСЫЗ:", q["id"], q["q"])
     assert len(qs) == 40, (f, len(qs))
     tests.append({"id": tid, "title": f"{n}-нұсқа", "questions": qs})
