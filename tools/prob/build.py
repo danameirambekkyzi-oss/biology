@@ -32,13 +32,16 @@ def body(d):  # абзацтар мен кестелер құжаттағы ре
 
 tests = []
 for n, f in enumerate(files, 1):
-    tid = f"prob-{n}"; qs = []; cur = None; ctx = None; ctx_left = 0; pending_ctx = None
+    tid = f"prob-{n}"; qs = []; cur = None; ctx = None; ctx_left = 0; pending_ctx = None; in_ctx = False
     for kind, x in body(docx.Document(f)):
         if kind == "img":  # сурет — ағымдағы сұраққа
             import os
             k = cur["id"].split("-q")[1]; ext = os.path.splitext(x.partname)[1] or ".png"
             os.makedirs(f"{repo}/img/tests/{tid}", exist_ok=True)
             path = f"img/tests/{tid}/q{k}{'' if not cur.get('img') else '-' + str(len(cur['img']) + 1)}{ext}"
+            if in_ctx:  # контекст мәтінінен кейінгі сурет — контекстке
+                path = f"img/tests/{tid}/ctx{ext}"; open(f"{repo}/{path}", "wb").write(x.blob)
+                pending_ctx["contextImg"] = [path]; continue
             open(f"{repo}/{path}", "wb").write(x.blob); cur.setdefault("img", []).append(path); continue
         if kind == "t":  # сәйкестендіру жауаптары
             items = []
@@ -60,11 +63,12 @@ for n, f in enumerate(files, 1):
         if m:
             k = int(m.group(1))
             cur = {"id": f"{tid}-q{k}", "module": "", "q": m.group(2), "options": [], "correct": []}
+            in_ctx = False
             if pending_ctx and 26 <= k <= 30: cur.update(pending_ctx); cur["type"] = "context"
             qs.append(cur); continue
         # нөмірсіз ұзын мәтін — контекст («Тақырыбы. Мәтін…»)
         t, rest = (x.split(".", 1) + [""])[:2]
-        pending_ctx = {"contextTitle": t.strip(), "context": rest.strip()}
+        pending_ctx = {"contextTitle": t.strip(), "context": rest.strip()}; in_ctx = True
     for q in qs:
         k = int(q["id"].split("-q")[1])
         fx = FIX.get(n, {}).get(k, {})
