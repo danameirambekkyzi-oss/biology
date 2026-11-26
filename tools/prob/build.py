@@ -9,6 +9,7 @@ L = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "А": 0, "В": 1, "С": 2, 
 OPT = re.compile(r"^([A-FАВСДЕ])\)\s*(.*?)\s*(✅)?\s*$")
 QN = re.compile(r"^(\d+)\.\s*(.*)$")
 FIX = {  # файл → {сұрақ: өзгерту}
+    7: {33: {"q": "Фитогормондарды қызметтерімен сәйкестендіріңіз:"}},  # элементтер сұрақ мәтінінде қайталанған
     2: {15: {"q": "Суретте көрсетілген үдеріс", "img": ["img/tests/prob-2/q15.png"]}},  # сурет — мұғалім жіберген (2026-11-23)
     1: {35: {"options": {1: "популяциядағы даралар ие барлық геннің, олардың түр өзгерістерінің жиынтығы",
                          2: "популяциядағы жыныстық жағынан жетілген аталық және аналық арасындағы қатынас",
@@ -81,6 +82,22 @@ for n, f in enumerate(files, 1):
         if not q["correct"]: print("ЖАУАПСЫЗ:", q["id"], q["q"])
     assert len(qs) == 40, (f, len(qs))
     tests.append({"id": tid, "title": f"{n}-нұсқа", "questions": qs})
+# Суреттерді тазарту: жауапқа сілтейтін қолжазба, сұраққа сәйкес келмейтін тақырып үзіндісі (бастапқы суреттің пикселімен)
+from PIL import Image, ImageDraw, ImageFilter
+IMGFIX = {
+    "img/tests/prob-7/q19.png": {"white": [(97, 146, 140, 161)], "scale": 3},  # «несеп» қолжазбасы; сурет кішкентай
+    "img/tests/prob-7/q17.png": {"crop_top": 45},                                 # «…дағы 1 санымен берілген ұлпа» үзіндісі
+}
+for path, fx in IMGFIX.items():
+    im = Image.open(f"{repo}/{path}").convert("RGB")
+    for b in fx.get("white", []):  # айналасындағы фонның орташа түсімен жабу
+        ring = [im.getpixel((x, y)) for x in range(b[0] - 3, b[2] + 4) for y in (b[1] - 3, b[3] + 3)] + [im.getpixel((x, y)) for y in range(b[1], b[3]) for x in (b[2] + 3,)]
+        ring = sorted(ring, key=sum)[len(ring) // 3:]  # күңгірт сызықтарды ескермеу
+        ImageDraw.Draw(im).rectangle(b, fill=tuple(sum(c[i] for c in ring) // len(ring) for i in range(3)))
+    if fx.get("crop_top"): im = im.crop((0, fx["crop_top"], im.width, im.height))
+    if fx.get("scale"):
+        k = fx["scale"]; im = im.resize((im.width * k, im.height * k), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=2, percent=80, threshold=3))
+    im.save(f"{repo}/{path}")
 folder = {"id": "prob", "title": "Пробныйда келген нұсқалар", "tests": tests}
 with open(f"{repo}/js/tests/prob.js", "w", encoding="utf-8") as fh:
     fh.write("/* «Пробныйда келген нұсқалар» — мұғалімнің .docx файлдары (tools/prob/build.py) */\n")
